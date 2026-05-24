@@ -1,0 +1,326 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Nav from '../components/Nav.astro';
+import { COFFEE_DB, PICKER_TASTE_MAP, PICKER_NOTES_MAP, PICKER_BREW_OPTIONS } from '../data/coffees';
+---
+
+<Layout title="Подобрать кофе — Shmelco">
+  <Nav />
+  <div class="container">
+    <div class="section-anchor" style="padding-top:72px">
+      <div class="picker-progress" id="pickerProgress"></div>
+      <div id="pickerCard" class="picker-card"></div>
+    </div>
+  </div>
+</Layout>
+
+<script define:vars={{ COFFEE_DB, PICKER_TASTE_MAP, PICKER_NOTES_MAP, PICKER_BREW_OPTIONS }}>
+let pickerState = { step:0, brew:null, tastes:[], notes:[] };
+
+function getDripPool() { return COFFEE_DB.filter(c => c.format === 'дрип'); }
+function getBeanPool() { return COFFEE_DB.filter(c => c.format === 'зерно'); }
+
+function getAvailableTastes(pool) {
+  const allTags = new Set();
+  pool.forEach(c => c.tags.forEach(t => allTags.add(t)));
+  const result = {};
+  Object.entries(PICKER_TASTE_MAP).forEach(([k, v]) => {
+    if (v.tags.some(t => allTags.has(t))) result[k] = v;
+  });
+  return result;
+}
+
+function getAvailableNotes(pool, selectedTastes) {
+  const allNotes = [];
+  selectedTastes.forEach(t => {
+    (PICKER_NOTES_MAP[t]||[]).forEach(n => {
+      if (!allNotes.includes(n)) {
+        const hasMatch = pool.some(c => c.notes.some(cn =>
+          cn.toLowerCase().includes(n.toLowerCase()) || n.toLowerCase().includes(cn.toLowerCase())
+        ));
+        if (hasMatch) allNotes.push(n);
+      }
+    });
+  });
+  return allNotes;
+}
+
+function getBrewTip(brew, c) {
+  const tips = {
+    drip: {
+      icon:'☕', title:'Как раскрыть',
+      tip: c.acidity >= 4
+        ? 'Вода 92–94°C · Залей 200 мл за 2 приёма · Дай стечь 3–4 мин'
+        : 'Вода 88–90°C · Залей 200 мл плавно · Подожди 4 мин',
+      why: c.acidity >= 4
+        ? 'Горячая вода раскроет кислотность и яркие ноты'
+        : 'Температура пониже подчеркнёт сладость'
+    },
+    pourover: {
+      icon:'🫖', title:'Рецепт для воронки',
+      tip: `${c.body>=4?'15 г / 240 мл':'15 г / 250 мл'} · Помол ${c.acidity>=4?'средне-мелкий':'средний'} · ${c.acidity>=4?'93–95°C':'90–92°C'} · Пролив 2:30–3:00`,
+      why: c.body>=4 ? 'Плотное тело — меньше воды сохранит текстуру' : 'Лёгкий кофе — больше воды, тонкая струя'
+    },
+    aeropress: {
+      icon:'🔵', title:'Рецепт для аэропресса',
+      tip: `15 г / ${c.acidity>=4?'200 мл':'220 мл'} · ${c.sweetness>=4?'Стандартный':'Инверсный'} метод · ${c.acidity>=4?'88°C':'92°C'} · ${c.sweetness>=4?'1:30':'2:00'}`,
+      why: c.sweetness>=4 ? 'Сладкий профиль лучше при низкой температуре' : 'Инверсный метод даст больше тела и яркости'
+    },
+    frenchpress: {
+      icon:'🫕', title:'Рецепт для френч-пресса',
+      tip: '18 г / 270 мл · Грубый помол · 94°C · 4 мин',
+      why: c.body>=4 ? 'Плотный кофе идеален для иммерсии — насыщенная чашка' : 'Лёгкий — увеличь ratio до 1:17 для баланса'
+    },
+    cup: {
+      icon:'🏠', title:'В чашке / турке',
+      tip: `12 г / 150 мл · Очень мелкий помол · ${c.acidity>=4?'Не доводи до кипения':'Подними пенку 2–3 раза'}`,
+      why: c.acidity>=4 ? 'Снимай до кипения — сохранишь яркость' : 'Медленный нагрев раскроет сладость'
+    }
+  };
+  return tips[brew] || tips.pourover;
+}
+
+function getCountryFlag(country) {
+  const flags = {
+    'Руанда':'🇷🇼','Колумбия':'🇨🇴','Эфиопия':'🇪🇹','Кения':'🇰🇪',
+    'Индонезия':'🇮🇩','Коста-Рика':'🇨🇷','Бразилия':'🇧🇷','Перу':'🇵🇪',
+  };
+  return flags[country] || '🌍';
+}
+
+function renderPickerProgress() {
+  const total = 4;
+  const el = document.getElementById('pickerProgress');
+  let html = '';
+  for (let i = 0; i < total; i++) {
+    const cls = i < pickerState.step ? 'done' : (i === pickerState.step ? 'active' : '');
+    html += `<div class="picker-step-dot ${cls}"></div>`;
+  }
+  el.innerHTML = html;
+}
+
+function renderPickerStep() {
+  renderPickerProgress();
+  const card = document.getElementById('pickerCard');
+
+  if (pickerState.step === 0) {
+    card.innerHTML = `
+      <h3 class="picker-title">Как ты завариваешь кофе?</h3>
+      <p class="picker-subtitle">Это поможет подобрать формат — зерно или дрип-пакеты</p>
+      <div class="picker-grid">
+        ${PICKER_BREW_OPTIONS.map(o => `
+          <div class="picker-option ${pickerState.brew===o.id?'selected':''}" data-brew="${o.id}">
+            <div class="picker-option-icon">${o.icon}</div>
+            <div class="picker-option-label">${o.label}</div>
+            <div class="picker-option-desc">${o.desc}</div>
+          </div>
+        `).join('')}
+      </div>
+      <div class="picker-nav">
+        <a class="btn-ghost" href="/">← На главную</a>
+        <button class="btn btn-primary" id="pickerNextBtn" style="font-size:.82rem;padding:8px 18px">Далее →</button>
+      </div>
+    `;
+    card.querySelectorAll('.picker-option').forEach(el => {
+      el.addEventListener('click', () => {
+        pickerState.brew = pickerState.brew === el.dataset.brew ? null : el.dataset.brew;
+        renderPickerStep();
+      });
+    });
+  } else if (pickerState.step === 1) {
+    const isDrip = pickerState.brew === 'drip';
+    const pool = isDrip ? getDripPool() : COFFEE_DB;
+    const availTastes = isDrip ? getAvailableTastes(pool) : PICKER_TASTE_MAP;
+    const dripHint = isDrip && Object.keys(availTastes).length < Object.keys(PICKER_TASTE_MAP).length
+      ? `<div class="picker-drip-hint">В дрип-пакетах доступно меньше вкусовых направлений. <a href="#" id="switchToBean">Выбрать ручную заварку →</a> для полного выбора</div>`
+      : '';
+    pickerState.tastes = pickerState.tastes.filter(t => t in availTastes);
+    card.innerHTML = `
+      <h3 class="picker-title">Какой вкус тебе ближе?</h3>
+      <p class="picker-subtitle">Выбери 1–2 направления</p>
+      ${dripHint}
+      <div class="picker-grid" style="grid-template-columns: repeat(auto-fill, minmax(160px, 1fr))">
+        ${Object.entries(availTastes).map(([k,v]) => `
+          <div class="picker-option ${pickerState.tastes.includes(k)?'selected':''}" data-taste="${k}">
+            <div class="picker-option-label">${v.label}</div>
+          </div>
+        `).join('')}
+      </div>
+      <div class="picker-nav">
+        <button class="btn-ghost" id="pickerPrevBtn">← Назад</button>
+        <button class="btn btn-primary" id="pickerNextBtn" style="font-size:.82rem;padding:8px 18px">Далее →</button>
+      </div>
+    `;
+    card.querySelectorAll('[data-taste]').forEach(el => {
+      el.addEventListener('click', () => {
+        const id = el.dataset.taste;
+        const idx = pickerState.tastes.indexOf(id);
+        if (idx > -1) pickerState.tastes.splice(idx, 1);
+        else if (pickerState.tastes.length < 2) pickerState.tastes.push(id);
+        renderPickerStep();
+      });
+    });
+    const switchLink = document.getElementById('switchToBean');
+    if (switchLink) {
+      switchLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        pickerState.brew = 'pourover';
+        pickerState.step = 0;
+        renderPickerStep();
+      });
+    }
+  } else if (pickerState.step === 2) {
+    const isDrip = pickerState.brew === 'drip';
+    const pool = isDrip ? getDripPool() : COFFEE_DB;
+    const allNotes = isDrip
+      ? getAvailableNotes(pool, pickerState.tastes)
+      : (() => { const n=[]; pickerState.tastes.forEach(t=>{(PICKER_NOTES_MAP[t]||[]).forEach(x=>{if(!n.includes(x))n.push(x)})}); return n; })();
+    pickerState.notes = pickerState.notes.filter(n => allNotes.includes(n));
+    const skipHint = isDrip && allNotes.length < 4
+      ? `<div class="picker-drip-hint">Для дрипов доступно мало конкретных нот — можешь пропустить этот шаг</div>`
+      : '';
+    card.innerHTML = `
+      <h3 class="picker-title">Какие ноты звучат вкуснее?</h3>
+      <p class="picker-subtitle">Необязательный шаг — выбери те, что нравятся (или пропусти)</p>
+      ${skipHint}
+      <div class="picker-chips">
+        ${allNotes.map(n => `
+          <div class="picker-chip ${pickerState.notes.includes(n)?'selected':''}" data-note="${n}">${n}</div>
+        `).join('')}
+      </div>
+      <div class="picker-nav">
+        <button class="btn-ghost" id="pickerPrevBtn">← Назад</button>
+        <button class="btn btn-primary" id="pickerNextBtn" style="font-size:.82rem;padding:8px 18px">Показать кофе →</button>
+      </div>
+    `;
+    card.querySelectorAll('.picker-chip').forEach(el => {
+      el.addEventListener('click', () => {
+        const note = el.dataset.note;
+        const idx = pickerState.notes.indexOf(note);
+        if (idx > -1) pickerState.notes.splice(idx, 1);
+        else pickerState.notes.push(note);
+        renderPickerStep();
+      });
+    });
+  } else if (pickerState.step === 3) {
+    renderPickerResults();
+    return;
+  }
+
+  const nextBtn = document.getElementById('pickerNextBtn');
+  if (nextBtn) nextBtn.addEventListener('click', pickerNext);
+  const prevBtn = document.getElementById('pickerPrevBtn');
+  if (prevBtn) prevBtn.addEventListener('click', pickerPrev);
+}
+
+function pickerNext() {
+  if (pickerState.step === 0 && !pickerState.brew) return;
+  if (pickerState.step === 1 && pickerState.tastes.length === 0) return;
+  pickerState.step++;
+  renderPickerStep();
+}
+
+function pickerPrev() {
+  if (pickerState.step > 0) {
+    pickerState.step--;
+    renderPickerStep();
+  }
+}
+
+function pickerScoreCoffee(coffee) {
+  let score = 0;
+  const wantedTags = [];
+  pickerState.tastes.forEach(t => {
+    (PICKER_TASTE_MAP[t]?.tags || []).forEach(tag => {
+      if (!wantedTags.includes(tag)) wantedTags.push(tag);
+    });
+  });
+  wantedTags.forEach(tag => {
+    if (coffee.tags.includes(tag)) score += 10;
+  });
+  pickerState.notes.forEach(note => {
+    const noteLower = note.toLowerCase();
+    coffee.notes.forEach(cn => {
+      if (cn.toLowerCase().includes(noteLower) || noteLower.includes(cn.toLowerCase())) score += 5;
+    });
+  });
+  return score;
+}
+
+function renderPickerResults() {
+  renderPickerProgress();
+  const wantDrip = pickerState.brew === 'drip';
+  let pool = COFFEE_DB.slice();
+  let dripFallback = false;
+
+  if (wantDrip) {
+    const drips = pool.filter(c => c.format === 'дрип');
+    if (drips.length >= 3) {
+      pool = drips;
+    } else {
+      dripFallback = true;
+    }
+  }
+
+  const scored = pool.map(c => ({coffee: c, score: pickerScoreCoffee(c)}));
+  scored.sort((a, b) => b.score - a.score);
+  const results = scored.slice(0, 5);
+
+  const card = document.getElementById('pickerCard');
+  card.innerHTML = `
+    <div class="picker-results">
+      <div class="picker-results-header">
+        <h2>Твой кофе</h2>
+        <p>Подобрали ${results.length} ${results.length === 1 ? 'вариант' : (results.length < 5 ? 'варианта' : 'вариантов')} на основе твоих предпочтений</p>
+      </div>
+      ${results.map(({coffee: c, score}) => {
+        const isDripMismatch = wantDrip && c.format !== 'дрип';
+        const brew = isDripMismatch ? 'pourover' : pickerState.brew;
+        const tip = getBrewTip(brew, c);
+        return `
+        <div class="picker-result-card">
+          <div class="picker-result-top">
+            <div>
+              <div class="picker-result-roaster">${c.roaster}</div>
+              <div class="picker-result-name">${c.name}</div>
+              <div class="picker-result-meta">
+                <span class="picker-meta-chip">${getCountryFlag(c.country)} ${c.country}</span>
+                <span class="picker-meta-chip">${c.processing}</span>
+              </div>
+              <div class="picker-result-notes">
+                ${c.notes.map(n => '<span class="picker-note-chip">'+n+'</span>').join('')}
+              </div>
+            </div>
+            <div class="picker-result-right">
+              <div class="picker-result-price">${c.price} ₽ <span>/ 250 г</span></div>
+              <span class="picker-format-tag ${c.format==='дрип'?'drip':'bean'}">${c.format==='дрип'?'дрип-пакеты':'зерно'}</span>
+              <a href="${c.url}" target="_blank" class="picker-result-buy">Купить →</a>
+            </div>
+          </div>
+          ${isDripMismatch ? `
+          <div class="picker-drip-note">
+            ☕ Дрипы с таким профилем сейчас недоступны — попробуй это зерно в воронке!
+            <a href="/recipes?tab=v60">📖 Рецепт V60 →</a>
+          </div>` : ''}
+          <div class="picker-brew-tip">
+            <div class="picker-brew-tip-head">${tip.icon} ${tip.title}</div>
+            <div class="picker-brew-tip-params">${tip.tip}</div>
+            <div class="picker-brew-tip-why">${tip.why}</div>
+          </div>
+        </div>`;
+      }).join('')}
+      <div class="picker-again">
+        <button class="btn" id="pickerAgainBtn" style="margin-right:8px">Подобрать заново</button>
+        <a class="btn" href="/">На главную</a>
+      </div>
+    </div>
+  `;
+  document.getElementById('pickerAgainBtn').addEventListener('click', () => {
+    pickerState = { step:0, brew:null, tastes:[], notes:[] };
+    renderPickerStep();
+    window.scrollTo({top:0,behavior:'smooth'});
+  });
+}
+
+renderPickerStep();
+</script>

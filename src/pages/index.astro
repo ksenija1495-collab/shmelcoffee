@@ -1,0 +1,228 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Nav from '../components/Nav.astro';
+import { wheelData } from '../data/wheel';
+---
+
+<Layout title="Какой кофе — ваш? — Shmelco">
+  <Nav />
+  <div class="container">
+
+    <!-- HERO -->
+    <div class="hero">
+      <h1>Какой кофе — ваш?</h1>
+      <p class="subtitle">Пройдите диагностику вкуса — мы подберём зерно и соберём дегустационный сет под ваш профиль</p>
+      <div class="hero-actions">
+        <a class="btn btn-primary" href="/quiz">Узнать свой вкус →</a>
+      </div>
+    </div>
+
+    <!-- BENEFITS -->
+    <div class="benefits">
+      <a class="benefit" href="/quiz" style="text-decoration:none;color:inherit">
+        <div class="benefit-icon">🎯</div>
+        <div class="benefit-title">Поймите свой профиль</div>
+        <div class="benefit-desc">4 вопроса — и вы узнаете, какие страны и обработки подходят именно вам</div>
+      </a>
+      <a class="benefit" href="/quiz" style="text-decoration:none;color:inherit">
+        <div class="benefit-icon">☕</div>
+        <div class="benefit-title">Попробуйте на практике</div>
+        <div class="benefit-desc">Дегустационный сет от российских обжарщиков — под ваш вкус, с гидом</div>
+      </a>
+      <div class="benefit" style="cursor:default">
+        <div class="benefit-icon">📖</div>
+        <div class="benefit-title">Научитесь различать</div>
+        <div class="benefit-desc">Колесо вкусов, заметки к каждому лоту и карта предпочтений</div>
+      </div>
+    </div>
+
+    <!-- WHEEL -->
+    <div class="wheel-section">
+      <h2 class="wheel-heading">Колесо вкусов кофе</h2>
+      <p class="wheel-sub">Стандарт SCA · Нажмите на сегмент — узнаете, в кофе каких стран встречается этот вкус</p>
+      <svg id="wheelSvg" class="wheel-svg" viewBox="0 0 620 620"></svg>
+      <div class="wheel-tooltip" id="wheelTooltip">
+        <div class="wheel-tooltip-title" id="tooltipTitle"></div>
+        <div class="wheel-tooltip-origins" id="tooltipOrigins"></div>
+      </div>
+      <div class="wheel-info-panel" id="wheelInfoPanel"></div>
+      <a href="/quiz" class="btn btn-primary" style="margin-top:20px">Узнать свой вкус →</a>
+    </div>
+
+    <!-- CONTACTS -->
+    <div class="contacts-section">
+      <div class="contacts-grid">
+        <a href="https://t.me/shmel_coffee" target="_blank" class="contact-card">
+          <span class="contact-icon">✈️</span>
+          <span class="contact-name">Telegram</span>
+          <span class="contact-handle">@shmel_coffee</span>
+        </a>
+        <a href="https://www.threads.net/@shmelcoffee" target="_blank" class="contact-card">
+          <span class="contact-icon">🧵</span>
+          <span class="contact-name">Threads</span>
+          <span class="contact-handle">@shmelcoffee</span>
+        </a>
+        <a href="https://t.me/ksenijashmel" target="_blank" class="contact-card">
+          <span class="contact-icon">👩‍💻</span>
+          <span class="contact-name">Связаться</span>
+          <span class="contact-handle">@ksenijashmel</span>
+        </a>
+      </div>
+    </div>
+
+  </div>
+</Layout>
+
+<style>
+  .hero {
+    padding: 90px 0 36px; text-align: center;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+  }
+  .hero h1 {
+    font-family: 'Cormorant Garamond', Georgia, serif; font-size: 2.8rem;
+    font-weight: 600; margin-bottom: 12px; line-height: 1.15;
+  }
+  .hero .subtitle {
+    font-size: .92rem; color: var(--text-dim); max-width: 440px;
+    margin: 0 auto 24px; line-height: 1.65;
+  }
+
+  .wheel-section {
+    text-align: center; padding: 12px 0 32px;
+  }
+  .wheel-heading {
+    font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.5rem;
+    font-weight: 600; margin-bottom: 4px;
+  }
+  .wheel-sub {
+    color: var(--text-muted); font-size: .82rem; margin-bottom: 20px;
+  }
+
+  .contacts-section {
+    padding: 24px 0 48px;
+  }
+  .contacts-grid {
+    display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;
+  }
+  .contact-card {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 10px 18px; border-radius: 8px;
+    background: var(--surface); border: 1px solid var(--border);
+    text-decoration: none; color: inherit; transition: all .2s;
+    box-shadow: var(--shadow);
+  }
+  .contact-card:hover {
+    border-color: var(--border-hover); box-shadow: var(--shadow-hover);
+  }
+  .contact-icon { font-size: 1.1rem; }
+  .contact-name { font-weight: 600; font-size: .82rem; }
+  .contact-handle { font-size: .76rem; color: var(--accent); font-weight: 500; }
+
+  @media (max-width: 768px) {
+    .hero h1 { font-size: 2rem; }
+    .hero { padding: 80px 0 28px; }
+    .contacts-grid { flex-direction: column; align-items: center; }
+  }
+</style>
+
+<script define:vars={{ wheelData }}>
+function polarToXY(cx,cy,r,deg){
+  const rad=(deg-90)*Math.PI/180;
+  return{x:cx+r*Math.cos(rad),y:cy+r*Math.sin(rad)};
+}
+function arcSector(cx,cy,ri,ro,a1,a2){
+  const p1=polarToXY(cx,cy,ro,a1), p2=polarToXY(cx,cy,ro,a2);
+  const p3=polarToXY(cx,cy,ri,a2), p4=polarToXY(cx,cy,ri,a1);
+  const lg=(a2-a1)>180?1:0;
+  return `M${p1.x},${p1.y} A${ro},${ro},0,${lg},1,${p2.x},${p2.y} L${p3.x},${p3.y} A${ri},${ri},0,${lg},0,${p4.x},${p4.y}Z`;
+}
+function hexToHSL(hex){
+  let r=parseInt(hex.slice(1,3),16)/255, g=parseInt(hex.slice(3,5),16)/255, b=parseInt(hex.slice(5,7),16)/255;
+  const mx=Math.max(r,g,b), mn=Math.min(r,g,b);
+  let h,s,l=(mx+mn)/2;
+  if(mx===mn){h=s=0;}else{
+    const d=mx-mn; s=l>.5?d/(2-mx-mn):d/(mx+mn);
+    if(mx===r)h=((g-b)/d+(g<b?6:0))/6;
+    else if(mx===g)h=((b-r)/d+2)/6;
+    else h=((r-g)/d+4)/6;
+  }
+  return{h:Math.round(h*360),s:Math.round(s*100),l:Math.round(l*100)};
+}
+function buildWheel(){
+  const svg=document.getElementById('wheelSvg');
+  if(!svg) return;
+  const cx=310,cy=310, ir1=70,ir2=155, or1=160,or2=260, gap=1.2;
+  const n=wheelData.length, catAng=360/n;
+  let html='';
+  html+=`<circle cx="${cx}" cy="${cy}" r="${ir1-5}" fill="#F8F7ED"/>`;
+  html+=`<text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="middle" font-family="'Cormorant Garamond',Georgia,serif" font-size="14" font-weight="600" fill="#462918">ВКУСЫ</text>`;
+  wheelData.forEach((cat,i)=>{
+    const a1=i*catAng+gap, a2=(i+1)*catAng-gap;
+    html+=`<path d="${arcSector(cx,cy,ir1,ir2,a1,a2)}" fill="${cat.color}" data-type="cat" data-idx="${i}" style="cursor:pointer;stroke:#F8F7ED;stroke-width:1.5"/>`;
+    const midA=(a1+a2)/2, lR=(ir1+ir2)/2;
+    const pos=polarToXY(cx,cy,lR,midA);
+    let rot=midA; if(rot>90&&rot<270) rot+=180;
+    html+=`<text x="${pos.x}" y="${pos.y}" text-anchor="middle" dominant-baseline="middle" transform="rotate(${rot},${pos.x},${pos.y})" font-family="'Inter',sans-serif" font-size="10" font-weight="600" fill="#462918" style="pointer-events:none">${cat.name}</text>`;
+    const subAng=(a2-a1)/cat.subs.length;
+    cat.subs.forEach((sub,j)=>{
+      const sa1=a1+j*subAng+gap*.4, sa2=a1+(j+1)*subAng-gap*.4;
+      const hsl=hexToHSL(cat.color);
+      const lShift=(j%2===0)?4:-4;
+      html+=`<path d="${arcSector(cx,cy,or1,or2,sa1,sa2)}" fill="hsl(${hsl.h},${hsl.s}%,${hsl.l+lShift}%)" data-type="sub" data-cat="${i}" data-sub="${j}" style="cursor:pointer;stroke:#F8F7ED;stroke-width:1"/>`;
+      const smA=(sa1+sa2)/2, sR=(or1+or2)/2;
+      const sp=polarToXY(cx,cy,sR,smA);
+      let sr=smA; if(sr>90&&sr<270) sr+=180;
+      html+=`<text x="${sp.x}" y="${sp.y}" text-anchor="middle" dominant-baseline="middle" transform="rotate(${sr},${sp.x},${sp.y})" font-family="'Inter',sans-serif" font-size="8" font-weight="500" fill="#462918" style="pointer-events:none">${sub.name}</text>`;
+    });
+  });
+  svg.innerHTML = html;
+  svg.querySelectorAll('path[data-type]').forEach(p => {
+    p.addEventListener('mouseenter', e => {
+      const cat=wheelData[p.dataset.type==='cat'?p.dataset.idx:p.dataset.cat];
+      const tt=document.getElementById('wheelTooltip');
+      if(p.dataset.type==='cat'){
+        document.getElementById('tooltipTitle').textContent=cat.name;
+        document.getElementById('tooltipOrigins').textContent='Нажмите для подробностей';
+      } else {
+        const sub=cat.subs[p.dataset.sub];
+        document.getElementById('tooltipTitle').textContent=sub.name;
+        document.getElementById('tooltipOrigins').innerHTML=sub.org;
+      }
+      tt.classList.add('visible');
+      tt.style.left=(e.clientX+14)+'px'; tt.style.top=(e.clientY+14)+'px';
+    });
+    p.addEventListener('mousemove', e => {
+      const tt=document.getElementById('wheelTooltip');
+      tt.style.left=(e.clientX+14)+'px'; tt.style.top=(e.clientY+14)+'px';
+    });
+    p.addEventListener('mouseleave', ()=>{
+      document.getElementById('wheelTooltip').classList.remove('visible');
+    });
+    p.addEventListener('click', ()=>{
+      const idx=p.dataset.type==='cat'?p.dataset.idx:p.dataset.cat;
+      showWheelCat(parseInt(idx));
+    });
+    p.style.transition='opacity .15s, filter .15s';
+    p.addEventListener('mouseenter',()=>{p.style.opacity='.8';p.style.filter='brightness(1.1)';});
+    p.addEventListener('mouseleave',()=>{p.style.opacity='1';p.style.filter='none';});
+  });
+}
+function showWheelCat(idx){
+  const cat=wheelData[idx];
+  const panel=document.getElementById('wheelInfoPanel');
+  panel.innerHTML=`
+    <h3>${cat.name}</h3>
+    <div class="wheel-flavor-list">
+      ${cat.subs.map(s=>`
+        <div class="wheel-flavor-item">
+          <div class="wheel-flavor-name">${s.name}</div>
+          <div class="wheel-flavor-origins">${s.org}</div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+  panel.classList.add('active');
+  panel.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+buildWheel();
+</script>

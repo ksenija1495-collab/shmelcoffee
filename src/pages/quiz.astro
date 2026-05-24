@@ -1,0 +1,778 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Nav from '../components/Nav.astro';
+import { DB } from '../data/countries';
+import { COFFEE_DB } from '../data/coffees';
+---
+
+<Layout title="Диагностика вкуса — Shmelco">
+  <Nav />
+  <div class="container">
+    <div class="section-anchor" style="padding-top:72px">
+      <div class="quiz-progress" id="quizProgress"></div>
+      <div class="quiz-card" id="quizCard"></div>
+    </div>
+  </div>
+</Layout>
+
+<style is:global>
+  .equip-feedback {
+    padding: 16px 18px; border-radius: var(--radius); margin: 14px 0;
+    border: 1px solid var(--border); line-height: 1.6; font-size: .88rem;
+  }
+  .equip-feedback.great { background: rgba(107,143,113,.08); border-color: rgba(107,143,113,.25); }
+  .equip-feedback.ok { background: rgba(168,124,79,.06); border-color: rgba(168,124,79,.2); }
+  .equip-feedback.warn { background: rgba(181,112,77,.06); border-color: rgba(181,112,77,.2); }
+  .equip-feedback strong { display: block; font-size: .92rem; margin-bottom: 4px; }
+  .equip-feedback .equip-tip { font-size: .78rem; color: var(--text-dim); margin-top: 8px; font-style: italic; }
+
+  .pourover-guide {
+    margin-top: 16px; padding: 18px; border-radius: var(--radius);
+    background: var(--surface); border: 1px solid var(--border);
+  }
+  .pourover-guide h4 { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.05rem; margin-bottom: 10px; }
+  .pourover-guide-items { display: grid; gap: 8px; }
+  .pourover-guide-item {
+    display: flex; gap: 10px; align-items: flex-start;
+    padding: 10px 12px; border-radius: 8px; background: var(--surface-2);
+    font-size: .82rem; line-height: 1.45;
+  }
+  .pourover-guide-item .pg-icon { font-size: 1.2rem; flex-shrink: 0; }
+  .pourover-guide-item strong { display: block; font-size: .84rem; }
+
+  .practice-choice {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 18px 0;
+  }
+  .practice-card {
+    padding: 20px 16px; border-radius: var(--radius); border: 1px solid var(--border);
+    background: var(--surface); text-align: center; cursor: pointer;
+    transition: all .2s; box-shadow: var(--shadow);
+  }
+  .practice-card:hover { border-color: var(--border-hover); box-shadow: var(--shadow-hover); transform: translateY(-2px); }
+  .practice-card-icon { font-size: 1.8rem; margin-bottom: 8px; }
+  .practice-card-title { font-weight: 700; font-size: .92rem; margin-bottom: 4px; }
+  .practice-card-desc { font-size: .78rem; color: var(--text-dim); line-height: 1.45; }
+
+  .offramp {
+    text-align: center; padding: 32px 20px;
+  }
+  .offramp h3 { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.4rem; margin-bottom: 8px; }
+  .offramp p { color: var(--text-dim); font-size: .88rem; margin-bottom: 20px; line-height: 1.6; max-width: 480px; margin-left: auto; margin-right: auto; }
+  .offramp-links { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 16px; }
+  .offramp-link {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 10px 18px; border-radius: 8px; border: 1px solid var(--border);
+    font-size: .82rem; font-weight: 600; color: var(--text-dim);
+    text-decoration: none; transition: all .2s; background: var(--surface);
+  }
+  .offramp-link:hover { border-color: var(--border-hover); color: var(--text); box-shadow: var(--shadow-hover); }
+  .offramp-back { margin-top: 18px; font-size: .78rem; color: var(--text-muted); }
+  .offramp-back a { color: var(--accent); text-decoration: none; font-weight: 600; cursor: pointer; }
+
+  .set-pref { display: grid; gap: 14px; margin: 16px 0; }
+  .set-pref-group label {
+    display: block; font-weight: 700; font-size: .88rem; margin-bottom: 8px;
+  }
+  .set-pref-options { display: flex; gap: 8px; flex-wrap: wrap; }
+  .set-pref-opt {
+    padding: 10px 18px; border-radius: 8px; border: 1px solid var(--border);
+    font-size: .84rem; cursor: pointer; transition: all .2s; background: var(--surface);
+  }
+  .set-pref-opt:hover { border-color: var(--border-hover); }
+  .set-pref-opt.selected { border-color: var(--text); background: var(--text); color: var(--bg); font-weight: 600; }
+
+  .set-result { margin-top: 18px; }
+  .set-result-card {
+    padding: 14px 16px; border-radius: var(--radius); border: 1px solid var(--border);
+    background: var(--surface); margin-bottom: 10px; box-shadow: var(--shadow);
+  }
+  .set-result-card:hover { border-color: var(--border-hover); box-shadow: var(--shadow-hover); }
+  .set-result-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+  .set-result-name { font-weight: 700; font-size: .9rem; }
+  .set-result-roaster { font-size: .75rem; color: var(--text-muted); }
+  .set-result-meta { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+  .set-meta-chip {
+    padding: 3px 8px; border-radius: 4px; font-size: .7rem;
+    background: var(--surface-2); color: var(--text-dim); border: 1px solid var(--border);
+  }
+  .set-result-why {
+    font-size: .75rem; color: var(--accent); margin-top: 6px; font-style: italic;
+  }
+  .set-result-price { font-weight: 700; font-size: .88rem; white-space: nowrap; }
+  .set-result-buy {
+    display: inline-flex; padding: 6px 14px; border-radius: 6px;
+    background: var(--text); color: var(--bg); font-size: .76rem;
+    font-weight: 600; text-decoration: none; transition: all .2s;
+  }
+  .set-result-buy:hover { background: var(--accent); }
+
+  .set-total {
+    text-align: center; margin-top: 16px; padding: 14px;
+    background: var(--surface-2); border-radius: var(--radius); font-size: .88rem;
+  }
+  .set-total strong { font-size: 1.1rem; }
+
+  .guide-block {
+    margin-top: 24px; padding: 20px; border-radius: var(--radius);
+    background: var(--surface); border: 1px solid var(--border); text-align: center;
+  }
+  .guide-block h3 { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.2rem; margin-bottom: 6px; }
+  .guide-block p { font-size: .82rem; color: var(--text-dim); margin-bottom: 14px; line-height: 1.55; }
+  .guide-features { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 14px; }
+  .guide-feat {
+    padding: 6px 12px; border-radius: 6px; background: var(--surface-2);
+    font-size: .76rem; font-weight: 600; color: var(--text-dim);
+  }
+
+  @media (max-width: 768px) {
+    .practice-choice { grid-template-columns: 1fr; }
+  }
+</style>
+
+<script define:vars={{ DB, COFFEE_DB }}>
+const TOTAL_STEPS = 10;
+
+const quizSteps = [
+  { question:'Какие вкусы вам ближе?', hint:'Выберите 1–3 варианта', multi:true, options:[
+    {id:'fruity',icon:'🍒',label:'Фруктовые',desc:'Ягоды, цитрусы, косточковые'},
+    {id:'floral',icon:'🌸',label:'Цветочные и чайные',desc:'Жасмин, роза, бергамот, чай'},
+    {id:'chocolate',icon:'🍫',label:'Шоколадные и ореховые',desc:'Какао, фундук, миндаль'},
+    {id:'caramel',icon:'🍯',label:'Карамельные и медовые',desc:'Карамель, мёд, коричневый сахар'},
+    {id:'spicy',icon:'🌿',label:'Пряные и землистые',desc:'Специи, табак, дерево, земля'},
+    {id:'tropical',icon:'🥭',label:'Тропические фрукты',desc:'Манго, личи, маракуйя'},
+  ]},
+  { question:'Как вы относитесь к кислотности?', hint:'Кислотность — не «кислый» вкус, а яркость и сочность', multi:false, options:[
+    {id:'high',icon:'⚡',label:'Люблю яркую, сочную',desc:'Как откусить спелый фрукт'},
+    {id:'medium',icon:'⚖️',label:'Предпочитаю сбалансированную',desc:'Заметная, но не доминирующая'},
+    {id:'low',icon:'🌊',label:'Хочу мягкий, гладкий вкус',desc:'Минимальная кислотность, комфорт'},
+  ]},
+  { question:'Какое тело напитка?', hint:'Тело — ощущение плотности кофе на языке', multi:false, options:[
+    {id:'light',icon:'🍵',label:'Лёгкое, чайное',desc:'Прозрачное, как хороший чай'},
+    {id:'med',icon:'🥛',label:'Среднее, шелковистое',desc:'Приятная плотность, баланс'},
+    {id:'heavy',icon:'🫗',label:'Плотное, сиропистое',desc:'Тяжёлое, обволакивающее'},
+  ]},
+  { question:'Какой тип сладости ближе?', hint:'Кофе — сладкий напиток, просто по-разному', multi:false, options:[
+    {id:'fruitSw',icon:'🍓',label:'Фруктовая сладость',desc:'Ягоды, спелые фрукты'},
+    {id:'honeySw',icon:'🍯',label:'Медовая, карамельная',desc:'Мёд, тростниковый сахар, ириска'},
+    {id:'chocoSw',icon:'🍫',label:'Шоколадная, какао',desc:'Тёмный шоколад, горьковатая'},
+    {id:'drySw',icon:'🌰',label:'Сухая, минимальная',desc:'Орехи, древесина, сухой финиш'},
+  ]}
+];
+
+const EQUIP_OPTIONS = [
+  {id:'pourover', icon:'🫖', label:'Воронка (V60, Калита, Кемекс)', desc:'Пуровер — ручной пролив через фильтр'},
+  {id:'drip', icon:'☕', label:'Дрип-пакеты', desc:'Залить водой — без оборудования'},
+  {id:'frenchpress', icon:'🫕', label:'Френч-пресс', desc:'Иммерсионный метод — погружение'},
+  {id:'espresso', icon:'⚙️', label:'Кофемашина / эспрессо', desc:'Автомат или рожковая машина'},
+];
+
+const EQUIP_FEEDBACK = {
+  pourover: {
+    cls: 'great',
+    title: '🫖 Отличный выбор!',
+    text: 'Воронка — лучший способ погрузиться в мир specialty-кофе. Чистая чашка без масел, каждая нота читается. Вы сможете менять переменные (помол, температура, пролив) и слышать, как это влияет на вкус.',
+    showGuide: false,
+  },
+  drip: {
+    cls: 'ok',
+    title: '☕ Хорошее начало!',
+    text: 'Дрип-пакеты — простой способ попробовать specialty. Но выбор стран и обработок будет сильно ограничен, а настроить вкус (помол, температура) не получится. Для серьёзного погружения рекомендуем воронку — она раскроет в десятки раз больше.',
+    showGuide: true,
+  },
+  frenchpress: {
+    cls: 'ok',
+    title: '🫕 Для начала — ок!',
+    text: 'Френч-пресс даёт плотную, маслянистую чашку. Для ежедневного кофе — отлично. Но для изучения вкусов он не идеален: масла и мелкие частицы «смазывают» ноты. Цветочный жасмин или ягодную кислотность в нём сложно расслышать. Для обучения советуем воронку.',
+    showGuide: true,
+  },
+  espresso: {
+    cls: 'warn',
+    title: '⚙️ Для изучения вкусов — не лучший вариант',
+    text: 'Кофемашина скрывает переменные: температура, давление, предсмачивание — всё автоматическое. Эспрессо усиливает ошибки, а малый объём воды делает любое отклонение критическим. Новичок не сможет отличить «плохо настроил» от «зерно такое». Для исследования вкусов настоятельно рекомендуем воронку.',
+    showGuide: true,
+  },
+};
+
+let state = {
+  phase: 'quiz',
+  step: 0,
+  answers: { flavors:[], acidity:null, body:null, sweetness:null },
+  topCountries: [],
+  wantPractice: null,
+  equipment: null,
+  setFormat: null,
+  setSize: null,
+};
+
+renderStep();
+
+function getProgressDots() {
+  let total, current;
+  if (state.phase === 'quiz') { total = 4; current = state.step; }
+  else if (state.phase === 'results') { total = 4; current = 4; }
+  else if (state.phase === 'practice-choice') { total = 6; current = 4; }
+  else if (state.phase === 'offramp') { total = 6; current = 5; }
+  else if (state.phase === 'equipment') { total = 8; current = 5; }
+  else if (state.phase === 'equip-feedback') { total = 8; current = 6; }
+  else if (state.phase === 'set-offer') { total = 10; current = 7; }
+  else if (state.phase === 'set-prefs') { total = 10; current = 8; }
+  else if (state.phase === 'set-results') { total = 10; current = 9; }
+  else { total = 10; current = 10; }
+
+  let html = '';
+  for (let i = 0; i < total; i++) {
+    const cls = i < current ? 'done' : (i === current ? 'active' : '');
+    html += `<div class="quiz-dot ${cls}"></div>`;
+  }
+  return html;
+}
+
+function renderStep() {
+  const progress = document.getElementById('quizProgress');
+  const card = document.getElementById('quizCard');
+  progress.innerHTML = getProgressDots();
+
+  if (state.phase === 'quiz') renderQuiz(card);
+  else if (state.phase === 'results') renderResults(card);
+  else if (state.phase === 'practice-choice') renderPracticeChoice(card);
+  else if (state.phase === 'offramp') renderOfframp(card);
+  else if (state.phase === 'equipment') renderEquipment(card);
+  else if (state.phase === 'equip-feedback') renderEquipFeedback(card);
+  else if (state.phase === 'set-offer') renderSetOffer(card);
+  else if (state.phase === 'set-prefs') renderSetPrefs(card);
+  else if (state.phase === 'set-results') renderSetResults(card);
+
+  window.scrollTo({top: 0, behavior: 'smooth'});
+}
+
+/* ═══ PHASE: QUIZ (steps 0-3) ═══ */
+function renderQuiz(card) {
+  const step = quizSteps[state.step];
+  let sel = [];
+  if (state.step===0) sel = state.answers.flavors;
+  else if (state.step===1) sel = state.answers.acidity ? [state.answers.acidity] : [];
+  else if (state.step===2) sel = state.answers.body ? [state.answers.body] : [];
+  else if (state.step===3) sel = state.answers.sweetness ? [state.answers.sweetness] : [];
+
+  card.innerHTML = `
+    <h3 class="quiz-question">${step.question}</h3>
+    <p class="quiz-hint">${step.hint}</p>
+    <div class="quiz-options">
+      ${step.options.map(o => `
+        <div class="quiz-option ${sel.includes(o.id)?'selected':''}" data-id="${o.id}" data-multi="${step.multi}">
+          <div class="quiz-option-icon">${o.icon}</div>
+          <div>
+            <div class="quiz-option-label">${o.label}</div>
+            <div class="quiz-option-desc">${o.desc}</div>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+    <div class="quiz-nav">
+      ${state.step > 0 ? '<button class="btn-ghost" id="prevBtn">← Назад</button>' : '<span></span>'}
+      <button class="btn btn-primary" id="nextBtn" style="font-size:.82rem;padding:8px 18px">
+        ${state.step === 3 ? 'Узнать свой профиль →' : 'Далее →'}
+      </button>
+    </div>
+  `;
+
+  card.querySelectorAll('.quiz-option').forEach(el => {
+    el.addEventListener('click', () => {
+      const id = el.dataset.id;
+      if (state.step===0) {
+        const idx = state.answers.flavors.indexOf(id);
+        if (idx>-1) state.answers.flavors.splice(idx,1);
+        else if (state.answers.flavors.length<3) state.answers.flavors.push(id);
+      } else if (state.step===1) state.answers.acidity = state.answers.acidity===id ? null : id;
+      else if (state.step===2) state.answers.body = state.answers.body===id ? null : id;
+      else if (state.step===3) state.answers.sweetness = state.answers.sweetness===id ? null : id;
+      renderStep();
+    });
+  });
+
+  const prevBtn = document.getElementById('prevBtn');
+  if (prevBtn) prevBtn.addEventListener('click', () => { state.step--; renderStep(); });
+  document.getElementById('nextBtn').addEventListener('click', () => {
+    if (state.step===0 && state.answers.flavors.length===0) return;
+    if (state.step===1 && !state.answers.acidity) return;
+    if (state.step===2 && !state.answers.body) return;
+    if (state.step===3 && !state.answers.sweetness) return;
+    if (state.step < 3) { state.step++; renderStep(); }
+    else { calcResults(); state.phase = 'results'; renderStep(); }
+  });
+}
+
+function calcResults() {
+  const scores = {};
+  for (const [k,c] of Object.entries(DB)) {
+    let s = 0;
+    state.answers.flavors.forEach(f => { s += (c.sc[f]||0); });
+    if (state.answers.acidity) s += (c.sc[state.answers.acidity]||0);
+    if (state.answers.body) s += (c.sc[state.answers.body]||0);
+    if (state.answers.sweetness) s += (c.sc[state.answers.sweetness]||0);
+    scores[k] = s;
+  }
+  const sorted = Object.entries(scores).sort((a,b) => b[1]-a[1]);
+  state.topCountries = sorted.slice(0,3).map(([k]) => k);
+}
+
+/* ═══ PHASE: RESULTS ═══ */
+function renderResults(card) {
+  const top = state.topCountries;
+  const m = DB[top[0]];
+
+  card.innerHTML = `
+    <div class="result-main">
+      <div class="result-hero-block">
+        <div class="result-flag">${m.flag}</div>
+        <h2 class="result-country">${m.name}</h2>
+        <div class="result-region">${m.region} · ${m.altitude} · ${m.varieties}</div>
+        <div class="result-tags">${m.flavors.map(f=>'<span class="tag">'+f+'</span>').join('')}</div>
+      </div>
+      <div class="result-body">
+        <div class="result-section">
+          <div class="result-meter"><span class="meter-label">Кислотность</span><div class="meter-bar"><div class="meter-fill" style="width:0" data-w="${m.aLvl}%"></div></div><span class="meter-desc">${m.aDesc}</span></div>
+          <div class="result-meter"><span class="meter-label">Тело</span><div class="meter-bar"><div class="meter-fill" style="width:0" data-w="${m.bLvl}%"></div></div><span class="meter-desc">${m.bDesc}</span></div>
+          <div class="result-meter"><span class="meter-label">Сладость</span><div class="meter-bar"><div class="meter-fill" style="width:0" data-w="${m.sLvl}%"></div></div></div>
+        </div>
+        <div class="result-grid">
+          <div class="info-card"><h4>🌱 Произрастание</h4><p>${m.growing}</p></div>
+          <div class="info-card"><h4>💡 Интересный факт</h4><p>${m.fact}</p></div>
+        </div>
+        <div class="result-grid">
+          <div class="info-card"><h4>⚙️ Обработка</h4><p>${m.proc}</p></div>
+          <div class="info-card"><h4>☕ Заваривание</h4><p>${m.brew}</p></div>
+        </div>
+        <div class="result-section" style="margin-top:16px">
+          <h3>🔄 С чем сравнить</h3>
+          <p>${m.compare}</p>
+        </div>
+      </div>
+    </div>
+    <p class="others-title">Также стоит попробовать</p>
+    <div class="others-grid">
+      ${top.slice(1).map(k => { const c=DB[k]; return `
+        <a class="other-card" href="/countries?c=${k}" style="text-decoration:none;color:inherit">
+          <div class="other-card-flag">${c.flag}</div>
+          <h3 class="other-card-name">${c.name}</h3>
+          <p class="other-card-notes">${c.flavors.slice(0,3).join(', ')}</p>
+        </a>`;}).join('')}
+    </div>
+    <div class="quiz-nav" style="margin-top:24px">
+      <button class="btn-ghost" id="backToQuiz">← Пройти заново</button>
+      <button class="btn btn-primary" id="goToPractice" style="font-size:.88rem;padding:10px 22px">Хочу попробовать на практике →</button>
+    </div>
+  `;
+
+  setTimeout(() => {
+    document.querySelectorAll('.meter-fill').forEach(el => { el.style.width = el.dataset.w; });
+  }, 100);
+
+  document.getElementById('backToQuiz').addEventListener('click', () => {
+    state = { phase:'quiz', step:0, answers:{flavors:[],acidity:null,body:null,sweetness:null}, topCountries:[], wantPractice:null, equipment:null, setFormat:null, setSize:null };
+    renderStep();
+  });
+  document.getElementById('goToPractice').addEventListener('click', () => {
+    state.phase = 'practice-choice';
+    renderStep();
+  });
+}
+
+/* ═══ PHASE: PRACTICE CHOICE ═══ */
+function renderPracticeChoice(card) {
+  card.innerHTML = `
+    <h3 class="quiz-question">Хотите изучить эти вкусы на практике?</h3>
+    <p class="quiz-hint">Мы подберём конкретные зёрна от российских обжарщиков и соберём дегустационный сет</p>
+    <div class="practice-choice">
+      <div class="practice-card" id="practiceYes">
+        <div class="practice-card-icon">🎯</div>
+        <div class="practice-card-title">Да, хочу попробовать</div>
+        <div class="practice-card-desc">Подберём зерно под ваш профиль + дегустационный сет для обучения</div>
+      </div>
+      <div class="practice-card" id="practiceNo">
+        <div class="practice-card-icon">📚</div>
+        <div class="practice-card-title">Пока изучаю теорию</div>
+        <div class="practice-card-desc">Сохраню свой профиль и вернусь, когда буду готов</div>
+      </div>
+    </div>
+    <div class="quiz-nav">
+      <button class="btn-ghost" id="backToResults">← Назад к результатам</button>
+      <span></span>
+    </div>
+  `;
+
+  document.getElementById('practiceYes').addEventListener('click', () => {
+    state.wantPractice = true;
+    state.phase = 'equipment';
+    renderStep();
+  });
+  document.getElementById('practiceNo').addEventListener('click', () => {
+    state.wantPractice = false;
+    state.phase = 'offramp';
+    renderStep();
+  });
+  document.getElementById('backToResults').addEventListener('click', () => {
+    state.phase = 'results';
+    renderStep();
+  });
+}
+
+/* ═══ PHASE: OFFRAMP ═══ */
+function renderOfframp(card) {
+  const m = DB[state.topCountries[0]];
+  card.innerHTML = `
+    <div class="offramp">
+      <h3>${m.flag} Ваш профиль сохранён</h3>
+      <p>Вы знаете свой вкус — ${m.name} и похожие регионы вам подходят. Когда будете готовы попробовать на практике — возвращайтесь, мы подберём зерно и соберём дегустационный сет.</p>
+      <p style="font-size:.82rem;color:var(--text-muted)">А пока — погрузитесь в мир кофе:</p>
+      <div class="offramp-links">
+        <a href="/blog" class="offramp-link">📖 Блог о кофе</a>
+        <a href="https://www.threads.net/@shmelcoffee" target="_blank" class="offramp-link">🧵 Threads @shmelcoffee</a>
+        <a href="https://t.me/shmel_coffee" target="_blank" class="offramp-link">✈️ Telegram @shmel_coffee</a>
+      </div>
+      <div class="offramp-back">
+        Передумали? <a id="goBackToPractice">Перейти к практике →</a>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('goBackToPractice').addEventListener('click', () => {
+    state.phase = 'equipment';
+    renderStep();
+  });
+}
+
+/* ═══ PHASE: EQUIPMENT ═══ */
+function renderEquipment(card) {
+  card.innerHTML = `
+    <h3 class="quiz-question">Как вы завариваете кофе дома?</h3>
+    <p class="quiz-hint">Это поможет подобрать формат и дать рекомендации по завариванию</p>
+    <div class="quiz-options">
+      ${EQUIP_OPTIONS.map(o => `
+        <div class="quiz-option ${state.equipment===o.id?'selected':''}" data-id="${o.id}">
+          <div class="quiz-option-icon">${o.icon}</div>
+          <div>
+            <div class="quiz-option-label">${o.label}</div>
+            <div class="quiz-option-desc">${o.desc}</div>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+    <div class="quiz-nav">
+      <button class="btn-ghost" id="backToPractice">← Назад</button>
+      <button class="btn btn-primary" id="nextEquip" style="font-size:.82rem;padding:8px 18px">Далее →</button>
+    </div>
+  `;
+
+  card.querySelectorAll('.quiz-option').forEach(el => {
+    el.addEventListener('click', () => {
+      state.equipment = state.equipment === el.dataset.id ? null : el.dataset.id;
+      renderStep();
+    });
+  });
+  document.getElementById('backToPractice').addEventListener('click', () => {
+    state.phase = 'practice-choice';
+    renderStep();
+  });
+  document.getElementById('nextEquip').addEventListener('click', () => {
+    if (!state.equipment) return;
+    state.phase = 'equip-feedback';
+    renderStep();
+  });
+}
+
+/* ═══ PHASE: EQUIPMENT FEEDBACK ═══ */
+function renderEquipFeedback(card) {
+  const fb = EQUIP_FEEDBACK[state.equipment];
+
+  let guideHtml = '';
+  if (fb.showGuide) {
+    guideHtml = `
+      <div class="pourover-guide">
+        <h4>Что нужно для воронки</h4>
+        <div class="pourover-guide-items">
+          <div class="pourover-guide-item">
+            <span class="pg-icon">🫖</span>
+            <div><strong>Воронка V60 или Калита Wave</strong>Пластиковая V60 — от 500 ₽. Керамическая — от 1500 ₽.</div>
+          </div>
+          <div class="pourover-guide-item">
+            <span class="pg-icon">📄</span>
+            <div><strong>Бумажные фильтры</strong>100 шт — от 300 ₽. Промывайте кипятком перед завариванием.</div>
+          </div>
+          <div class="pourover-guide-item">
+            <span class="pg-icon">⚖️</span>
+            <div><strong>Весы с таймером</strong>Любые кухонные от 500 ₽. Точность важнее бренда.</div>
+          </div>
+          <div class="pourover-guide-item">
+            <span class="pg-icon">🫗</span>
+            <div><strong>Чайник с тонким носиком</strong>«Гусиная шея» — от 1500 ₽. Контроль пролива = контроль вкуса.</div>
+          </div>
+          <div class="pourover-guide-item">
+            <span class="pg-icon">🔧</span>
+            <div><strong>Кофемолка (желательно)</strong>Ручная жерновая — от 3000 ₽. Свежий помол = лучший вкус. Или покупайте молотый у обжарщика.</div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  card.innerHTML = `
+    <div class="equip-feedback ${fb.cls}">
+      <strong>${fb.title}</strong>
+      ${fb.text}
+      <div class="equip-tip">Для изучения вкусов лучше всего подходит воронка или дрип-пакеты — чистая чашка, все ноты читаются.</div>
+    </div>
+    ${guideHtml}
+    <div class="quiz-nav" style="margin-top:18px">
+      <button class="btn-ghost" id="backToEquip">← Другое оборудование</button>
+      <button class="btn btn-primary" id="goToSet" style="font-size:.82rem;padding:8px 18px">Собрать дегустационный сет →</button>
+    </div>
+  `;
+
+  document.getElementById('backToEquip').addEventListener('click', () => {
+    state.phase = 'equipment';
+    renderStep();
+  });
+  document.getElementById('goToSet').addEventListener('click', () => {
+    state.phase = 'set-offer';
+    renderStep();
+  });
+}
+
+/* ═══ PHASE: SET OFFER ═══ */
+function renderSetOffer(card) {
+  const m = DB[state.topCountries[0]];
+  card.innerHTML = `
+    <h3 class="quiz-question">Дегустационный сет под ваш профиль</h3>
+    <p class="quiz-hint">Мы подберём зерно от российских обжарщиков, чтобы вы могли изучить вкусы ${state.topCountries.slice(0,3).map(k => DB[k].name).join(', ')} и сравнить их между собой</p>
+    <div class="benefits" style="margin: 18px 0; grid-template-columns: repeat(3, 1fr);">
+      <div class="benefit" style="cursor:default">
+        <div class="benefit-icon">☕</div>
+        <div class="benefit-title">Зерно под ваш вкус</div>
+        <div class="benefit-desc">Конкретные лоты, подобранные под ваш профиль</div>
+      </div>
+      <div class="benefit" style="cursor:default">
+        <div class="benefit-icon">🌍</div>
+        <div class="benefit-title">Разные регионы</div>
+        <div class="benefit-desc">Сравнивайте страны и обработки — так быстрее учиться</div>
+      </div>
+      <div class="benefit" style="cursor:default">
+        <div class="benefit-icon">📖</div>
+        <div class="benefit-title">Гид по дегустации</div>
+        <div class="benefit-desc">Вопросы к каждому лоту + карта предпочтений</div>
+      </div>
+    </div>
+    <div class="quiz-nav">
+      <button class="btn-ghost" id="backToFeedback">← Назад</button>
+      <button class="btn btn-primary" id="goToPrefs" style="font-size:.88rem;padding:10px 22px">Собрать сет →</button>
+    </div>
+  `;
+
+  document.getElementById('backToFeedback').addEventListener('click', () => {
+    state.phase = 'equip-feedback';
+    renderStep();
+  });
+  document.getElementById('goToPrefs').addEventListener('click', () => {
+    state.phase = 'set-prefs';
+    renderStep();
+  });
+}
+
+/* ═══ PHASE: SET PREFERENCES ═══ */
+function renderSetPrefs(card) {
+  card.innerHTML = `
+    <h3 class="quiz-question">Настройте свой сет</h3>
+    <p class="quiz-hint">Выберите формат и количество</p>
+    <div class="set-pref">
+      <div class="set-pref-group">
+        <label>Формат</label>
+        <div class="set-pref-options" id="formatOpts">
+          <div class="set-pref-opt ${state.setFormat==='beans'?'selected':''}" data-val="beans">☕ Зерно (для воронки / френч-пресса)</div>
+          <div class="set-pref-opt ${state.setFormat==='drip'?'selected':''}" data-val="drip">📦 Дрип-пакеты (без оборудования)</div>
+        </div>
+      </div>
+      <div class="set-pref-group">
+        <label>Сколько лотов в сете</label>
+        <div class="set-pref-options" id="sizeOpts">
+          <div class="set-pref-opt ${state.setSize==='small'?'selected':''}" data-val="small">3–4 лота — знакомство</div>
+          <div class="set-pref-opt ${state.setSize==='large'?'selected':''}" data-val="large">5+ лотов — глубокое погружение</div>
+        </div>
+      </div>
+    </div>
+    <div class="quiz-nav">
+      <button class="btn-ghost" id="backToOffer">← Назад</button>
+      <button class="btn btn-primary" id="buildSet" style="font-size:.82rem;padding:8px 18px">Показать сет →</button>
+    </div>
+  `;
+
+  document.querySelectorAll('#formatOpts .set-pref-opt').forEach(el => {
+    el.addEventListener('click', () => {
+      state.setFormat = el.dataset.val;
+      renderStep();
+    });
+  });
+  document.querySelectorAll('#sizeOpts .set-pref-opt').forEach(el => {
+    el.addEventListener('click', () => {
+      state.setSize = el.dataset.val;
+      renderStep();
+    });
+  });
+  document.getElementById('backToOffer').addEventListener('click', () => {
+    state.phase = 'set-offer';
+    renderStep();
+  });
+  document.getElementById('buildSet').addEventListener('click', () => {
+    if (!state.setFormat || !state.setSize) return;
+    state.phase = 'set-results';
+    renderStep();
+  });
+}
+
+/* ═══ PHASE: SET RESULTS ═══ */
+function renderSetResults(card) {
+  const targetSize = state.setSize === 'small' ? 4 : 6;
+  const wantDrip = state.setFormat === 'drip';
+  const topNames = state.topCountries.map(k => DB[k].name);
+
+  const wantedTags = [];
+  state.answers.flavors.forEach(f => {
+    if (f==='fruity') wantedTags.push('фруктовый','ягодный');
+    if (f==='floral') wantedTags.push('цветочный','лёгкий');
+    if (f==='chocolate') wantedTags.push('шоколадный','ореховый');
+    if (f==='caramel') wantedTags.push('сладкий');
+    if (f==='spicy') wantedTags.push('пряный','сложный');
+    if (f==='tropical') wantedTags.push('фруктовый','сладкий');
+  });
+
+  let pool = COFFEE_DB.slice();
+
+  const scored = pool.map(c => {
+    let score = 0;
+    if (topNames.includes(c.country)) score += 20;
+    wantedTags.forEach(t => { if (c.tags.includes(t)) score += 8; });
+    if (wantDrip && c.format === 'дрип') score += 15;
+    if (!wantDrip && c.format === 'зерно') score += 5;
+    return { coffee: c, score };
+  });
+
+  scored.sort((a,b) => b.score - a.score);
+
+  const set = [];
+  const usedCountries = new Set();
+  const usedRoasters = new Set();
+
+  for (const item of scored) {
+    if (set.length >= targetSize) break;
+    const c = item.coffee;
+    if (wantDrip && c.format !== 'дрип') continue;
+
+    const countryCount = [...set].filter(s => s.coffee.country === c.country).length;
+    if (countryCount >= 2) continue;
+
+    set.push(item);
+    usedCountries.add(c.country);
+    usedRoasters.add(c.roaster);
+  }
+
+  if (set.length < targetSize && wantDrip) {
+    for (const item of scored) {
+      if (set.length >= targetSize) break;
+      if (item.coffee.format === 'дрип') continue;
+      if (set.some(s => s.coffee.name === item.coffee.name)) continue;
+      set.push({ ...item, fallback: true });
+    }
+  }
+
+  if (set.length < targetSize) {
+    for (const item of scored) {
+      if (set.length >= targetSize) break;
+      if (set.some(s => s.coffee.name === item.coffee.name)) continue;
+      set.push(item);
+    }
+  }
+
+  const totalPrice = set.reduce((sum, s) => sum + s.coffee.price, 0);
+
+  const flags = {'Руанда':'🇷🇼','Колумбия':'🇨🇴','Эфиопия':'🇪🇹','Кения':'🇰🇪','Индонезия':'🇮🇩','Коста-Рика':'🇨🇷','Бразилия':'🇧🇷','Перу':'🇵🇪'};
+  const getFlag = (c) => flags[c] || '🌍';
+
+  const getWhy = (item) => {
+    const c = item.coffee;
+    if (topNames[0] === c.country) return `Ваш основной профиль — ${c.country}`;
+    if (topNames.includes(c.country)) return `Рекомендованный регион`;
+    return 'Для сравнения и обучения';
+  };
+
+  let dripNote = '';
+  if (wantDrip && set.some(s => s.fallback)) {
+    dripNote = `<div class="equip-feedback ok" style="margin-bottom:14px">
+      <strong>☕ Дрип-пакетов с вашим профилем пока мало</strong>
+      Добавили зерно — его можно заварить в воронке. <a href="/recipes" style="color:var(--accent);font-weight:600">Рецепт V60 →</a>
+    </div>`;
+  }
+
+  card.innerHTML = `
+    <h3 class="quiz-question">Ваш дегустационный сет</h3>
+    <p class="quiz-hint">${set.length} лотов от ${usedRoasters.size} обжарщиков · ${usedCountries.size} стран</p>
+    ${dripNote}
+    <div class="set-result">
+      ${set.map((item, i) => {
+        const c = item.coffee;
+        const isFallback = item.fallback;
+        return `
+        <div class="set-result-card" ${isFallback ? 'style="opacity:.85"' : ''}>
+          <div class="set-result-head">
+            <div>
+              <div class="set-result-name">${i+1}. ${c.name} ${isFallback ? '<span style="font-size:.7rem;color:var(--accent)">(зерно)</span>' : ''}</div>
+              <div class="set-result-roaster">${c.roaster}</div>
+            </div>
+            <div style="text-align:right">
+              <div class="set-result-price">${c.price} ₽</div>
+              <a href="${c.url}" target="_blank" class="set-result-buy">Купить →</a>
+            </div>
+          </div>
+          <div class="set-result-meta">
+            <span class="set-meta-chip">${getFlag(c.country)} ${c.country}</span>
+            <span class="set-meta-chip">${c.processing}</span>
+            ${c.notes.slice(0,3).map(n => `<span class="set-meta-chip">${n}</span>`).join('')}
+          </div>
+          <div class="set-result-why">${getWhy(item)}</div>
+        </div>`;
+      }).join('')}
+    </div>
+
+    <div class="set-total">
+      Итого за сет: <strong>${totalPrice.toLocaleString('ru-RU')} ₽</strong> <span style="color:var(--text-muted);font-size:.78rem">(${set.length} × 250 г)</span>
+    </div>
+
+    <div class="guide-block">
+      <h3>📖 Гид по дегустации</h3>
+      <p>К вашему сету мы подготовим персональный гид: как дегустировать каждый лот, на что обращать внимание, вопросы для сравнения и карту предпочтений.</p>
+      <div class="guide-features">
+        <span class="guide-feat">☕ Вопросы к каждому лоту</span>
+        <span class="guide-feat">📊 Карта предпочтений</span>
+        <span class="guide-feat">🔄 Что с чем сравнивать</span>
+        <span class="guide-feat">📝 Заметки для дегустации</span>
+      </div>
+      <a href="https://t.me/m/F5-cKlk_M2My" target="_blank" class="btn btn-primary" style="font-size:.88rem;padding:10px 24px">
+        Заказать сет с гидом в Telegram →
+      </a>
+      <p style="font-size:.75rem;color:var(--text-muted);margin-top:10px">Напишите — подберём и соберём сет под ваш профиль</p>
+    </div>
+
+    <div class="quiz-nav" style="margin-top:20px">
+      <button class="btn-ghost" id="backToPrefs">← Изменить настройки</button>
+      <button class="btn" id="restartAll">Пройти заново</button>
+    </div>
+  `;
+
+  document.getElementById('backToPrefs').addEventListener('click', () => {
+    state.phase = 'set-prefs';
+    renderStep();
+  });
+  document.getElementById('restartAll').addEventListener('click', () => {
+    state = { phase:'quiz', step:0, answers:{flavors:[],acidity:null,body:null,sweetness:null}, topCountries:[], wantPractice:null, equipment:null, setFormat:null, setSize:null };
+    renderStep();
+  });
+}
+</script>

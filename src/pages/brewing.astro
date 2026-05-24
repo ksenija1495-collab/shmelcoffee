@@ -1,0 +1,26 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Nav from '../components/Nav.astro';
+import { brewData } from '../data/brewing';
+---
+
+<Layout title="Методы заваривания — Shmelco">
+  <Nav />
+  <div class="container">
+    <div class="section-anchor page-section">
+      <div class="section-title">Методы заваривания</div>
+      <p class="section-desc">Каждый метод раскрывает разные грани кофе — от деликатных цветов до плотного шоколада</p>
+      <div class="brewing-grid">
+        {brewData.map(m => (
+          <div class="brew-card">
+            <div class="brew-icon">{m.icon}</div>
+            <h3 class="brew-name">{m.name}</h3>
+            <p class="brew-desc">{m.desc}</p>
+            <p class="brew-best">→ {m.best}</p>
+            <a href={`/recipes?tab=${m.key}`} style="display:inline-block;margin-top:10px;font-size:.78rem;color:var(--accent);font-weight:500;text-decoration:none;cursor:pointer">Рецепты {m.name} →</a>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+</Layout>

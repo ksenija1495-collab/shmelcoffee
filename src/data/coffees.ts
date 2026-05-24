@@ -1,0 +1,62 @@
+export const COFFEE_DB = [
+  {name:'Руанда Бисумо',roaster:'The Welder Catherine',url:'https://theweldercatherine.ru/catalog/dlya_filtra/ruanda_bisumo/',country:'Руанда',processing:'натуральный, анаэробный',roast:'фильтр',format:'зерно',price:1363,notes:['апельсин','варенье','портвейн'],tags:['фруктовый','сладкий','сложный'],acidity:4,sweetness:4,body:3},
+  {name:'Колумбия Оливер Бердуго',roaster:'The Welder Catherine',url:'https://theweldercatherine.ru/catalog/dlya_filtra/kolumbiya_oliver_berdugo_1/',country:'Колумбия',processing:'мытый',roast:'фильтр',format:'зерно',price:1485,notes:['малина','цитрус','кислотность'],tags:['ягодный','цитрусовый','яркий'],acidity:5,sweetness:3,body:3},
+  {name:'Руанда Кабуе',roaster:'The Welder Catherine',url:'https://theweldercatherine.ru/catalog/dlya_filtra/ruanda_kabue_/',country:'Руанда',processing:'мытый',roast:'фильтр',format:'зерно',price:1140,notes:['цитрус','лемонграсс'],tags:['цитрусовый','лёгкий','свежий'],acidity:4,sweetness:3,body:2},
+  {name:'Эфиопия Урага Раро',roaster:'The Welder Catherine',url:'https://theweldercatherine.ru/catalog/dlya_filtra/efiopiya_uraga_raro_2/',country:'Эфиопия',processing:'натуральный',roast:'фильтр',format:'зерно',price:1201,notes:['цветы','жасмин','бергамот'],tags:['цветочный','лёгкий','яркий'],acidity:4,sweetness:3,body:2},
+  {name:'Эфиопия Ворка из бочки',roaster:'The Welder Catherine',url:'https://theweldercatherine.ru/catalog/dlya_filtra/efiopiya_vorka_iz_bochki/',country:'Эфиопия',processing:'мытый, бочковая выдержка',roast:'фильтр',format:'зерно',price:1411,notes:['чайный грог','цитрус'],tags:['сложный','цитрусовый','пряный'],acidity:3,sweetness:3,body:3},
+  {name:'Кения Ньери ПБ',roaster:'The Welder Catherine',url:'https://theweldercatherine.ru/catalog/dlya_filtra/keniya_neri_pb/',country:'Кения',processing:'мытый',roast:'фильтр',format:'зерно',price:1300,notes:['шиповник','лесные ягоды'],tags:['ягодный','яркий','свежий'],acidity:5,sweetness:3,body:3},
+  {name:'Ява Вайни',roaster:'The Welder Catherine',url:'https://theweldercatherine.ru/catalog/dlya_filtra/yava_vayni/',country:'Индонезия',processing:'натуральный, анаэробный',roast:'фильтр',format:'зерно',price:1696,notes:['банан','ананас','маракуйя','шоколад'],tags:['сладкий','фруктовый','сложный'],acidity:3,sweetness:5,body:4},
+  {name:'Коста-Рика Дон Эли',roaster:'The Welder Catherine',url:'https://theweldercatherine.ru/catalog/dlya_filtra/kosta_rika_don_eli/',country:'Коста-Рика',processing:'натуральный, анаэробный',roast:'фильтр',format:'зерно',price:1489,notes:['карамелизированный ананас','груша','кешью'],tags:['сладкий','ореховый','фруктовый'],acidity:2,sweetness:5,body:4},
+  {name:'Ява Золотая',roaster:'The Welder Catherine',url:'https://theweldercatherine.ru/catalog/dlya_filtra/yava_zolotaya_1/',country:'Индонезия',processing:'натуральный, анаэробный',roast:'фильтр',format:'зерно',price:1610,notes:['тропический букет','портвейн'],tags:['сладкий','сложный','фруктовый'],acidity:3,sweetness:5,body:4},
+  {name:'Кения Тириква Гукуюни АВ',roaster:'The Welder Catherine',url:'https://theweldercatherine.ru/catalog/dlya_filtra/keniya_tirikva_gukuyuni_av/',country:'Кения',processing:'мытый',roast:'фильтр',format:'зерно',price:1222,notes:['ягоды','кислотность','смородина'],tags:['ягодный','яркий','цитрусовый'],acidity:5,sweetness:3,body:3},
+  {name:'Бразилия Флавио Рейс',roaster:'The Welder Catherine',url:'https://theweldercatherine.ru/catalog/dlya_filtra/braziliya_flavio_reys/',country:'Бразилия',processing:'натуральный, анаэробный',roast:'фильтр',format:'зерно',price:1201,notes:['фрукты','алкоголь'],tags:['фруктовый','сложный','пряный'],acidity:4,sweetness:3,body:3},
+  {name:'Индонезия Иджен',roaster:'The Welder Catherine',url:'https://theweldercatherine.ru/catalog/dlya_filtra/indoneziya_idzhen/',country:'Индонезия',processing:'натуральный, экспериментальный',roast:'фильтр',format:'зерно',price:1404,notes:['ягоды','алкоголь'],tags:['ягодный','сложный','пряный'],acidity:4,sweetness:3,body:4},
+  {name:'Колумбия Джеферсон Кастаньо',roaster:'The Welder Catherine',url:'https://theweldercatherine.ru/catalog/dlya_filtra/kolumbiya_dzheferson_kastano/',country:'Колумбия',processing:'мытый',roast:'фильтр',format:'зерно',price:1570,notes:['лайм','красные ягоды'],tags:['цитрусовый','ягодный','яркий'],acidity:5,sweetness:3,body:3},
+  {name:'Эфиопия Челчеле 120ч',roaster:'The Welder Catherine',url:'https://theweldercatherine.ru/catalog/dlya_filtra/efiopiya_chelchele_120_chasov/',country:'Эфиопия',processing:'натуральный, анаэробный',roast:'фильтр',format:'зерно',price:1468,notes:['абрикос','ягоды'],tags:['фруктовый','сладкий','ягодный'],acidity:3,sweetness:4,body:3},
+  {name:'Бразилия Ситиу Бейжа Флор',roaster:'The Welder Catherine',url:'https://theweldercatherine.ru/catalog/dlya_filtra/braziliya_sitiu_beyzha_flor/',country:'Бразилия',processing:'натуральный, анаэробный',roast:'фильтр',format:'зерно',price:1323,notes:['тёмные ягоды','сладость'],tags:['ягодный','сладкий','шоколадный'],acidity:2,sweetness:5,body:4},
+  {name:'Руанда Гикумби',roaster:'The Welder Catherine',url:'https://theweldercatherine.ru/catalog/dlya_filtra/ruanda_gikumbi_mytaya/',country:'Руанда',processing:'мытый',roast:'фильтр',format:'зерно',price:1176,notes:['деликатная кислотность','африканский профиль'],tags:['лёгкий','цветочный','ягодный'],acidity:3,sweetness:3,body:2},
+  {name:'Фильтр-пакеты Эфиопия Ворка Spicy Underdog',roaster:'The Welder Catherine',url:'https://theweldercatherine.ru/catalog/kofe_v_filtr_pakete/',country:'Эфиопия',processing:'мытый',roast:'фильтр',format:'дрип',price:1075,notes:['пряные цитрусы'],tags:['цитрусовый','пряный'],acidity:4,sweetness:3,body:3},
+  {name:'Эфиопия Негуссе Дебела',roaster:'Silky Drum',url:'https://www.silkydrum.ru/catalog',country:'Эфиопия',processing:'мытый',roast:'фильтр',format:'зерно',price:915,notes:['абрикос','жасмин','лимон','бергамот','чёрный чай'],tags:['цветочный','лёгкий','цитрусовый'],acidity:4,sweetness:3,body:2},
+  {name:'Эфиопия Реко Онанчо',roaster:'Silky Drum',url:'https://www.silkydrum.ru/catalog',country:'Эфиопия',processing:'натуральный',roast:'фильтр',format:'зерно',price:895,notes:['апельсин','смородина','нектарин','клубника','гибискус'],tags:['фруктовый','ягодный','яркий'],acidity:4,sweetness:4,body:3},
+  {name:'Колумбия Асеведо',roaster:'Silky Drum',url:'https://www.silkydrum.ru/catalog',country:'Колумбия',processing:'мытый',roast:'фильтр',format:'зерно',price:890,notes:['брусника','грейпфрут','гибискус','смородина','красный чай'],tags:['ягодный','цитрусовый','яркий'],acidity:5,sweetness:3,body:2},
+  {name:'Колумбия Ла Ривьера Гейша',roaster:'Silky Drum',url:'https://www.silkydrum.ru/catalog',country:'Колумбия',processing:'мытый',roast:'фильтр',format:'зерно',price:1200,notes:['абрикос','барбарис','лайм','черешня'],tags:['фруктовый','цитрусовый','сложный'],acidity:4,sweetness:4,body:3},
+  {name:'Кения (фильтр)',roaster:'Silky Drum',url:'https://www.silkydrum.ru/catalog',country:'Кения',processing:'мытый',roast:'фильтр',format:'зерно',price:890,notes:['клюква','слива','розовый грейпфрут','вишня','карамель'],tags:['ягодный','цитрусовый','яркий'],acidity:5,sweetness:3,body:3},
+  {name:'Бразилия (фильтр)',roaster:'Silky Drum',url:'https://www.silkydrum.ru/catalog',country:'Бразилия',processing:'натуральный',roast:'фильтр',format:'зерно',price:895,notes:['красное яблоко','какао','изюм','фундук'],tags:['шоколадный','ореховый','сладкий'],acidity:2,sweetness:4,body:4},
+  {name:'Эфиопия Анаэроб (фильтр)',roaster:'Silky Drum',url:'https://www.silkydrum.ru/catalog',country:'Эфиопия',processing:'натуральный, анаэробный',roast:'фильтр',format:'зерно',price:895,notes:['черника','молочный шоколад','апельсин','ваниль'],tags:['ягодный','сладкий','шоколадный'],acidity:3,sweetness:5,body:3},
+  {name:'Кения мытая (фильтр)',roaster:'Silky Drum',url:'https://www.silkydrum.ru/catalog',country:'Кения',processing:'мытый',roast:'фильтр',format:'зерно',price:915,notes:['красная смородина','малина','чёрный чай','жасмин'],tags:['ягодный','цветочный','яркий'],acidity:5,sweetness:3,body:2},
+  {name:'Кения (фильтр)',roaster:'Rockets Coffee',url:'https://rockets.coffee/catalog',country:'Кения',processing:'мытый',roast:'фильтр',format:'зерно',price:1051,notes:['шиповник','красное яблоко','каркаде'],tags:['ягодный','цитрусовый','яркий'],acidity:5,sweetness:3,body:3},
+  {name:'Руанда (фильтр)',roaster:'Rockets Coffee',url:'https://rockets.coffee/catalog',country:'Руанда',processing:'мытый',roast:'фильтр',format:'зерно',price:1010,notes:['красные ягоды','липовый мёд','чёрный чай'],tags:['ягодный','сладкий','лёгкий'],acidity:3,sweetness:4,body:3},
+  {name:'Колумбия Санта Рита',roaster:'Rockets Coffee',url:'https://rockets.coffee/catalog',country:'Колумбия',processing:'мытый',roast:'фильтр',format:'зерно',price:1120,notes:['чернослив','зелёное яблоко','сливочная ириска'],tags:['сладкий','фруктовый','шоколадный'],acidity:3,sweetness:4,body:4},
+  {name:'Эфиопия Яйе Арбегона',roaster:'Rockets Coffee',url:'https://rockets.coffee/catalog',country:'Эфиопия',processing:'натуральный',roast:'фильтр',format:'зерно',price:1050,notes:['персиковый конфитюр','красный виноград','кардамон'],tags:['фруктовый','сладкий','пряный'],acidity:3,sweetness:4,body:3},
+  {name:'Колумбия Ла Дельфита',roaster:'Rockets Coffee',url:'https://rockets.coffee/catalog',country:'Колумбия',processing:'мытый',roast:'фильтр',format:'зерно',price:1050,notes:['облепиха','алыча','корица'],tags:['фруктовый','пряный','цитрусовый'],acidity:4,sweetness:3,body:3},
+  {name:'Колумбия Луис Альберто Хохоа',roaster:'Rockets Coffee',url:'https://rockets.coffee/catalog',country:'Колумбия',processing:'мытый',roast:'фильтр',format:'зерно',price:1100,notes:['белый виноград','лаванда','лимонная карамель'],tags:['цветочный','сладкий','лёгкий'],acidity:3,sweetness:4,body:2},
+  {name:'Эфиопия Леми',roaster:'Fauno Coffee',url:'https://fauno.coffee/classico/ethiopia-lemi',country:'Эфиопия',processing:'мытый',roast:'фильтр',format:'зерно',price:1090,notes:['цветы','цитрус','чай'],tags:['цветочный','лёгкий','цитрусовый'],acidity:4,sweetness:3,body:2},
+  {name:'Перу Ла Коипа',roaster:'Fauno Coffee',url:'https://fauno.coffee/classico/peru-la-coipa',country:'Перу',processing:'мытый',roast:'фильтр',format:'зерно',price:790,notes:['шоколад','орехи','карамель'],tags:['шоколадный','ореховый','сладкий'],acidity:2,sweetness:4,body:4},
+  {name:'Эфиопия Бенса Голба',roaster:'Fauno Coffee',url:'https://fauno.coffee/classico/ethiopia-bensa',country:'Эфиопия',processing:'натуральный',roast:'фильтр',format:'зерно',price:1140,notes:['ягоды','фрукты','цветы'],tags:['ягодный','цветочный','фруктовый'],acidity:4,sweetness:4,body:3},
+];
+
+export const PICKER_TASTE_MAP: Record<string, {label: string; tags: string[]}> = {
+  'floral': {label:'🌸 Лёгкий, чайный, цветочный', tags:['цветочный','лёгкий']},
+  'berry': {label:'🫐 Ягодный, фруктовый, яркий', tags:['ягодный','фруктовый','яркий']},
+  'chocolate': {label:'🍫 Шоколадный, ореховый, классический', tags:['шоколадный','ореховый']},
+  'sweet': {label:'🍯 Сладкий, карамельный, мягкий', tags:['сладкий']},
+  'spicy': {label:'🌿 Терпкий, пряный, сложный', tags:['пряный','сложный']},
+  'citrus': {label:'🍊 Цитрусовый, кислотный, свежий', tags:['цитрусовый','свежий']},
+};
+
+export const PICKER_NOTES_MAP: Record<string, string[]> = {
+  'floral': ['жасмин','бергамот','лаванда','роза','гибискус','чёрный чай'],
+  'berry': ['черника','малина','смородина','клубника','вишня','шиповник'],
+  'chocolate': ['какао','фундук','марципан','изюм','пралине','карамель'],
+  'sweet': ['мёд','ваниль','ириска','абрикос','персик','карамель'],
+  'spicy': ['кардамон','корица','тропические фрукты','портвейн','специи'],
+  'citrus': ['лимон','грейпфрут','апельсин','лайм','облепиха','нектарин'],
+};
+
+export const PICKER_BREW_OPTIONS = [
+  {id:'drip',icon:'☕',label:'Дрип-пакеты',desc:'Просто залить водой — без оборудования'},
+  {id:'pourover',icon:'🫖',label:'Воронка',desc:'V60, Chemex, Калита — пуровер'},
+  {id:'aeropress',icon:'🔵',label:'Аэропресс',desc:'Давление + фильтрация'},
+  {id:'frenchpress',icon:'🫕',label:'Френч-пресс',desc:'Иммерсионный метод'},
+  {id:'cup',icon:'🏠',label:'В чашке / турке',desc:'Самый простой способ'},
+];

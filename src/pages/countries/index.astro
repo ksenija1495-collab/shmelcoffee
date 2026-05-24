@@ -1,0 +1,81 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Nav from '../../components/Nav.astro';
+import { DB, countryOrder } from '../../data/countries';
+---
+
+<Layout title="Страны кофе — Shmelco">
+  <Nav />
+  <div class="container">
+    <div class="section-anchor page-section">
+      <div class="section-title">Страны кофе</div>
+      <p class="section-desc">Выберите страну — узнайте всё о вкусовом профиле, обработке, заваривании и с чем сравнить</p>
+      <div class="country-grid" id="countryGrid"></div>
+      <div class="country-detail" id="countryDetail"></div>
+    </div>
+  </div>
+</Layout>
+
+<script define:vars={{ DB, countryOrder }}>
+function renderCountryGrid(){
+  document.getElementById('countryGrid').innerHTML = countryOrder.map(k=>{
+    const c=DB[k];
+    return `<div class="country-btn" data-key="${k}" id="cb-${k}">
+      <div class="country-btn-flag">${c.flag}</div>
+      <div class="country-btn-name">${c.name}</div>
+    </div>`;
+  }).join('');
+
+  document.querySelectorAll('.country-btn').forEach(btn => {
+    btn.addEventListener('click', () => openCountry(btn.dataset.key));
+  });
+}
+
+function openCountry(key){
+  document.querySelectorAll('.country-btn').forEach(b=>b.classList.remove('active'));
+  const btn=document.getElementById('cb-'+key);
+  if(btn) btn.classList.add('active');
+  const c=DB[key];
+  const el=document.getElementById('countryDetail');
+  el.innerHTML=`
+    <div class="country-detail-hero">
+      <div class="result-flag">${c.flag}</div>
+      <h2 class="result-country">${c.name}</h2>
+      <div class="result-region">${c.region} · ${c.altitude} · ${c.varieties}</div>
+      <div class="result-tags">${c.flavors.map(f=>'<span class="tag">'+f+'</span>').join('')}</div>
+    </div>
+    <div class="country-detail-body">
+      <div class="result-section">
+        <div class="result-meter"><span class="meter-label">Кислотность</span><div class="meter-bar"><div class="meter-fill" style="width:0" data-w="${c.aLvl}%"></div></div><span class="meter-desc">${c.aDesc}</span></div>
+        <div class="result-meter"><span class="meter-label">Тело</span><div class="meter-bar"><div class="meter-fill" style="width:0" data-w="${c.bLvl}%"></div></div><span class="meter-desc">${c.bDesc}</span></div>
+        <div class="result-meter"><span class="meter-label">Сладость</span><div class="meter-bar"><div class="meter-fill" style="width:0" data-w="${c.sLvl}%"></div></div></div>
+      </div>
+      <div class="result-grid">
+        <div class="info-card"><h4>🌱 Произрастание</h4><p>${c.growing}</p></div>
+        <div class="info-card"><h4>💡 Интересный факт</h4><p>${c.fact}</p></div>
+      </div>
+      <div class="result-grid">
+        <div class="info-card"><h4>⚙️ Обработка</h4><p>${c.proc}</p></div>
+        <div class="info-card"><h4>☕ Заваривание</h4><p>${c.brew}</p></div>
+      </div>
+      <div class="result-section" style="margin-top:16px">
+        <h3>🔄 С чем сравнить для обучения</h3>
+        <p>${c.compare}</p>
+      </div>
+    </div>
+  `;
+  el.classList.add('active');
+  setTimeout(()=>{
+    el.querySelectorAll('.meter-fill').forEach(f=>{f.style.width=f.dataset.w;});
+  },80);
+  el.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+renderCountryGrid();
+
+const params = new URLSearchParams(window.location.search);
+const preselect = params.get('c');
+if (preselect && DB[preselect]) {
+  openCountry(preselect);
+}
+</script>

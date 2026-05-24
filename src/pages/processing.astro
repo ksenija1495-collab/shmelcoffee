@@ -1,0 +1,27 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Nav from '../components/Nav.astro';
+import { procData } from '../data/processing';
+---
+
+<Layout title="Методы обработки — Shmelco">
+  <Nav />
+  <div class="container">
+    <div class="section-anchor page-section">
+      <div class="section-title">Методы обработки</div>
+      <p class="section-desc">Обработка зерна после сбора кардинально влияет на вкус в чашке</p>
+      <div class="proc-cards">
+        {procData.map(m => (
+          <div class="proc-card">
+            <div class="proc-icon">{m.icon}</div>
+            <div>
+              <h3 class="proc-name">{m.name}</h3>
+              <p class="proc-desc">{m.desc}</p>
+              <p class="proc-effect">→ {m.eff}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+</Layout>
