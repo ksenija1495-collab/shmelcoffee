@@ -55,16 +55,24 @@ nav {
 }
 .nav-links a.nav-cta:hover { background: var(--accent); color: #fff; }
 
+.mobile-nav {
+  display: none; position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+  background: rgba(248,247,237,.95); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  border-top: 1px solid var(--border); padding: 6px 8px 10px; gap: 4px;
+  justify-content: space-around; align-items: center;
+}
+.mobile-nav a {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  text-decoration: none; font-size: .62rem; font-weight: 500;
+  color: var(--text-muted); transition: color .2s; padding: 4px 8px;
+}
+.mobile-nav a .mn-icon { font-size: 1.15rem; }
+.mobile-nav a.active, .mobile-nav a:hover { color: var(--text); }
+
 /* Hero */
 .hero {
-  padding: 100px 0 48px; text-align: center;
-  min-height: 85vh; display: flex; flex-direction: column; align-items: center; justify-content: center;
-}
-.brand-label {
-  display: inline-block; font-family: 'Inter', sans-serif; font-size: .65rem;
-  text-transform: uppercase; letter-spacing: .28em; color: var(--text-muted);
-  margin-bottom: 20px; padding: 7px 18px; border: 1px solid var(--border);
-  border-radius: 40px; background: var(--surface); font-weight: 500;
+  padding: 100px 0 32px; text-align: center;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
 }
 .hero h1 {
   font-family: 'Cormorant Garamond', Georgia, serif; font-size: 2.8rem;
@@ -72,11 +80,10 @@ nav {
   color: var(--text); line-height: 1.15;
 }
 .hero .subtitle {
-  font-size: .95rem; color: var(--text-dim); max-width: 520px;
-  margin: 0 auto 32px; line-height: 1.7;
+  font-size: .92rem; color: var(--text-dim); max-width: 460px;
+  margin: 0 auto 24px; line-height: 1.65;
 }
 .hero-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
-.hero-micro { font-size: .78rem; color: var(--text-muted); margin-top: 14px; }
 
 /* Stats strip */
 .stats-strip {
@@ -97,7 +104,7 @@ nav {
 /* Benefits */
 .benefits {
   display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;
-  margin-bottom: 48px;
+  margin-bottom: 28px;
 }
 .benefit {
   padding: 22px 18px; border-radius: var(--radius); background: var(--surface);
@@ -134,10 +141,12 @@ nav {
 .btn:hover { border-color: var(--border-hover); color: var(--text); box-shadow: var(--shadow-hover); }
 .btn-primary {
   background: var(--text); color: var(--bg); border-color: var(--text);
+  font-weight: 600; letter-spacing: .01em;
 }
 .btn-primary:hover {
-  background: var(--text-dim); border-color: var(--text-dim);
-  color: #fff; box-shadow: var(--shadow-hover);
+  background: var(--accent); border-color: var(--accent);
+  color: #fff; box-shadow: 0 4px 16px rgba(70,41,24,.15);
+  transform: translateY(-1px);
 }
 
 /* Section */
@@ -705,8 +714,10 @@ nav {
 }
 @media (max-width: 768px) {
   .hero h1 { font-size: 2rem; }
+  .hero { padding: 72px 0 20px; }
   .nav-links { display: none; }
   .nav-inner { height: 48px; }
+  .mobile-nav { display: flex; }
   .quiz-card { padding: 18px; }
   .result-hero-block, .result-body { padding: 18px; }
   .result-grid, .others-grid { grid-template-columns: 1fr; }
@@ -719,4 +730,5 @@ nav {
   .picker-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
   .picker-result-top { flex-direction: column; }
   .picker-result-right { align-items: flex-start; flex-direction: row; gap: 12px; }
+  .footer { padding-bottom: 72px; }
 }

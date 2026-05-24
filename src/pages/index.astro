@@ -29,15 +29,15 @@ import { wheelData } from '../data/wheel';
         <div class="benefit-title">Попробуйте на практике</div>
         <div class="benefit-desc">Дегустационный сет от российских обжарщиков — под ваш вкус, с гидом</div>
       </a>
-      <div class="benefit" style="cursor:default">
+      <a class="benefit" href="#wheel" style="text-decoration:none;color:inherit">
         <div class="benefit-icon">📖</div>
         <div class="benefit-title">Научитесь различать</div>
         <div class="benefit-desc">Колесо вкусов, заметки к каждому лоту и карта предпочтений</div>
-      </div>
+      </a>
     </div>
 
     <!-- WHEEL -->
-    <div class="wheel-section">
+    <div class="wheel-section" id="wheel">
       <h2 class="wheel-heading">Колесо вкусов кофе</h2>
       <p class="wheel-sub">Стандарт SCA · Нажмите на сегмент — узнаете, в кофе каких стран встречается этот вкус</p>
       <svg id="wheelSvg" class="wheel-svg" viewBox="0 0 620 620"></svg>
@@ -74,21 +74,9 @@ import { wheelData } from '../data/wheel';
 </Layout>
 
 <style>
-  .hero {
-    padding: 72px 0 24px; text-align: center;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-  }
-  .hero h1 {
-    font-family: 'Cormorant Garamond', Georgia, serif; font-size: 2.4rem;
-    font-weight: 600; margin-bottom: 10px; line-height: 1.15;
-  }
-  .hero .subtitle {
-    font-size: .88rem; color: var(--text-dim); max-width: 420px;
-    margin: 0 auto 18px; line-height: 1.6;
-  }
-
   .wheel-section {
     text-align: center; padding: 12px 0 32px;
+    scroll-margin-top: 72px;
   }
   .wheel-heading {
     font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.5rem;
@@ -119,8 +107,6 @@ import { wheelData } from '../data/wheel';
   .contact-handle { font-size: .76rem; color: var(--accent); font-weight: 500; }
 
   @media (max-width: 768px) {
-    .hero h1 { font-size: 2rem; }
-    .hero { padding: 80px 0 28px; }
     .contacts-grid { flex-direction: column; align-items: center; }
   }
 </style>

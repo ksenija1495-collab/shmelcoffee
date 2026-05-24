@@ -1,5 +1,6 @@
 ---
 const currentPath = Astro.url.pathname;
+const isActive = (path: string) => currentPath === path || currentPath.startsWith(path + '/');
 ---
 
 <nav>
@@ -7,9 +8,10 @@ const currentPath = Astro.url.pathname;
     <a href="/" class="nav-logo">Shmelco · coffee guide</a>
     <ul class="nav-links">
       <li><a href="/" class={currentPath === '/' ? 'active' : ''}>Главная</a></li>
-      <li><a href="/wheel" class={currentPath === '/wheel' ? 'active' : ''}>Мир вкусов</a></li>
-      <li><a href="/blog" class={currentPath === '/blog' ? 'active' : ''}>Блог</a></li>
-      <li><a href="/quiz" class={`nav-cta ${currentPath === '/quiz' ? 'active' : ''}`}>Узнать свой вкус →</a></li>
+      <li><a href="/countries" class={isActive('/countries') ? 'active' : ''}>Страны</a></li>
+      <li><a href="/wheel" class={isActive('/wheel') ? 'active' : ''}>Вкусы</a></li>
+      <li><a href="/blog" class={isActive('/blog') ? 'active' : ''}>Блог</a></li>
+      <li><a href="/quiz" class={`nav-cta ${isActive('/quiz') ? 'active' : ''}`}>Узнать свой вкус →</a></li>
     </ul>
   </div>
 </nav>

@@ -1,15 +1,148 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import Nav from '../../components/Nav.astro';
+import { getCollection } from 'astro:content';
+
+const posts = await getCollection('blog');
+
+const clusters = [
+  { id: 'C1', name: 'Основы specialty coffee', desc: 'Что такое спешелти, обжарка, вода, дрип-пакеты', icon: '☕' },
+  { id: 'C2', name: 'Методы заваривания', desc: 'Пуровер, аэропресс, кемекс, турка', icon: '⏳' },
+  { id: 'C3', name: 'Кофейное зерно', desc: 'Сорта, обработка, как читать упаковку', icon: '🌱' },
+  { id: 'C5', name: 'Дегустация и вкус', desc: 'Каппинг, ароматы, как описать вкус', icon: '👃' },
+];
+
+const clusterPosts = clusters.map(c => ({
+  ...c,
+  posts: posts
+    .filter(p => p.data.cluster === c.id)
+    .sort((a, b) => {
+      if (a.data.type === 'pillar' && b.data.type !== 'pillar') return -1;
+      if (b.data.type === 'pillar' && a.data.type !== 'pillar') return 1;
+      return b.data.date.getTime() - a.data.date.getTime();
+    }),
+}));
+
+const schemaWebPage = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'CollectionPage',
+  name: 'Блог о кофе — Shmelco',
+  description: 'Статьи о specialty кофе: от основ до дегустации. Разбор сортов, методов заваривания, обжарки.',
+  url: 'https://shmelcoffee.com/blog',
+  publisher: { '@type': 'Organization', name: 'Shmelco Coffee' },
+});
 ---
 
-<Layout title="Блог — Shmelco">
+<Layout
+  title="Блог о кофе — Shmelco"
+  description="Статьи о specialty кофе: от основ до дегустации. Разбор сортов, методов заваривания, обжарки и вкусовых профилей."
+  keywords={['блог о кофе', 'specialty coffee блог', 'статьи о кофе', 'гид по кофе']}
+>
   <Nav />
-  <div class="container">
-    <div class="section-anchor page-section" style="text-align:center;min-height:60vh;display:flex;flex-direction:column;align-items:center;justify-content:center">
-      <div class="section-title">Блог о кофе</div>
-      <p class="section-desc" style="max-width:480px;margin:0 auto">Скоро здесь появятся статьи о кофе — от выбора оборудования до разбора вкусовых профилей разных стран</p>
-      <a href="/" class="btn" style="margin-top:20px">← На главную</a>
+  <script type="application/ld+json" set:html={schemaWebPage} />
+
+  <div class="container blog-page">
+    <div class="blog-hero">
+      <h1>Блог о кофе</h1>
+      <p class="blog-hero-sub">Разбираемся в specialty — от зерна до чашки</p>
+    </div>
+
+    {clusterPosts.map(cluster => (
+      <section class="blog-cluster">
+        <div class="cluster-header">
+          <span class="cluster-icon">{cluster.icon}</span>
+          <div>
+            <h2 class="cluster-name">{cluster.name}</h2>
+            <p class="cluster-desc">{cluster.desc}</p>
+          </div>
+        </div>
+        <div class="cluster-articles">
+          {cluster.posts.map(post => (
+            <a href={`/blog/${post.id}`} class={`article-card ${post.data.type === 'pillar' ? 'article-pillar' : ''}`}>
+              <div class="article-card-top">
+                {post.data.type === 'pillar' && <span class="pillar-badge">Полный гид</span>}
+                <h3>{post.data.title}</h3>
+              </div>
+              <p class="article-desc">{post.data.description}</p>
+              <span class="article-arrow">Читать →</span>
+            </a>
+          ))}
+        </div>
+      </section>
+    ))}
+
+    <div class="blog-bottom-cta">
+      <p>Не знаете, с чего начать? Пройдите диагностику вкуса — мы подберём кофе под вас.</p>
+      <a href="/quiz" class="btn btn-primary">Узнать свой вкус →</a>
     </div>
   </div>
 </Layout>
+
+<style>
+  .blog-page { padding-top: 80px; }
+  .blog-hero { text-align: center; margin-bottom: 36px; }
+  .blog-hero h1 {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: 2.2rem; font-weight: 600; margin-bottom: 6px;
+  }
+  .blog-hero-sub {
+    font-size: .88rem; color: var(--text-dim);
+  }
+
+  .blog-cluster { margin-bottom: 36px; }
+  .cluster-header {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 14px;
+  }
+  .cluster-icon { font-size: 1.6rem; }
+  .cluster-name {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: 1.25rem; font-weight: 600; line-height: 1.2;
+  }
+  .cluster-desc { font-size: .78rem; color: var(--text-muted); margin-top: 2px; }
+
+  .cluster-articles {
+    display: grid; grid-template-columns: 1fr; gap: 8px;
+  }
+  .article-card {
+    display: block; padding: 16px 18px; border-radius: var(--radius);
+    background: var(--surface); border: 1px solid var(--border);
+    text-decoration: none; color: inherit; transition: all .2s;
+  }
+  .article-card:hover {
+    border-color: var(--border-hover); box-shadow: var(--shadow-hover);
+    transform: translateY(-1px);
+  }
+  .article-pillar {
+    border-left: 3px solid var(--accent);
+  }
+  .article-card-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .pillar-badge {
+    padding: 2px 7px; border-radius: 4px; font-size: .65rem;
+    background: var(--accent); color: #fff; font-weight: 600;
+    flex-shrink: 0;
+  }
+  .article-card h3 {
+    font-size: .92rem; font-weight: 600; line-height: 1.3;
+  }
+  .article-desc {
+    font-size: .78rem; color: var(--text-dim); margin-top: 4px; line-height: 1.5;
+  }
+  .article-arrow {
+    display: inline-block; margin-top: 6px;
+    font-size: .76rem; color: var(--accent); font-weight: 500;
+  }
+
+  .blog-bottom-cta {
+    text-align: center; padding: 28px 20px; margin: 12px 0 48px;
+    background: var(--surface); border-radius: var(--radius-lg);
+    border: 1px solid var(--border);
+  }
+  .blog-bottom-cta p {
+    font-size: .86rem; color: var(--text-dim); margin-bottom: 14px;
+  }
+
+  @media (max-width: 768px) {
+    .blog-page { padding-top: 64px; }
+    .blog-hero h1 { font-size: 1.7rem; }
+  }
+</style>

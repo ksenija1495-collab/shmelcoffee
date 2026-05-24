@@ -1,0 +1,192 @@
+---
+import Layout from './Layout.astro';
+import Nav from '../components/Nav.astro';
+
+interface Props {
+  title: string;
+  description: string;
+  date: Date;
+  updatedDate?: Date;
+  cluster: string;
+  type: string;
+  keywords: string[];
+  readAlso?: { slug: string; title: string }[];
+}
+
+const { title, description, date, updatedDate, cluster, type, keywords, readAlso = [] } = Astro.props;
+const siteUrl = 'https://shmelcoffee.com';
+const canonicalUrl = new URL(Astro.url.pathname, siteUrl).href;
+
+const clusterNames: Record<string, { name: string; pillarSlug: string }> = {
+  C1: { name: 'Основы specialty coffee', pillarSlug: 'specialty-coffee' },
+  C2: { name: 'Методы заваривания', pillarSlug: 'metody-zavarivaniya' },
+  C3: { name: 'Кофейное зерно', pillarSlug: 'kofejnoe-zerno' },
+  C5: { name: 'Дегустация и вкус', pillarSlug: 'degustaciya-kofe' },
+};
+
+const clusterInfo = clusterNames[cluster] || { name: cluster, pillarSlug: '' };
+const dateISO = date.toISOString();
+const updatedISO = updatedDate ? updatedDate.toISOString() : dateISO;
+const dateDisplay = date.toLocaleDateString('ru-RU', { year: 'numeric', month: 'long', day: 'numeric' });
+
+const schemaArticle = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'Article',
+  headline: title,
+  description,
+  datePublished: dateISO,
+  dateModified: updatedISO,
+  author: { '@type': 'Organization', name: 'Shmelco Coffee', url: siteUrl },
+  publisher: { '@type': 'Organization', name: 'Shmelco Coffee', url: siteUrl },
+  mainEntityOfPage: { '@type': 'WebPage', '@id': canonicalUrl },
+  keywords: keywords.join(', '),
+});
+
+const schemaBreadcrumb = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Главная', item: siteUrl },
+    { '@type': 'ListItem', position: 2, name: 'Блог', item: `${siteUrl}/blog` },
+    { '@type': 'ListItem', position: 3, name: clusterInfo.name, item: `${siteUrl}/blog/${clusterInfo.pillarSlug}` },
+    { '@type': 'ListItem', position: 4, name: title, item: canonicalUrl },
+  ],
+});
+---
+
+<Layout title={`${title} — Shmelco`} description={description} keywords={keywords} ogType="article" canonical={canonicalUrl}>
+  <Nav />
+  <script type="application/ld+json" set:html={schemaArticle} />
+  <script type="application/ld+json" set:html={schemaBreadcrumb} />
+
+  <article class="container blog-article">
+    <div class="blog-article-header">
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a href="/">Главная</a> <span>›</span>
+        <a href="/blog">Блог</a> <span>›</span>
+        <a href={`/blog/${clusterInfo.pillarSlug}`}>{clusterInfo.name}</a>
+      </nav>
+
+      <h1>{title}</h1>
+      <div class="blog-meta">
+        <time datetime={dateISO}>{dateDisplay}</time>
+        {type === 'pillar' && <span class="blog-badge">Полный гид</span>}
+      </div>
+    </div>
+
+    <div class="blog-content prose">
+      <slot />
+    </div>
+
+    {readAlso.length > 0 && (
+      <aside class="read-also">
+        <h3>Читайте также</h3>
+        <div class="read-also-grid">
+          {readAlso.map(r => (
+            <a href={`/blog/${r.slug}`} class="read-also-card">
+              {r.title}
+              <span class="read-also-arrow">→</span>
+            </a>
+          ))}
+        </div>
+      </aside>
+    )}
+
+    <div class="blog-cta-block">
+      <p>Хотите понять, какой кофе подходит именно вам?</p>
+      <a href="/quiz" class="btn btn-primary">Пройти диагностику вкуса →</a>
+    </div>
+  </article>
+</Layout>
+
+<style is:global>
+  .blog-article {
+    padding-top: 80px; max-width: 720px;
+  }
+  .blog-article-header { margin-bottom: 32px; }
+  .breadcrumb {
+    font-size: .75rem; color: var(--text-muted); margin-bottom: 16px;
+    display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  }
+  .breadcrumb a {
+    color: var(--text-muted); text-decoration: none; transition: color .2s;
+  }
+  .breadcrumb a:hover { color: var(--accent); }
+  .breadcrumb span { color: var(--border); }
+
+  .blog-article h1 {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: 2rem; font-weight: 600; line-height: 1.2; margin-bottom: 10px;
+  }
+  .blog-meta {
+    display: flex; align-items: center; gap: 10px;
+    font-size: .78rem; color: var(--text-muted);
+  }
+  .blog-badge {
+    padding: 2px 8px; border-radius: 4px; font-size: .68rem;
+    background: var(--accent); color: #fff; font-weight: 600;
+  }
+
+  .blog-content { line-height: 1.75; font-size: .94rem; }
+  .blog-content h2 {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: 1.4rem; font-weight: 600; margin: 36px 0 14px;
+  }
+  .blog-content h3 {
+    font-size: 1.05rem; font-weight: 600; margin: 28px 0 10px;
+  }
+  .blog-content p { margin-bottom: 16px; color: var(--text); }
+  .blog-content ul, .blog-content ol {
+    margin: 0 0 16px 20px; color: var(--text);
+  }
+  .blog-content li { margin-bottom: 6px; }
+  .blog-content strong { font-weight: 600; }
+  .blog-content blockquote {
+    border-left: 3px solid var(--accent);
+    padding: 12px 16px; margin: 20px 0;
+    background: var(--surface); border-radius: 0 var(--radius) var(--radius) 0;
+    font-style: italic; color: var(--text-dim);
+  }
+  .blog-content a { color: var(--accent); text-decoration: underline; }
+  .blog-content a:hover { color: var(--text); }
+  .blog-content hr {
+    border: none; border-top: 1px solid var(--border); margin: 32px 0;
+  }
+
+  .read-also {
+    margin-top: 40px; padding-top: 24px; border-top: 1px solid var(--border);
+  }
+  .read-also h3 {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: 1.15rem; font-weight: 600; margin-bottom: 14px;
+  }
+  .read-also-grid {
+    display: grid; grid-template-columns: 1fr; gap: 8px;
+  }
+  .read-also-card {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 16px; border-radius: var(--radius);
+    background: var(--surface); border: 1px solid var(--border);
+    text-decoration: none; color: var(--text); font-size: .86rem;
+    font-weight: 500; transition: all .2s;
+  }
+  .read-also-card:hover {
+    border-color: var(--accent); color: var(--accent);
+  }
+  .read-also-arrow { color: var(--text-muted); }
+
+  .blog-cta-block {
+    margin-top: 32px; text-align: center; padding: 28px 20px;
+    background: var(--surface); border-radius: var(--radius-lg);
+    border: 1px solid var(--border);
+  }
+  .blog-cta-block p {
+    font-size: .88rem; color: var(--text-dim); margin-bottom: 14px;
+  }
+
+  @media (max-width: 768px) {
+    .blog-article { padding-top: 64px; }
+    .blog-article h1 { font-size: 1.6rem; }
+    .read-also-grid { grid-template-columns: 1fr; }
+  }
+</style>
