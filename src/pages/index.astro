@@ -193,6 +193,18 @@ function buildWheel(){
     p.addEventListener('mouseleave',()=>{p.style.opacity='1';p.style.filter='none';});
   });
 }
+const countryMap={
+  'Эфиопия':'ethiopia','Кения':'kenya','Колумбия':'colombia','Бразилия':'brazil',
+  'Гватемала':'guatemala','Коста-Рика':'costarica','Панама':'panama','Руанда':'rwanda',
+  'Индонезия':'indonesia','Йемен':'yemen','Гондурас':'honduras','Перу':'peru'
+};
+function linkOrigins(text){
+  let out=text;
+  for(const [name,key] of Object.entries(countryMap)){
+    out=out.replace(new RegExp(name,'g'),`<a href="/countries?c=${key}" style="color:var(--accent);text-decoration:underline;text-decoration-color:var(--border)">${name}</a>`);
+  }
+  return out;
+}
 function showWheelCat(idx){
   const cat=wheelData[idx];
   const panel=document.getElementById('wheelInfoPanel');
@@ -202,7 +214,7 @@ function showWheelCat(idx){
       ${cat.subs.map(s=>`
         <div class="wheel-flavor-item">
           <div class="wheel-flavor-name">${s.name}</div>
-          <div class="wheel-flavor-origins">${s.org}</div>
+          <div class="wheel-flavor-origins">${linkOrigins(s.org)}</div>
         </div>
       `).join('')}
     </div>
