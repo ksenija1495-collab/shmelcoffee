@@ -1,0 +1,253 @@
+---
+export const prerender = true;
+import Layout from '../layouts/Layout.astro';
+import Nav from '../components/Nav.astro';
+---
+
+<Layout title="Личный кабинет — Shmelco" description="Ваш вкусовой профиль, подборки кофе и персональные гиды">
+  <Nav />
+  <div class="container">
+    <div class="account-page" id="accountPage">
+      <div class="account-loading" id="accountLoading">
+        <p>Загрузка...</p>
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .account-page { padding-top: 80px; max-width: 720px; margin: 0 auto; }
+  .account-loading { text-align: center; padding: 60px 0; color: var(--text-muted); }
+
+  .account-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 28px; flex-wrap: wrap; gap: 12px;
+  }
+  .account-header h1 {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: 1.8rem; font-weight: 600;
+  }
+  .account-email { font-size: .78rem; color: var(--text-muted); }
+  .logout-btn {
+    font-size: .76rem; color: var(--text-muted); background: none; border: 1px solid var(--border);
+    padding: 5px 12px; border-radius: 6px; cursor: pointer; transition: all .2s;
+    font-family: 'Inter', sans-serif;
+  }
+  .logout-btn:hover { border-color: var(--accent-warm); color: var(--accent-warm); }
+
+  .account-section { margin-bottom: 32px; }
+  .account-section-title {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: 1.15rem; font-weight: 600; margin-bottom: 12px;
+    display: flex; align-items: center; gap: 8px;
+  }
+
+  .profile-card {
+    padding: 18px; background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); box-shadow: var(--shadow);
+  }
+  .profile-type { font-weight: 600; font-size: .92rem; margin-bottom: 6px; }
+  .profile-tastes { font-size: .82rem; color: var(--text-dim); }
+  .profile-tag {
+    display: inline-block; padding: 2px 8px; border-radius: 4px;
+    background: var(--surface-2); font-size: .74rem; margin: 2px;
+  }
+
+  .selection-card {
+    padding: 16px; background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 10px;
+  }
+  .selection-meta { font-size: .74rem; color: var(--text-muted); margin-bottom: 8px; }
+  .selection-coffees { display: flex; flex-direction: column; gap: 6px; }
+  .sel-coffee {
+    font-size: .84rem; padding: 8px 12px; background: var(--surface-2);
+    border-radius: 6px;
+  }
+  .sel-coffee-name { font-weight: 600; }
+  .sel-coffee-detail { font-size: .76rem; color: var(--text-dim); }
+
+  .selection-actions { margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .sel-action-btn {
+    font-size: .76rem; padding: 5px 12px; border-radius: 6px;
+    border: 1px solid var(--border); background: var(--surface);
+    cursor: pointer; transition: all .2s; font-family: 'Inter', sans-serif; color: var(--text-dim);
+  }
+  .sel-action-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .sel-action-btn.primary { background: var(--text); color: var(--bg); border-color: var(--text); }
+  .sel-action-btn.primary:hover { background: var(--accent); border-color: var(--accent); }
+
+  .guide-card {
+    padding: 18px; background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 10px;
+  }
+  .guide-date { font-size: .72rem; color: var(--text-muted); margin-bottom: 8px; }
+  .guide-content {
+    font-size: .86rem; line-height: 1.7; color: var(--text);
+  }
+  .guide-content h2 { font-size: 1.1rem; font-weight: 600; margin: 16px 0 8px; }
+  .guide-content h3 { font-size: .95rem; font-weight: 600; margin: 12px 0 6px; }
+  .guide-content p { margin-bottom: 10px; }
+  .guide-content ul { margin: 0 0 10px 18px; }
+  .guide-content li { margin-bottom: 4px; }
+
+  .empty-state {
+    text-align: center; padding: 28px; color: var(--text-muted);
+    font-size: .84rem; background: var(--surface); border-radius: var(--radius);
+    border: 1px solid var(--border);
+  }
+  .empty-state a { color: var(--accent); }
+
+  .status-badge {
+    display: inline-block; padding: 2px 7px; border-radius: 4px;
+    font-size: .65rem; font-weight: 600;
+  }
+  .status-selected { background: var(--surface-2); color: var(--text-dim); }
+  .status-ordered { background: #e8f0e4; color: #4a7a45; }
+  .status-received { background: #fef3e2; color: #9a6e2e; }
+  .status-tasted { background: #e8e4f0; color: #6b5a8a; }
+
+  @media (max-width: 768px) {
+    .account-page { padding-top: 64px; }
+    .account-header h1 { font-size: 1.5rem; }
+  }
+</style>
+
+<script>
+  import { createClient } from '@supabase/supabase-js';
+
+  const supabase = createClient(
+    import.meta.env.PUBLIC_SUPABASE_URL,
+    import.meta.env.PUBLIC_SUPABASE_ANON_KEY
+  );
+
+  const page = document.getElementById('accountPage')!;
+
+  async function init() {
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      window.location.href = '/login';
+      return;
+    }
+
+    const [profilesRes, selectionsRes, guidesRes] = await Promise.all([
+      supabase.from('taste_profiles').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
+      supabase.from('coffee_selections').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
+      supabase.from('guides').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
+    ]);
+
+    const profiles = profilesRes.data || [];
+    const selections = selectionsRes.data || [];
+    const guides = guidesRes.data || [];
+    const latestProfile = profiles[0];
+
+    const statusLabels: Record<string, string> = {
+      selected: 'Выбрано', ordered: 'Заказано', received: 'Получено', tasted: 'Продегустировано'
+    };
+
+    page.innerHTML = `
+      <div class="account-header">
+        <div>
+          <h1>Личный кабинет</h1>
+          <div class="account-email">${user.email}</div>
+        </div>
+        <button class="logout-btn" id="logoutBtn">Выйти</button>
+      </div>
+
+      <div class="account-section">
+        <div class="account-section-title">🎯 Вкусовой профиль</div>
+        ${latestProfile ? `
+          <div class="profile-card">
+            <div class="profile-type">${latestProfile.profile_type}</div>
+            <div class="profile-tastes">
+              ${(latestProfile.preferred_tastes || []).map((t: string) => `<span class="profile-tag">${t}</span>`).join('')}
+              ${(latestProfile.preferred_notes || []).map((n: string) => `<span class="profile-tag">${n}</span>`).join('')}
+            </div>
+            <div style="margin-top:8px;font-size:.74rem;color:var(--text-muted)">
+              Метод: ${latestProfile.brew_method || '—'}
+            </div>
+          </div>
+        ` : `
+          <div class="empty-state">
+            Вы ещё не проходили диагностику вкуса. <a href="/quiz">Пройти →</a>
+          </div>
+        `}
+      </div>
+
+      <div class="account-section">
+        <div class="account-section-title">☕ Мои подборки</div>
+        ${selections.length ? selections.map((sel: any) => `
+          <div class="selection-card" data-sel-id="${sel.id}">
+            <div class="selection-meta">
+              ${new Date(sel.created_at).toLocaleDateString('ru-RU')}
+              · ${sel.format === 'drip' ? 'Дрип-пакеты' : sel.format === 'beans' ? 'Зерно' : 'Микс'}
+              · <span class="status-badge status-${sel.status}">${statusLabels[sel.status] || sel.status}</span>
+            </div>
+            <div class="selection-coffees">
+              ${(sel.coffees as any[]).map((c: any) => `
+                <div class="sel-coffee">
+                  <div class="sel-coffee-name">${c.name}</div>
+                  <div class="sel-coffee-detail">${c.roaster} · ${c.origin || ''} · ${c.notes || ''}</div>
+                </div>
+              `).join('')}
+            </div>
+            <div class="selection-actions">
+              ${sel.status === 'selected' ? `<button class="sel-action-btn" onclick="updateStatus('${sel.id}','ordered')">Отметить «Заказано»</button>` : ''}
+              ${sel.status === 'ordered' ? `<button class="sel-action-btn" onclick="updateStatus('${sel.id}','received')">Получил!</button>` : ''}
+              ${sel.status === 'received' ? `<button class="sel-action-btn primary" onclick="generateGuide('${sel.id}')">Сгенерировать гид 🤖</button>` : ''}
+              ${sel.status === 'received' ? `<button class="sel-action-btn" onclick="updateStatus('${sel.id}','tasted')">Продегустировал</button>` : ''}
+            </div>
+          </div>
+        `).join('') : `
+          <div class="empty-state">
+            Пока нет подборок. <a href="/quiz">Пройдите тест</a> — мы подберём кофе под ваш вкус.
+          </div>
+        `}
+      </div>
+
+      <div class="account-section">
+        <div class="account-section-title">📖 Мои гиды</div>
+        ${guides.length ? guides.map((g: any) => `
+          <div class="guide-card">
+            <div class="guide-date">${new Date(g.created_at).toLocaleDateString('ru-RU')}</div>
+            <div class="guide-content">${g.content}</div>
+          </div>
+        `).join('') : `
+          <div class="empty-state">
+            Гиды появятся после того, как вы получите кофе и нажмёте «Сгенерировать гид».
+          </div>
+        `}
+      </div>
+    `;
+
+    document.getElementById('logoutBtn')?.addEventListener('click', async () => {
+      await supabase.auth.signOut();
+      window.location.href = '/';
+    });
+  }
+
+  (window as any).updateStatus = async (selId: string, status: string) => {
+    await supabase.from('coffee_selections').update({ status, updated_at: new Date().toISOString() }).eq('id', selId);
+    init();
+  };
+
+  (window as any).generateGuide = async (selId: string) => {
+    const btn = document.querySelector(`[data-sel-id="${selId}"] .sel-action-btn.primary`) as HTMLButtonElement;
+    if (btn) { btn.disabled = true; btn.textContent = 'Генерация...'; }
+
+    try {
+      const res = await fetch('/api/generate-guide', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ selectionId: selId }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      init();
+    } catch (e: any) {
+      alert('Ошибка генерации: ' + e.message);
+      if (btn) { btn.disabled = false; btn.textContent = 'Сгенерировать гид 🤖'; }
+    }
+  };
+
+  init();
+</script>

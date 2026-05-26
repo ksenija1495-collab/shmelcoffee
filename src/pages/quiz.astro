@@ -130,6 +130,20 @@ import { COFFEE_DB } from '../data/coffees';
 </style>
 
 <script define:vars={{ DB, COFFEE_DB }}>
+import { createClient } from '@supabase/supabase-js';
+
+const supa = createClient(
+  import.meta.env.PUBLIC_SUPABASE_URL,
+  import.meta.env.PUBLIC_SUPABASE_ANON_KEY
+);
+
+async function getUser() {
+  try {
+    const { data } = await supa.auth.getUser();
+    return data?.user || null;
+  } catch { return null; }
+}
+
 const TOTAL_STEPS = 10;
 
 const quizSteps = [
@@ -754,10 +768,15 @@ function renderSetResults(card) {
         <span class="guide-feat">🔄 Что с чем сравнивать</span>
         <span class="guide-feat">📝 Заметки для дегустации</span>
       </div>
-      <a href="https://t.me/m/F5-cKlk_M2My" target="_blank" class="btn btn-primary" style="font-size:.88rem;padding:10px 24px">
-        Заказать сет с гидом в Telegram →
-      </a>
-      <p style="font-size:.75rem;color:var(--text-muted);margin-top:10px">Напишите — подберём и соберём сет под ваш профиль</p>
+      <div style="display:flex;flex-direction:column;gap:10px;align-items:center">
+        <button class="btn btn-primary" id="saveAndOrder" style="font-size:.88rem;padding:10px 24px">
+          Сохранить подборку и заказать →
+        </button>
+        <a href="https://t.me/m/F5-cKlk_M2My" target="_blank" style="font-size:.78rem;color:var(--accent);text-decoration:underline">
+          или написать в Telegram напрямую
+        </a>
+      </div>
+      <p style="font-size:.75rem;color:var(--text-muted);margin-top:10px">Закажите сами у обжарщиков — ссылки в подборке. Мы сгенерируем персональный гид после получения.</p>
     </div>
 
     <div class="quiz-nav" style="margin-top:20px">
@@ -765,6 +784,69 @@ function renderSetResults(card) {
       <button class="btn" id="restartAll">Пройти заново</button>
     </div>
   `;
+
+  document.getElementById('saveAndOrder').addEventListener('click', async () => {
+    const btn = document.getElementById('saveAndOrder');
+    btn.textContent = 'Сохраняем...';
+    btn.disabled = true;
+
+    let user = await getUser();
+    if (!user) {
+      const email = prompt('Введите email для сохранения подборки и получения гида:');
+      if (!email) { btn.textContent = 'Сохранить подборку и заказать →'; btn.disabled = false; return; }
+      const { error } = await supa.auth.signInWithOtp({
+        email,
+        options: { emailRedirectTo: window.location.origin + '/auth/callback' },
+      });
+      if (error) {
+        alert('Ошибка: ' + error.message);
+        btn.textContent = 'Сохранить подборку и заказать →'; btn.disabled = false;
+        return;
+      }
+      btn.innerHTML = '✓ Ссылка отправлена на ' + email + '<br><span style="font-size:.75rem">Перейдите по ссылке в письме — подборка сохранится</span>';
+      sessionStorage.setItem('pendingSelection', JSON.stringify({
+        coffees: set.map(c => ({ name: c.name, roaster: c.roaster, origin: c.origin, process: c.process, notes: (c.notes||[]).join(', '), price: c.price, url: c.url })),
+        format: state.setFormat,
+        answers: state.answers,
+        profileType: state.topCountries.map(k => DB[k].name).join(', '),
+        brewMethod: state.equipment,
+        tastes: state.answers.flavors,
+      }));
+      return;
+    }
+
+    try {
+      const profileRes = await fetch('/api/save-profile', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({
+          userId: user.id,
+          answers: state.answers,
+          profileType: state.topCountries.map(k => DB[k].name).join(', '),
+          brewMethod: state.equipment,
+          tastes: state.answers.flavors,
+          notes: [],
+        }),
+      });
+      const profile = await profileRes.json();
+
+      await fetch('/api/save-selection', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({
+          userId: user.id,
+          profileId: profile.id,
+          coffees: set.map(c => ({ name: c.name, roaster: c.roaster, origin: c.origin, process: c.process, notes: (c.notes||[]).join(', '), price: c.price, url: c.url })),
+          format: state.setFormat,
+        }),
+      });
+
+      btn.innerHTML = '✓ Сохранено! <a href="/account" style="color:#fff;text-decoration:underline">Перейти в кабинет →</a>';
+    } catch (e) {
+      alert('Ошибка сохранения: ' + e.message);
+      btn.textContent = 'Сохранить подборку и заказать →'; btn.disabled = false;
+    }
+  });
 
   document.getElementById('backToPrefs').addEventListener('click', () => {
     state.phase = 'set-prefs';

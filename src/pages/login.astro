@@ -1,0 +1,98 @@
+---
+export const prerender = true;
+import Layout from '../layouts/Layout.astro';
+import Nav from '../components/Nav.astro';
+---
+
+<Layout title="Войти — Shmelco" description="Войдите в личный кабинет Shmelco Coffee Guide">
+  <Nav />
+  <div class="container">
+    <div class="login-page">
+      <div class="login-card">
+        <h1>Войти в Shmelco</h1>
+        <p class="login-desc">Введите email — мы отправим ссылку для входа. Без пароля.</p>
+
+        <form id="loginForm" class="login-form">
+          <input type="email" id="emailInput" placeholder="your@email.com" required autocomplete="email">
+          <button type="submit" class="btn btn-primary" id="submitBtn">Отправить ссылку →</button>
+        </form>
+
+        <div id="loginMsg" class="login-msg"></div>
+        <p class="login-hint">Нет аккаунта? Он создастся автоматически при первом входе.</p>
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .login-page {
+    padding-top: 100px; min-height: 70vh;
+    display: flex; align-items: flex-start; justify-content: center;
+  }
+  .login-card {
+    max-width: 400px; width: 100%; padding: 32px;
+    background: var(--surface); border-radius: var(--radius-lg);
+    border: 1px solid var(--border); box-shadow: var(--shadow);
+    text-align: center;
+  }
+  .login-card h1 {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: 1.6rem; font-weight: 600; margin-bottom: 8px;
+  }
+  .login-desc { font-size: .84rem; color: var(--text-dim); margin-bottom: 24px; line-height: 1.5; }
+  .login-form { display: flex; flex-direction: column; gap: 10px; }
+  .login-form input {
+    padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border);
+    font-family: 'Inter', sans-serif; font-size: .88rem; background: var(--bg);
+    color: var(--text); outline: none; transition: border-color .2s;
+  }
+  .login-form input:focus { border-color: var(--accent); }
+  .login-msg {
+    margin-top: 16px; font-size: .82rem; line-height: 1.5;
+    min-height: 24px;
+  }
+  .login-msg.success { color: var(--accent-green); }
+  .login-msg.error { color: var(--accent-warm); }
+  .login-hint { font-size: .74rem; color: var(--text-muted); margin-top: 16px; }
+</style>
+
+<script>
+  import { createClient } from '@supabase/supabase-js';
+
+  const supabase = createClient(
+    import.meta.env.PUBLIC_SUPABASE_URL,
+    import.meta.env.PUBLIC_SUPABASE_ANON_KEY
+  );
+
+  const form = document.getElementById('loginForm') as HTMLFormElement;
+  const input = document.getElementById('emailInput') as HTMLInputElement;
+  const msg = document.getElementById('loginMsg')!;
+  const btn = document.getElementById('submitBtn') as HTMLButtonElement;
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = input.value.trim();
+    if (!email) return;
+
+    btn.disabled = true;
+    btn.textContent = 'Отправляем...';
+    msg.className = 'login-msg';
+    msg.textContent = '';
+
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+    });
+
+    if (error) {
+      msg.className = 'login-msg error';
+      msg.textContent = `Ошибка: ${error.message}`;
+      btn.disabled = false;
+      btn.textContent = 'Отправить ссылку →';
+    } else {
+      msg.className = 'login-msg success';
+      msg.textContent = '✓ Ссылка отправлена! Проверьте почту и нажмите на ссылку для входа.';
+      btn.textContent = 'Отправлено ✓';
+    }
+  });
+</script>
