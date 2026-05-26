@@ -3,6 +3,9 @@ import Layout from '../layouts/Layout.astro';
 import Nav from '../components/Nav.astro';
 import { DB } from '../data/countries';
 import { COFFEE_DB } from '../data/coffees';
+
+const SUPA_URL = import.meta.env.PUBLIC_SUPABASE_URL || '';
+const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '';
 ---
 
 <Layout title="Диагностика вкуса — Shmelco">
@@ -129,18 +132,26 @@ import { COFFEE_DB } from '../data/coffees';
   }
 </style>
 
-<script define:vars={{ DB, COFFEE_DB }}>
-import { createClient } from '@supabase/supabase-js';
+<script define:vars={{ DB, COFFEE_DB, SUPA_URL, SUPA_KEY }}>
 
-const supa = createClient(
-  import.meta.env.PUBLIC_SUPABASE_URL,
-  import.meta.env.PUBLIC_SUPABASE_ANON_KEY
-);
+async function supaAuth(method, body) {
+  const res = await fetch(`${SUPA_URL}/auth/v1/${method}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'apikey': SUPA_KEY },
+    body: JSON.stringify(body),
+  });
+  return res.json();
+}
 
 async function getUser() {
+  const token = localStorage.getItem('sb-access-token');
+  if (!token) return null;
   try {
-    const { data } = await supa.auth.getUser();
-    return data?.user || null;
+    const res = await fetch(`${SUPA_URL}/auth/v1/user`, {
+      headers: { 'Authorization': `Bearer ${token}`, 'apikey': SUPA_KEY },
+    });
+    if (!res.ok) return null;
+    return await res.json();
   } catch { return null; }
 }
 
@@ -790,28 +801,35 @@ function renderSetResults(card) {
     btn.textContent = 'Сохраняем...';
     btn.disabled = true;
 
+    const selectionData = {
+      coffees: set.map(c => ({ name: c.name, roaster: c.roaster, origin: c.origin, process: c.process, notes: (c.notes||[]).join(', '), price: c.price, url: c.url })),
+      format: state.setFormat,
+      answers: state.answers,
+      profileType: state.topCountries.map(k => DB[k].name).join(', '),
+      brewMethod: state.equipment,
+      tastes: state.answers.flavors,
+    };
+
     let user = await getUser();
     if (!user) {
       const email = prompt('Введите email для сохранения подборки и получения гида:');
       if (!email) { btn.textContent = 'Сохранить подборку и заказать →'; btn.disabled = false; return; }
-      const { error } = await supa.auth.signInWithOtp({
-        email,
-        options: { emailRedirectTo: window.location.origin + '/auth/callback' },
+
+      const otpRes = await fetch(`${SUPA_URL}/auth/v1/otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': SUPA_KEY },
+        body: JSON.stringify({ email, options: { emailRedirectTo: window.location.origin + '/auth/callback' } }),
       });
-      if (error) {
-        alert('Ошибка: ' + error.message);
+
+      if (!otpRes.ok) {
+        const err = await otpRes.json();
+        alert('Ошибка: ' + (err.msg || err.message || 'Не удалось отправить'));
         btn.textContent = 'Сохранить подборку и заказать →'; btn.disabled = false;
         return;
       }
+
       btn.innerHTML = '✓ Ссылка отправлена на ' + email + '<br><span style="font-size:.75rem">Перейдите по ссылке в письме — подборка сохранится</span>';
-      sessionStorage.setItem('pendingSelection', JSON.stringify({
-        coffees: set.map(c => ({ name: c.name, roaster: c.roaster, origin: c.origin, process: c.process, notes: (c.notes||[]).join(', '), price: c.price, url: c.url })),
-        format: state.setFormat,
-        answers: state.answers,
-        profileType: state.topCountries.map(k => DB[k].name).join(', '),
-        brewMethod: state.equipment,
-        tastes: state.answers.flavors,
-      }));
+      sessionStorage.setItem('pendingSelection', JSON.stringify(selectionData));
       return;
     }
 
@@ -836,7 +854,7 @@ function renderSetResults(card) {
         body: JSON.stringify({
           userId: user.id,
           profileId: profile.id,
-          coffees: set.map(c => ({ name: c.name, roaster: c.roaster, origin: c.origin, process: c.process, notes: (c.notes||[]).join(', '), price: c.price, url: c.url })),
+          coffees: selectionData.coffees,
           format: state.setFormat,
         }),
       });
