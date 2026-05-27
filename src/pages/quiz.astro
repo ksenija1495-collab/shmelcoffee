@@ -812,24 +812,8 @@ function renderSetResults(card) {
 
     let user = await getUser();
     if (!user) {
-      const email = prompt('Введите email для сохранения подборки и получения гида:');
-      if (!email) { btn.textContent = 'Сохранить подборку и заказать →'; btn.disabled = false; return; }
-
-      const otpRes = await fetch(`${SUPA_URL}/auth/v1/otp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'apikey': SUPA_KEY },
-        body: JSON.stringify({ email, options: { emailRedirectTo: window.location.origin + '/auth/callback' } }),
-      });
-
-      if (!otpRes.ok) {
-        const err = await otpRes.json();
-        alert('Ошибка: ' + (err.msg || err.message || 'Не удалось отправить'));
-        btn.textContent = 'Сохранить подборку и заказать →'; btn.disabled = false;
-        return;
-      }
-
-      btn.innerHTML = '✓ Ссылка отправлена на ' + email + '<br><span style="font-size:.75rem">Перейдите по ссылке в письме — подборка сохранится</span>';
       sessionStorage.setItem('pendingSelection', JSON.stringify(selectionData));
+      window.location.href = '/login';
       return;
     }
 
