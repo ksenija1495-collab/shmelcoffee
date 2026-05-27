@@ -67,7 +67,7 @@ import Nav from '../components/Nav.astro';
   document.getElementById('googleBtn')!.addEventListener('click', async () => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
+      options: { redirectTo: 'https://www.shmelcoffee.com/auth/callback' },
     });
     if (error) {
       const msg = document.getElementById('loginMsg')!;
