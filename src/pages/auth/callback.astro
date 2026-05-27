@@ -6,11 +6,23 @@ import Layout from '../../layouts/Layout.astro';
 <Layout title="Вход... — Shmelco">
   <div class="container" style="padding-top:120px;text-align:center;min-height:60vh">
     <p style="color:var(--text-dim);font-size:.9rem" id="statusMsg">Авторизация...</p>
+    <pre id="debugLog" style="text-align:left;font-size:.7rem;color:#888;margin-top:2rem;white-space:pre-wrap;max-width:600px;margin-left:auto;margin-right:auto"></pre>
   </div>
 </Layout>
 
 <script>
   import { createClient } from '@supabase/supabase-js';
+
+  const log = (msg: string) => {
+    const el = document.getElementById('debugLog');
+    if (el) el.textContent += msg + '\n';
+    console.log('[callback]', msg);
+  };
+
+  log('Page loaded');
+  log('URL: ' + window.location.href);
+  log('Hash: ' + (window.location.hash ? window.location.hash.substring(0, 80) + '...' : '(empty)'));
+  log('Search: ' + (window.location.search || '(empty)'));
 
   const supabase = createClient(
     import.meta.env.PUBLIC_SUPABASE_URL,
@@ -18,20 +30,30 @@ import Layout from '../../layouts/Layout.astro';
     { auth: { flowType: 'implicit', detectSessionInUrl: true } }
   );
 
+  log('Supabase client created');
+
+  let handled = false;
+
   supabase.auth.onAuthStateChange(async (event, session) => {
+    log('Auth event: ' + event);
+    if (handled) return;
+
     if (event === 'SIGNED_IN' && session?.user) {
-      const user = session.user;
+      handled = true;
+      log('User signed in: ' + session.user.email);
+      document.getElementById('statusMsg')!.textContent = 'Вход выполнен! Перенаправляем...';
 
       const pending = sessionStorage.getItem('pendingSelection');
       if (pending) {
         sessionStorage.removeItem('pendingSelection');
+        log('Saving pending selection...');
         const sel = JSON.parse(pending);
         try {
           const profRes = await fetch('/api/save-profile', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              userId: user.id,
+              userId: session.user.id,
               answers: sel.answers || {},
               profileType: sel.profileType || '',
               brewMethod: sel.brewMethod || null,
@@ -44,21 +66,78 @@ import Layout from '../../layouts/Layout.astro';
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              userId: user.id,
+              userId: session.user.id,
               profileId: profile.id,
               coffees: sel.coffees || [],
               format: sel.format || 'mixed',
             }),
           });
-        } catch (e) { console.error('Pending save failed:', e); }
+          log('Pending saved OK');
+        } catch (e: any) { log('Pending save error: ' + e.message); }
       }
 
-      window.location.href = '/account';
+      setTimeout(() => { window.location.href = '/account'; }, 500);
     }
   });
 
-  setTimeout(() => {
-    document.getElementById('statusMsg')!.textContent = 'Не удалось войти. Перенаправляем...';
-    setTimeout(() => { window.location.href = '/login'; }, 2000);
-  }, 5000);
+  // Manual fallback: try parsing hash ourselves after 2s
+  setTimeout(async () => {
+    if (handled) return;
+    log('Fallback: manual hash parse...');
+    const hash = window.location.hash;
+    if (hash) {
+      const params = new URLSearchParams(hash.replace('#', ''));
+      const accessToken = params.get('access_token');
+      const refreshToken = params.get('refresh_token');
+      log('access_token: ' + (accessToken ? accessToken.substring(0, 20) + '...' : 'null'));
+      log('refresh_token: ' + (refreshToken ? 'present' : 'null'));
+
+      if (accessToken && refreshToken) {
+        log('Setting session manually...');
+        const { error } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+        if (error) {
+          log('setSession error: ' + error.message);
+        } else {
+          log('Session set OK');
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            log('User: ' + user.email);
+            handled = true;
+            window.location.href = '/account';
+            return;
+          } else {
+            log('getUser returned null after setSession');
+          }
+        }
+      }
+    }
+
+    // Also try code exchange
+    const code = new URLSearchParams(window.location.search).get('code');
+    if (code) {
+      log('Found code param, exchanging...');
+      const { error } = await supabase.auth.exchangeCodeForSession(code);
+      if (error) {
+        log('exchangeCode error: ' + error.message);
+      } else {
+        log('Code exchange OK');
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          log('User: ' + user.email);
+          handled = true;
+          window.location.href = '/account';
+          return;
+        }
+      }
+    }
+
+    if (!handled) {
+      log('All methods failed.');
+      document.getElementById('statusMsg')!.textContent = 'Не удалось войти. Перенаправляем...';
+      setTimeout(() => { window.location.href = '/login'; }, 5000);
+    }
+  }, 2000);
 </script>
