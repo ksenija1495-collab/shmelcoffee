@@ -15,32 +15,13 @@ import Layout from '../../layouts/Layout.astro';
   const supabase = createClient(
     import.meta.env.PUBLIC_SUPABASE_URL,
     import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
-    { auth: { flowType: 'implicit' } }
+    { auth: { flowType: 'implicit', detectSessionInUrl: true } }
   );
 
-  async function handleCallback() {
-    const params = new URLSearchParams(window.location.search);
-    const code = params.get('code');
+  supabase.auth.onAuthStateChange(async (event, session) => {
+    if (event === 'SIGNED_IN' && session?.user) {
+      const user = session.user;
 
-    if (code) {
-      await supabase.auth.exchangeCodeForSession(code);
-    }
-
-    const hash = window.location.hash;
-    if (hash) {
-      const hashParams = new URLSearchParams(hash.replace('#', ''));
-      const accessToken = hashParams.get('access_token');
-      const refreshToken = hashParams.get('refresh_token');
-      if (accessToken && refreshToken) {
-        await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
-      }
-    }
-
-    await new Promise(r => setTimeout(r, 500));
-
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (user) {
       const pending = sessionStorage.getItem('pendingSelection');
       if (pending) {
         sessionStorage.removeItem('pendingSelection');
@@ -59,7 +40,6 @@ import Layout from '../../layouts/Layout.astro';
             }),
           });
           const profile = await profRes.json();
-
           await fetch('/api/save-selection', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -70,14 +50,15 @@ import Layout from '../../layouts/Layout.astro';
               format: sel.format || 'mixed',
             }),
           });
-        } catch (e) { console.error('Failed to save pending:', e); }
+        } catch (e) { console.error('Pending save failed:', e); }
       }
-      window.location.href = '/account';
-    } else {
-      document.getElementById('statusMsg')!.textContent = 'Не удалось войти. Перенаправляем...';
-      setTimeout(() => { window.location.href = '/login'; }, 2000);
-    }
-  }
 
-  handleCallback();
+      window.location.href = '/account';
+    }
+  });
+
+  setTimeout(() => {
+    document.getElementById('statusMsg')!.textContent = 'Не удалось войти. Перенаправляем...';
+    setTimeout(() => { window.location.href = '/login'; }, 2000);
+  }, 5000);
 </script>
