@@ -18,19 +18,24 @@ import Layout from '../../layouts/Layout.astro';
   );
 
   async function handleCallback() {
-    const { data: { session }, error } = await supabase.auth.getSession();
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('code');
 
-    if (error || !session) {
-      const hash = window.location.hash;
-      if (hash) {
-        const params = new URLSearchParams(hash.replace('#', ''));
-        const accessToken = params.get('access_token');
-        const refreshToken = params.get('refresh_token');
-        if (accessToken && refreshToken) {
-          await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
-        }
+    if (code) {
+      await supabase.auth.exchangeCodeForSession(code);
+    }
+
+    const hash = window.location.hash;
+    if (hash) {
+      const hashParams = new URLSearchParams(hash.replace('#', ''));
+      const accessToken = hashParams.get('access_token');
+      const refreshToken = hashParams.get('refresh_token');
+      if (accessToken && refreshToken) {
+        await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
       }
     }
+
+    await new Promise(r => setTimeout(r, 500));
 
     const { data: { user } } = await supabase.auth.getUser();
 
@@ -64,11 +69,11 @@ import Layout from '../../layouts/Layout.astro';
               format: sel.format || 'mixed',
             }),
           });
-        } catch (e) { console.error('Failed to save pending selection:', e); }
+        } catch (e) { console.error('Failed to save pending:', e); }
       }
       window.location.href = '/account';
     } else {
-      document.getElementById('statusMsg')!.textContent = 'Не удалось войти. Попробуйте ещё раз.';
+      document.getElementById('statusMsg')!.textContent = 'Не удалось войти. Перенаправляем...';
       setTimeout(() => { window.location.href = '/login'; }, 2000);
     }
   }
