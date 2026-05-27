@@ -11,6 +11,7 @@ const isActive = (path: string) => currentPath === path || currentPath.startsWit
       <li><a href="/countries" class={isActive('/countries') ? 'active' : ''}>Страны</a></li>
       <li><a href="/wheel" class={isActive('/wheel') ? 'active' : ''}>Вкусы</a></li>
       <li><a href="/blog" class={isActive('/blog') ? 'active' : ''}>Блог</a></li>
+      <li><a href="/account" class={isActive('/account') ? 'active' : ''} id="navAccount">Кабинет</a></li>
       <li><a href="/quiz" class={`nav-cta ${isActive('/quiz') ? 'active' : ''}`}>Узнать свой вкус →</a></li>
     </ul>
   </div>

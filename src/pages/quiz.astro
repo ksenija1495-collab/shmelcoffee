@@ -144,9 +144,13 @@ async function supaAuth(method, body) {
 }
 
 async function getUser() {
-  const token = localStorage.getItem('sb-access-token');
-  if (!token) return null;
+  const ref = SUPA_URL.replace('https://','').split('.')[0];
+  const stored = localStorage.getItem(`sb-${ref}-auth-token`);
+  if (!stored) return null;
   try {
+    const parsed = JSON.parse(stored);
+    const token = parsed.access_token;
+    if (!token) return null;
     const res = await fetch(`${SUPA_URL}/auth/v1/user`, {
       headers: { 'Authorization': `Bearer ${token}`, 'apikey': SUPA_KEY },
     });
@@ -802,7 +806,10 @@ function renderSetResults(card) {
     btn.disabled = true;
 
     const selectionData = {
-      coffees: set.map(c => ({ name: c.name, roaster: c.roaster, origin: c.origin, process: c.process, notes: (c.notes||[]).join(', '), price: c.price, url: c.url })),
+      coffees: set.map(s => {
+        const cf = s.coffee;
+        return { name: cf.name, roaster: cf.roaster, origin: cf.country, process: cf.processing, notes: (cf.notes||[]).join(', '), price: cf.price, url: cf.url };
+      }),
       format: state.setFormat,
       answers: state.answers,
       profileType: state.topCountries.map(k => DB[k].name).join(', '),

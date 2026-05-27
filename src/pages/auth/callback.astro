@@ -5,24 +5,17 @@ import Layout from '../../layouts/Layout.astro';
 
 <Layout title="Вход... — Shmelco">
   <div class="container" style="padding-top:120px;text-align:center;min-height:60vh">
+    <div style="width:28px;height:28px;border:2px solid var(--border);border-top-color:var(--text);border-radius:50%;animation:spin .6s linear infinite;margin:0 auto 16px"></div>
     <p style="color:var(--text-dim);font-size:.9rem" id="statusMsg">Авторизация...</p>
-    <pre id="debugLog" style="text-align:left;font-size:.7rem;color:#888;margin-top:2rem;white-space:pre-wrap;max-width:600px;margin-left:auto;margin-right:auto"></pre>
   </div>
 </Layout>
 
+<style>
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+
 <script>
   import { createClient } from '@supabase/supabase-js';
-
-  const log = (msg: string) => {
-    const el = document.getElementById('debugLog');
-    if (el) el.textContent += msg + '\n';
-    console.log('[callback]', msg);
-  };
-
-  log('Page loaded');
-  log('URL: ' + window.location.href);
-  log('Hash: ' + (window.location.hash ? window.location.hash.substring(0, 80) + '...' : '(empty)'));
-  log('Search: ' + (window.location.search || '(empty)'));
 
   const supabase = createClient(
     import.meta.env.PUBLIC_SUPABASE_URL,
@@ -30,114 +23,76 @@ import Layout from '../../layouts/Layout.astro';
     { auth: { flowType: 'implicit', detectSessionInUrl: true } }
   );
 
-  log('Supabase client created');
-
   let handled = false;
 
   supabase.auth.onAuthStateChange(async (event, session) => {
-    log('Auth event: ' + event);
     if (handled) return;
-
     if (event === 'SIGNED_IN' && session?.user) {
       handled = true;
-      log('User signed in: ' + session.user.email);
-      document.getElementById('statusMsg')!.textContent = 'Вход выполнен! Перенаправляем...';
-
-      const pending = sessionStorage.getItem('pendingSelection');
-      if (pending) {
-        sessionStorage.removeItem('pendingSelection');
-        log('Saving pending selection...');
-        const sel = JSON.parse(pending);
-        try {
-          const profRes = await fetch('/api/save-profile', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              userId: session.user.id,
-              answers: sel.answers || {},
-              profileType: sel.profileType || '',
-              brewMethod: sel.brewMethod || null,
-              tastes: sel.tastes || [],
-              notes: [],
-            }),
-          });
-          const profile = await profRes.json();
-          await fetch('/api/save-selection', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              userId: session.user.id,
-              profileId: profile.id,
-              coffees: sel.coffees || [],
-              format: sel.format || 'mixed',
-            }),
-          });
-          log('Pending saved OK');
-        } catch (e: any) { log('Pending save error: ' + e.message); }
-      }
-
-      setTimeout(() => { window.location.href = '/account'; }, 500);
+      document.getElementById('statusMsg')!.textContent = 'Добро пожаловать!';
+      await savePendingData(session.user);
+      window.location.href = '/account';
     }
   });
 
-  // Manual fallback: try parsing hash ourselves after 2s
+  async function savePendingData(user: any) {
+    const pending = sessionStorage.getItem('pendingSelection');
+    if (!pending) return;
+    sessionStorage.removeItem('pendingSelection');
+    const sel = JSON.parse(pending);
+    try {
+      const profRes = await fetch('/api/save-profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.id,
+          answers: sel.answers || {},
+          profileType: sel.profileType || '',
+          brewMethod: sel.brewMethod || null,
+          tastes: sel.tastes || [],
+          notes: [],
+        }),
+      });
+      const profile = await profRes.json();
+      await fetch('/api/save-selection', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.id,
+          profileId: profile.id,
+          coffees: sel.coffees || [],
+          format: sel.format || 'mixed',
+        }),
+      });
+    } catch (e) { console.error('Pending save error:', e); }
+  }
+
   setTimeout(async () => {
     if (handled) return;
-    log('Fallback: manual hash parse...');
     const hash = window.location.hash;
     if (hash) {
       const params = new URLSearchParams(hash.replace('#', ''));
       const accessToken = params.get('access_token');
       const refreshToken = params.get('refresh_token');
-      log('access_token: ' + (accessToken ? accessToken.substring(0, 20) + '...' : 'null'));
-      log('refresh_token: ' + (refreshToken ? 'present' : 'null'));
-
       if (accessToken && refreshToken) {
-        log('Setting session manually...');
-        const { error } = await supabase.auth.setSession({
-          access_token: accessToken,
-          refresh_token: refreshToken,
-        });
-        if (error) {
-          log('setSession error: ' + error.message);
-        } else {
-          log('Session set OK');
+        const { error } = await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+        if (!error) {
           const { data: { user } } = await supabase.auth.getUser();
-          if (user) {
-            log('User: ' + user.email);
-            handled = true;
-            window.location.href = '/account';
-            return;
-          } else {
-            log('getUser returned null after setSession');
-          }
+          if (user) { handled = true; await savePendingData(user); window.location.href = '/account'; return; }
         }
       }
     }
-
-    // Also try code exchange
     const code = new URLSearchParams(window.location.search).get('code');
     if (code) {
-      log('Found code param, exchanging...');
       const { error } = await supabase.auth.exchangeCodeForSession(code);
-      if (error) {
-        log('exchangeCode error: ' + error.message);
-      } else {
-        log('Code exchange OK');
+      if (!error) {
         const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          log('User: ' + user.email);
-          handled = true;
-          window.location.href = '/account';
-          return;
-        }
+        if (user) { handled = true; await savePendingData(user); window.location.href = '/account'; return; }
       }
     }
-
     if (!handled) {
-      log('All methods failed.');
       document.getElementById('statusMsg')!.textContent = 'Не удалось войти. Перенаправляем...';
-      setTimeout(() => { window.location.href = '/login'; }, 5000);
+      setTimeout(() => { window.location.href = '/login'; }, 2000);
     }
   }, 2000);
 </script>
