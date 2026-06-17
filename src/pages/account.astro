@@ -4,7 +4,7 @@ import Layout from '../layouts/Layout.astro';
 import Nav from '../components/Nav.astro';
 ---
 
-<Layout title="Личный кабинет — Shmelco" description="Ваш вкусовой профиль, подборки кофе и персональные гиды">
+<Layout title="Личный кабинет — Shmelco" description="Ваш вкусовой профиль, карта вкуса, карта открытий, подборки кофе и персональные гиды">
   <Nav />
   <div class="container">
     <div class="account-page" id="accountPage">
@@ -63,6 +63,36 @@ import Nav from '../components/Nav.astro';
     background: var(--surface-2); font-size: .74rem; color: var(--text-dim);
     border: 1px solid var(--border);
   }
+
+  /* ─── Карта вкуса ─── */
+  .tastemap-card { display: flex; gap: 22px; align-items: center; flex-wrap: wrap; }
+  .tastemap-wheel { width: 210px; height: 210px; flex-shrink: 0; }
+  .tastemap-side { flex: 1; min-width: 190px; }
+  .tm-row { display: flex; justify-content: space-between; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--border); }
+  .tm-row:last-of-type { border-bottom: 0; }
+  .tm-fams { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 12px; }
+  .tm-fam { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: .74rem; color: #fff; font-weight: 600; }
+
+  /* ─── Карта открытий ─── */
+  .disco-top { display: flex; align-items: center; gap: 16px; margin-bottom: 8px; }
+  .disco-ring { width: 84px; height: 84px; flex-shrink: 0; }
+  .disco-count { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.5rem; font-weight: 600; }
+  .disco-subtitle { font-size: .82rem; font-weight: 700; color: var(--text); margin: 18px 0 10px; }
+  .disco-rec { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+  .disco-rec-card {
+    display: flex; flex-direction: column; gap: 3px; padding: 13px;
+    border-radius: 10px; border: 1px solid var(--accent); background: rgba(168,124,79,.07);
+    text-decoration: none; color: inherit; transition: all .2s;
+  }
+  .disco-rec-card:hover { box-shadow: var(--shadow-hover); transform: translateY(-1px); }
+  .drc-flag { font-size: 1.5rem; }
+  .drc-name { font-weight: 700; font-size: .88rem; }
+  .drc-why { font-size: .72rem; color: var(--text-muted); line-height: 1.35; }
+  .disco-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+  .disco-chip { padding: 6px 11px; border-radius: 20px; font-size: .74rem; border: 1px solid var(--border); }
+  .disco-chip.open { background: #e8f0e4; color: #4a7a45; border-color: #cfe0c8; font-weight: 600; }
+  .disco-chip.closed { color: var(--text-muted); border-style: dashed; }
+  .disco-hint { font-size: .78rem; color: var(--text-muted); margin-top: 16px; line-height: 1.55; }
 
   .selection-card {
     padding: 20px; background: var(--surface); border: 1px solid var(--border);
@@ -142,11 +172,14 @@ import Nav from '../components/Nav.astro';
     .account-header h1 { font-size: 1.4rem; }
     .coffee-item { flex-direction: column; align-items: flex-start; }
     .coffee-price { margin-top: 4px; }
+    .tastemap-wheel { width: 180px; height: 180px; margin: 0 auto; }
   }
 </style>
 
 <script>
   import { createClient } from '@supabase/supabase-js';
+  import { wheelData } from '../data/wheel';
+  import { DB, countryOrder } from '../data/countries';
 
   const supabase = createClient(
     import.meta.env.PUBLIC_SUPABASE_URL,
@@ -155,6 +188,74 @@ import Nav from '../components/Nav.astro';
   );
 
   const page = document.getElementById('accountPage')!;
+
+  // ─── Маппинг: вкусы из квиза → семейства колеса ───
+  const FLAVOR_TO_FAM: Record<string, string[]> = {
+    fruity: ['Ягоды', 'Цитрус', 'Фрукты'],
+    floral: ['Цветочный'],
+    chocolate: ['Ореховый'],
+    caramel: ['Сладкий'],
+    spicy: ['Пряный', 'Обжарочный'],
+    tropical: ['Фрукты'],
+  };
+  const ACID: Record<string, string> = { high: 'Яркая, сочная', medium: 'Сбалансированная', low: 'Мягкая, гладкая' };
+  const BODY: Record<string, string> = { light: 'Лёгкое, чайное', med: 'Среднее, шелковистое', heavy: 'Плотное, сиропистое' };
+  const SWEET: Record<string, string> = { fruitSw: 'Фруктовая', honeySw: 'Медовая, карамельная', chocoSw: 'Шоколадная', drySw: 'Сухая, ореховая' };
+
+  // Пересчёт топ-стран из ответов квиза (та же логика, что в /quiz)
+  function calcTop(answers: any): string[] {
+    if (!answers) return [];
+    const scores: Record<string, number> = {};
+    for (const [k, c] of Object.entries(DB) as [string, any][]) {
+      let s = 0;
+      (answers.flavors || []).forEach((f: string) => { s += (c.sc[f] || 0); });
+      if (answers.acidity) s += (c.sc[answers.acidity] || 0);
+      if (answers.body) s += (c.sc[answers.body] || 0);
+      if (answers.sweetness) s += (c.sc[answers.sweetness] || 0);
+      scores[k] = s;
+    }
+    return Object.entries(scores).sort((a, b) => b[1] - a[1]).map(([k]) => k);
+  }
+
+  function ringSVG(open: number, total: number): string {
+    const pct = total ? open / total : 0;
+    const C = 2 * Math.PI * 36;
+    return `<svg width="84" height="84" viewBox="0 0 84 84">
+      <circle cx="42" cy="42" r="36" fill="none" stroke="var(--border)" stroke-width="8"/>
+      <circle cx="42" cy="42" r="36" fill="none" stroke="var(--accent)" stroke-width="8" stroke-linecap="round"
+        stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - pct)}" transform="rotate(-90 42 42)"/>
+      <text x="42" y="48" text-anchor="middle" font-family="'Cormorant Garamond',serif" font-size="17" font-weight="700" fill="var(--text)">${Math.round(pct * 100)}%</text>
+    </svg>`;
+  }
+
+  function renderTasteWheel(prefFams: Set<string>) {
+    const svg = document.getElementById('tasteWheel');
+    if (!svg) return;
+    const cx = 180, cy = 180, ir1 = 44, ir2 = 96, or1 = 100, or2 = 152, gap = 1.2;
+    const n = wheelData.length, catAng = 360 / n;
+    const p2 = (r: number, deg: number) => { const rad = (deg - 90) * Math.PI / 180; return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) }; };
+    const sector = (ri: number, ro: number, a1: number, a2: number) => {
+      const A = p2(ro, a1), B = p2(ro, a2), C = p2(ri, a2), D = p2(ri, a1);
+      const lg = (a2 - a1) > 180 ? 1 : 0;
+      return `M${A.x},${A.y} A${ro},${ro},0,${lg},1,${B.x},${B.y} L${C.x},${C.y} A${ri},${ri},0,${lg},0,${D.x},${D.y}Z`;
+    };
+    let html = `<circle cx="${cx}" cy="${cy}" r="${ir1 - 4}" fill="var(--surface-2)"/>
+      <text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="middle" font-family="'Cormorant Garamond',serif" font-size="13" font-weight="600" fill="var(--text)">ВКУС</text>`;
+    wheelData.forEach((cat: any, i: number) => {
+      const a1 = i * catAng + gap, a2 = (i + 1) * catAng - gap;
+      const on = prefFams.has(cat.name);
+      html += `<path d="${sector(ir1, ir2, a1, a2)}" fill="${cat.color}" opacity="${on ? 1 : 0.16}" stroke="#fff" stroke-width="1"/>`;
+      const mid = (a1 + a2) / 2, pos = p2((ir1 + ir2) / 2, mid);
+      let rot = mid; if (rot > 90 && rot < 270) rot += 180;
+      html += `<text x="${pos.x}" y="${pos.y}" text-anchor="middle" dominant-baseline="middle" transform="rotate(${rot},${pos.x},${pos.y})" font-family="'Inter',sans-serif" font-size="8" font-weight="600" fill="#3b2a1c" opacity="${on ? 1 : 0.4}" style="pointer-events:none">${cat.name}</text>`;
+      const subAng = (a2 - a1) / cat.subs.length;
+      cat.subs.forEach((_s: any, j: number) => {
+        const sa1 = a1 + j * subAng + gap * .4, sa2 = a1 + (j + 1) * subAng - gap * .4;
+        html += `<path d="${sector(or1, or2, sa1, sa2)}" fill="${cat.color}" opacity="${on ? 0.7 : 0.1}" stroke="#fff" stroke-width=".6"/>`;
+      });
+    });
+    svg.innerHTML = html;
+  }
 
   async function init() {
     const { data: { user } } = await supabase.auth.getUser();
@@ -174,6 +275,21 @@ import Nav from '../components/Nav.astro';
     const selections = selectionsRes.data || [];
     const guides = guidesRes.data || [];
     const latestProfile = profiles[0];
+
+    // ─── Данные для Карты вкуса и Карты открытий ───
+    const answers = latestProfile?.answers || null;
+    const nameToKey: Record<string, string> = {};
+    for (const [k, c] of Object.entries(DB) as [string, any][]) nameToKey[c.name] = k;
+    const openedKeys = new Set<string>();
+    selections.forEach((s: any) => (s.coffees || []).forEach((c: any) => {
+      const k = nameToKey[c.origin]; if (k) openedKeys.add(k);
+    }));
+    const topKeys = calcTop(answers);
+    const recommendedFirst = topKeys.filter(k => !openedKeys.has(k)).slice(0, 3);
+    const prefFams = new Set<string>();
+    (answers?.flavors || []).forEach((f: string) => (FLAVOR_TO_FAM[f] || []).forEach(x => prefFams.add(x)));
+    const famColor: Record<string, string> = {};
+    wheelData.forEach((c: any) => { famColor[c.name] = c.color; });
 
     const statusLabels: Record<string, string> = {
       selected: 'Выбрано', ordered: 'Заказано', received: 'Получено', tasted: 'Продегустировано'
@@ -220,6 +336,51 @@ import Nav from '../components/Nav.astro';
           </div>
         `}
       </div>
+
+      ${answers ? `
+      <div class="account-section">
+        <div class="account-section-title">🗺️ Карта вкуса</div>
+        <div class="profile-card tastemap-card">
+          <svg id="tasteWheel" class="tastemap-wheel" viewBox="0 0 360 360"></svg>
+          <div class="tastemap-side">
+            <div class="tm-row"><span class="profile-label">Кислотность</span><span class="profile-value">${ACID[answers.acidity] || '—'}</span></div>
+            <div class="tm-row"><span class="profile-label">Тело</span><span class="profile-value">${BODY[answers.body] || '—'}</span></div>
+            <div class="tm-row"><span class="profile-label">Сладость</span><span class="profile-value">${SWEET[answers.sweetness] || '—'}</span></div>
+            <div class="tm-fams">
+              ${[...prefFams].map(f => `<span class="tm-fam" style="background:${famColor[f] || 'var(--accent)'}">${f}</span>`).join('') || '<span class="profile-tag">—</span>'}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="account-section">
+        <div class="account-section-title">🧭 Карта открытий</div>
+        <div class="profile-card">
+          <div class="disco-top">
+            <div class="disco-ring">${ringSVG(openedKeys.size, countryOrder.length)}</div>
+            <div>
+              <div class="disco-count">${openedKeys.size} / ${countryOrder.length}</div>
+              <div class="profile-label" style="min-width:0">стран открыто</div>
+            </div>
+          </div>
+          ${recommendedFirst.length ? `
+            <div class="disco-subtitle">Откройте первыми — под ваш вкус</div>
+            <div class="disco-rec">
+              ${recommendedFirst.map(k => { const c: any = DB[k]; return `
+                <a class="disco-rec-card" href="/countries?c=${k}">
+                  <span class="drc-flag">${c.flag}</span>
+                  <span class="drc-name">${c.name}</span>
+                  <span class="drc-why">${c.flavors.slice(0, 3).join(' · ')}</span>
+                </a>`; }).join('')}
+            </div>` : ''}
+          <div class="disco-subtitle">Весь мир кофе</div>
+          <div class="disco-grid">
+            ${countryOrder.map((k: string) => { const c: any = DB[k]; const open = openedKeys.has(k); return `<span class="disco-chip ${open ? 'open' : 'closed'}">${c.flag} ${c.name}${open ? ' ✓' : ''}</span>`; }).join('')}
+          </div>
+          <div class="disco-hint">Пробуйте новые страны и отмечайте чашки — карта будет открываться, а профиль становиться точнее. (Дневник дегустаций — следующий шаг.)</div>
+        </div>
+      </div>
+      ` : ''}
 
       <div class="account-section">
         <div class="account-section-title">☕ Мои подборки</div>
@@ -282,6 +443,9 @@ import Nav from '../components/Nav.astro';
         `}
       </div>
     `;
+
+    // отрисовать колесо Карты вкуса
+    renderTasteWheel(prefFams);
 
     document.getElementById('logoutBtn')?.addEventListener('click', async () => {
       await supabase.auth.signOut();
