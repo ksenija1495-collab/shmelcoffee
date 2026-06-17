@@ -1,12 +1,11 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
-import node from '@astrojs/node';
+import vercel from '@astrojs/vercel';
 import sitemap from '@astrojs/sitemap';
-
+ 
 export default defineConfig({
   output: 'static',
-  adapter: node({ mode: 'standalone' }),
-  server: { port: parseInt(process.env.PORT || '4321'), host: true },
+  adapter: vercel(),
   site: 'https://shmelcoffee.com',
   integrations: [sitemap()],
 });
