@@ -8,13 +8,12 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
-    "start": "node dist/server/entry.mjs",
     "preview": "astro preview",
     "astro": "astro"
   },
   "dependencies": {
-    "@astrojs/node": "^10.1.1",
     "@astrojs/sitemap": "^3.7.2",
+    "@astrojs/vercel": "^10.0.0",
     "@supabase/supabase-js": "^2.106.2",
     "astro": "^6.3.7",
     "openai": "^6.39.0"
