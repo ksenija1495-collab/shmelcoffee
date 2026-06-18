@@ -4,7 +4,7 @@ import Layout from '../layouts/Layout.astro';
 import Nav from '../components/Nav.astro';
 ---
 
-<Layout title="Личный кабинет — Shmelco" description="Ваш вкусовой профиль, карта вкуса, карта открытий, подборки кофе и персональные гиды">
+<Layout title="Личный кабинет — Shmelco" description="Ваш вкусовой профиль, карта вкуса, карта открытий, дневник и подборки">
   <Nav />
   <div class="container">
     <div class="account-page" id="accountPage">
@@ -19,52 +19,21 @@ import Nav from '../components/Nav.astro';
 <style is:global>
   .account-page { padding-top: 88px; max-width: 680px; margin: 0 auto; min-height: 70vh; padding-bottom: 100px; }
   .account-loading { text-align: center; padding: 80px 0; color: var(--text-muted); }
-  .loader-spinner {
-    width: 28px; height: 28px; border: 2px solid var(--border); border-top-color: var(--text);
-    border-radius: 50%; animation: spin .6s linear infinite; margin: 0 auto 16px;
-  }
+  .loader-spinner { width: 28px; height: 28px; border: 2px solid var(--border); border-top-color: var(--text); border-radius: 50%; animation: spin .6s linear infinite; margin: 0 auto 16px; }
   @keyframes spin { to { transform: rotate(360deg); } }
-
-  .account-header {
-    display: flex; align-items: center; justify-content: space-between;
-    margin-bottom: 32px; padding-bottom: 24px; border-bottom: 1px solid var(--border);
-    flex-wrap: wrap; gap: 12px;
-  }
-  .account-header h1 {
-    font-family: 'Cormorant Garamond', Georgia, serif;
-    font-size: 1.7rem; font-weight: 600; margin: 0;
-  }
+  .account-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px; padding-bottom: 24px; border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 12px; }
+  .account-header h1 { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.7rem; font-weight: 600; margin: 0; }
   .account-email { font-size: .76rem; color: var(--text-muted); margin-top: 2px; }
-  .logout-btn {
-    font-size: .74rem; color: var(--text-muted); background: none; border: 1px solid var(--border);
-    padding: 6px 14px; border-radius: 6px; cursor: pointer; transition: all .2s;
-    font-family: 'Inter', sans-serif;
-  }
+  .logout-btn { font-size: .74rem; color: var(--text-muted); background: none; border: 1px solid var(--border); padding: 6px 14px; border-radius: 6px; cursor: pointer; transition: all .2s; font-family: 'Inter', sans-serif; }
   .logout-btn:hover { border-color: var(--accent-warm); color: var(--accent-warm); }
-
   .account-section { margin-bottom: 36px; }
-  .account-section-title {
-    font-family: 'Cormorant Garamond', Georgia, serif;
-    font-size: 1.15rem; font-weight: 600; margin-bottom: 14px;
-    display: flex; align-items: center; gap: 8px;
-    color: var(--text);
-  }
-
-  .profile-card {
-    padding: 20px; background: var(--surface); border: 1px solid var(--border);
-    border-radius: var(--radius); box-shadow: var(--shadow);
-  }
+  .account-section-title { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.15rem; font-weight: 600; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; color: var(--text); }
+  .profile-card { padding: 20px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); }
   .profile-row { display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px; }
   .profile-label { font-size: .72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: .05em; min-width: 70px; }
   .profile-value { font-size: .88rem; font-weight: 500; }
   .profile-tags { display: flex; flex-wrap: wrap; gap: 5px; }
-  .profile-tag {
-    display: inline-block; padding: 3px 10px; border-radius: 20px;
-    background: var(--surface-2); font-size: .74rem; color: var(--text-dim);
-    border: 1px solid var(--border);
-  }
-
-  /* ─── Карта вкуса ─── */
+  .profile-tag { display: inline-block; padding: 3px 10px; border-radius: 20px; background: var(--surface-2); font-size: .74rem; color: var(--text-dim); border: 1px solid var(--border); }
   .tastemap-card { display: flex; gap: 22px; align-items: center; flex-wrap: wrap; }
   .tastemap-wheel { width: 210px; height: 210px; flex-shrink: 0; }
   .tastemap-wheel path[data-cat] { cursor: pointer; transition: opacity .15s; }
@@ -83,18 +52,12 @@ import Nav from '../components/Nav.astro';
   .tm-sub:last-child { border-bottom: 0; }
   .tm-sub b { color: var(--text); }
   .tm-sub .org { color: var(--text-muted); font-size: .78rem; }
-
-  /* ─── Карта открытий ─── */
   .disco-top { display: flex; align-items: center; gap: 16px; margin-bottom: 8px; }
   .disco-ring { width: 84px; height: 84px; flex-shrink: 0; }
   .disco-count { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.5rem; font-weight: 600; }
   .disco-subtitle { font-size: .82rem; font-weight: 700; color: var(--text); margin: 18px 0 10px; }
   .disco-rec { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
-  .disco-rec-card {
-    display: flex; flex-direction: column; gap: 3px; padding: 13px;
-    border-radius: 10px; border: 1px solid var(--accent); background: rgba(168,124,79,.07);
-    text-decoration: none; color: inherit; transition: all .2s;
-  }
+  .disco-rec-card { display: flex; flex-direction: column; gap: 3px; padding: 13px; border-radius: 10px; border: 1px solid var(--accent); background: rgba(168,124,79,.07); text-decoration: none; color: inherit; transition: all .2s; }
   .disco-rec-card:hover { box-shadow: var(--shadow-hover); transform: translateY(-1px); }
   .drc-flag { font-size: 1.5rem; }
   .drc-name { font-weight: 700; font-size: .88rem; }
@@ -105,8 +68,6 @@ import Nav from '../components/Nav.astro';
   .disco-chip.open { background: #e8f0e4; color: #4a7a45; border-color: #cfe0c8; font-weight: 600; }
   .disco-chip.closed { color: var(--text-muted); border-style: dashed; }
   .disco-hint { font-size: .78rem; color: var(--text-muted); margin-top: 16px; line-height: 1.55; }
-
-  /* ─── Сообщество ─── */
   .comm-sub { font-size: .82rem; font-weight: 700; margin: 14px 0 8px; color: var(--text); }
   .comm-sub:first-child { margin-top: 0; }
   .comm-row { display: flex; align-items: center; gap: 10px; margin: 8px 0; font-size: .82rem; }
@@ -114,87 +75,42 @@ import Nav from '../components/Nav.astro';
   .comm-bar { flex: 1; height: 10px; background: var(--surface-2); border-radius: 6px; overflow: hidden; }
   .comm-bar > i { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-warm)); }
   .comm-row .n { font-weight: 700; min-width: 26px; text-align: right; }
-
-  .selection-card {
-    padding: 20px; background: var(--surface); border: 1px solid var(--border);
-    border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 12px;
-    transition: border-color .2s;
-  }
+  .cup-item { padding: 12px 0; border-bottom: 1px solid var(--border); }
+  .cup-item:last-child { border-bottom: 0; }
+  .cup-head { font-weight: 700; font-size: .9rem; color: var(--text); }
+  .cup-star { color: #E0B81E; font-size: .82rem; }
+  .add-cup-btn { font-size: .76rem; padding: 7px 16px; border-radius: 6px; background: var(--text); color: var(--bg); border: 1px solid var(--text); cursor: pointer; text-decoration: none; transition: all .2s; }
+  .add-cup-btn:hover { background: var(--accent); border-color: var(--accent); }
+  .selection-card { padding: 20px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 12px; transition: border-color .2s; }
   .selection-card:hover { border-color: var(--border-hover); }
-  .selection-header {
-    display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;
-    flex-wrap: wrap; gap: 8px;
-  }
+  .selection-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 8px; }
   .selection-date { font-size: .76rem; color: var(--text-muted); }
   .selection-format { font-size: .72rem; padding: 3px 10px; border-radius: 20px; background: var(--surface-2); color: var(--text-dim); }
-
-  .status-badge {
-    display: inline-block; padding: 3px 10px; border-radius: 20px;
-    font-size: .7rem; font-weight: 600;
-  }
+  .status-badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: .7rem; font-weight: 600; }
   .status-selected { background: var(--surface-2); color: var(--text-dim); }
   .status-ordered { background: #e8f0e4; color: #4a7a45; }
   .status-received { background: #fef3e2; color: #9a6e2e; }
   .status-tasted { background: #e8e4f0; color: #6b5a8a; }
-
   .coffee-list { display: flex; flex-direction: column; gap: 8px; }
-  .coffee-item {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 12px 14px; background: var(--surface-2); border-radius: 8px;
-    gap: 10px;
-  }
+  .coffee-item { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; background: var(--surface-2); border-radius: 8px; gap: 10px; }
   .coffee-name { font-weight: 600; font-size: .86rem; }
   .coffee-detail { font-size: .74rem; color: var(--text-dim); margin-top: 2px; }
   .coffee-price { font-weight: 600; font-size: .86rem; white-space: nowrap; }
-  .coffee-buy {
-    display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 5px;
-    background: var(--text); color: var(--bg); font-size: .7rem; font-weight: 600;
-    text-decoration: none; transition: background .2s;
-  }
+  .coffee-buy { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 5px; background: var(--text); color: var(--bg); font-size: .7rem; font-weight: 600; text-decoration: none; transition: background .2s; }
   .coffee-buy:hover { background: var(--accent); }
-
   .selection-actions { margin-top: 14px; display: flex; gap: 8px; flex-wrap: wrap; }
-  .sel-action-btn {
-    font-size: .76rem; padding: 7px 16px; border-radius: 6px;
-    border: 1px solid var(--border); background: var(--surface);
-    cursor: pointer; transition: all .2s; font-family: 'Inter', sans-serif; color: var(--text-dim);
-  }
+  .sel-action-btn { font-size: .76rem; padding: 7px 16px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); cursor: pointer; transition: all .2s; font-family: 'Inter', sans-serif; color: var(--text-dim); }
   .sel-action-btn:hover { border-color: var(--accent); color: var(--accent); }
   .sel-action-btn.primary { background: var(--text); color: var(--bg); border-color: var(--text); }
   .sel-action-btn.primary:hover { background: var(--accent); border-color: var(--accent); }
-
-  .guide-card {
-    padding: 20px; background: var(--surface); border: 1px solid var(--border);
-    border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 12px;
-  }
+  .guide-card { padding: 20px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 12px; }
   .guide-date { font-size: .72rem; color: var(--text-muted); margin-bottom: 10px; }
   .guide-content { font-size: .86rem; line-height: 1.75; color: var(--text); }
-  .guide-content h2 { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.1rem; font-weight: 600; margin: 18px 0 8px; }
-  .guide-content h3 { font-size: .95rem; font-weight: 600; margin: 14px 0 6px; }
-  .guide-content p { margin-bottom: 10px; }
-  .guide-content ul { margin: 0 0 10px 18px; }
-  .guide-content li { margin-bottom: 4px; }
-
-  .empty-state {
-    text-align: center; padding: 32px 20px; color: var(--text-muted);
-    font-size: .84rem; background: var(--surface); border-radius: var(--radius);
-    border: 1px solid var(--border); line-height: 1.6;
-  }
+  .empty-state { text-align: center; padding: 32px 20px; color: var(--text-muted); font-size: .84rem; background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); line-height: 1.6; }
   .empty-state a { color: var(--accent); font-weight: 600; }
-
-  .selection-total {
-    text-align: right; font-size: .82rem; color: var(--text-dim); margin-top: 10px;
-    padding-top: 10px; border-top: 1px solid var(--border);
-  }
+  .selection-total { text-align: right; font-size: .82rem; color: var(--text-dim); margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
   .selection-total strong { font-size: .95rem; color: var(--text); }
-
-  @media (max-width: 768px) {
-    .account-page { padding-top: 72px; }
-    .account-header h1 { font-size: 1.4rem; }
-    .coffee-item { flex-direction: column; align-items: flex-start; }
-    .coffee-price { margin-top: 4px; }
-    .tastemap-wheel { width: 180px; height: 180px; margin: 0 auto; }
-  }
+  @media (max-width: 768px) { .account-page { padding-top: 72px; } .account-header h1 { font-size: 1.4rem; } .coffee-item { flex-direction: column; align-items: flex-start; } .coffee-price { margin-top: 4px; } .tastemap-wheel { width: 180px; height: 180px; margin: 0 auto; } }
 </style>
 
 <script>
@@ -210,18 +126,8 @@ import Nav from '../components/Nav.astro';
 
   const page = document.getElementById('accountPage')!;
 
-  const FLAVOR_TO_FAM: Record<string, string[]> = {
-    fruity: ['Ягоды', 'Цитрус', 'Фрукты'],
-    floral: ['Цветочный'],
-    chocolate: ['Ореховый'],
-    caramel: ['Сладкий'],
-    spicy: ['Пряный', 'Обжарочный'],
-    tropical: ['Фрукты'],
-  };
-  const FLAVOR_LABELS: Record<string, string> = {
-    fruity: 'Фруктовые', floral: 'Цветочные и чайные', chocolate: 'Шоколад и орехи',
-    caramel: 'Карамель и мёд', spicy: 'Пряные', tropical: 'Тропические',
-  };
+  const FLAVOR_TO_FAM: Record<string, string[]> = { fruity: ['Ягоды','Цитрус','Фрукты'], floral: ['Цветочный'], chocolate: ['Ореховый'], caramel: ['Сладкий'], spicy: ['Пряный','Обжарочный'], tropical: ['Фрукты'] };
+  const FLAVOR_LABELS: Record<string, string> = { fruity: 'Фруктовые', floral: 'Цветочные и чайные', chocolate: 'Шоколад и орехи', caramel: 'Карамель и мёд', spicy: 'Пряные', tropical: 'Тропические' };
   const ACID: Record<string, string> = { high: 'Яркая, сочная', medium: 'Сбалансированная', low: 'Мягкая, гладкая' };
   const BODY: Record<string, string> = { light: 'Лёгкое, чайное', med: 'Среднее, шелковистое', heavy: 'Плотное, сиропистое' };
   const SWEET: Record<string, string> = { fruitSw: 'Фруктовая', honeySw: 'Медовая, карамельная', chocoSw: 'Шоколадная', drySw: 'Сухая, ореховая' };
@@ -243,34 +149,23 @@ import Nav from '../components/Nav.astro';
   function ringSVG(open: number, total: number): string {
     const pct = total ? open / total : 0;
     const C = 2 * Math.PI * 36;
-    return `<svg width="84" height="84" viewBox="0 0 84 84">
-      <circle cx="42" cy="42" r="36" fill="none" stroke="var(--border)" stroke-width="8"/>
-      <circle cx="42" cy="42" r="36" fill="none" stroke="var(--accent)" stroke-width="8" stroke-linecap="round"
-        stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - pct)}" transform="rotate(-90 42 42)"/>
-      <text x="42" y="48" text-anchor="middle" font-family="'Cormorant Garamond',serif" font-size="17" font-weight="700" fill="var(--text)">${Math.round(pct * 100)}%</text>
-    </svg>`;
+    return `<svg width="84" height="84" viewBox="0 0 84 84"><circle cx="42" cy="42" r="36" fill="none" stroke="var(--border)" stroke-width="8"/><circle cx="42" cy="42" r="36" fill="none" stroke="var(--accent)" stroke-width="8" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - pct)}" transform="rotate(-90 42 42)"/><text x="42" y="48" text-anchor="middle" font-family="'Cormorant Garamond',serif" font-size="17" font-weight="700" fill="var(--text)">${Math.round(pct * 100)}%</text></svg>`;
   }
 
-  // Клик по сегменту колеса → какие ноты и в кофе каких стран
   function showFamily(idx: number) {
     const cat: any = wheelData[idx];
     const el = document.getElementById('tmInfo');
     if (!el || !cat) return;
-    el.innerHTML = `<h4 style="color:${cat.color}">${cat.name}</h4>` +
-      cat.subs.map((s: any) => `<div class="tm-sub"><b>${s.name}</b> <span class="org">— ${s.org}</span></div>`).join('');
+    el.innerHTML = `<h4 style="color:${cat.color}">${cat.name}</h4>` + cat.subs.map((s: any) => `<div class="tm-sub"><b>${s.name}</b> <span class="org">— ${s.org}</span></div>`).join('');
     el.classList.add('show');
   }
   (window as any).showFamily = showFamily;
 
-  // Клик по стране → детали
   function showCountry(k: string) {
     const c: any = DB[k];
     const el = document.getElementById('discoInfo');
     if (!el || !c) return;
-    el.innerHTML = `<h4 style="margin:0 0 6px">${c.flag} ${c.name}</h4>
-      <div class="profile-label" style="min-width:0;margin-bottom:6px">${c.region || ''}</div>
-      <div class="profile-tags" style="margin-bottom:10px">${(c.flavors || []).map((f: string) => `<span class="profile-tag">${f}</span>`).join('')}</div>
-      <a href="/countries?c=${k}" style="color:var(--accent);font-weight:600;font-size:.82rem">Подробнее о стране →</a>`;
+    el.innerHTML = `<h4 style="margin:0 0 6px">${c.flag} ${c.name}</h4><div class="profile-label" style="min-width:0;margin-bottom:6px">${c.region || ''}</div><div class="profile-tags" style="margin-bottom:10px">${(c.flavors || []).map((f: string) => `<span class="profile-tag">${f}</span>`).join('')}</div><a href="/countries?c=${k}" style="color:var(--accent);font-weight:600;font-size:.82rem">Подробнее о стране →</a>`;
     el.classList.add('show');
   }
   (window as any).showCountry = showCountry;
@@ -281,13 +176,8 @@ import Nav from '../components/Nav.astro';
     const cx = 180, cy = 180, ir1 = 44, ir2 = 96, or1 = 100, or2 = 152, gap = 1.2;
     const n = wheelData.length, catAng = 360 / n;
     const p2 = (r: number, deg: number) => { const rad = (deg - 90) * Math.PI / 180; return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) }; };
-    const sector = (ri: number, ro: number, a1: number, a2: number) => {
-      const A = p2(ro, a1), B = p2(ro, a2), C = p2(ri, a2), D = p2(ri, a1);
-      const lg = (a2 - a1) > 180 ? 1 : 0;
-      return `M${A.x},${A.y} A${ro},${ro},0,${lg},1,${B.x},${B.y} L${C.x},${C.y} A${ri},${ri},0,${lg},0,${D.x},${D.y}Z`;
-    };
-    let html = `<circle cx="${cx}" cy="${cy}" r="${ir1 - 4}" fill="var(--surface-2)"/>
-      <text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="middle" font-family="'Cormorant Garamond',serif" font-size="13" font-weight="600" fill="var(--text)" style="pointer-events:none">ВКУС</text>`;
+    const sector = (ri: number, ro: number, a1: number, a2: number) => { const A = p2(ro, a1), B = p2(ro, a2), C = p2(ri, a2), D = p2(ri, a1); const lg = (a2 - a1) > 180 ? 1 : 0; return `M${A.x},${A.y} A${ro},${ro},0,${lg},1,${B.x},${B.y} L${C.x},${C.y} A${ri},${ri},0,${lg},0,${D.x},${D.y}Z`; };
+    let html = `<circle cx="${cx}" cy="${cy}" r="${ir1 - 4}" fill="var(--surface-2)"/><text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="middle" font-family="'Cormorant Garamond',serif" font-size="13" font-weight="600" fill="var(--text)" style="pointer-events:none">ВКУС</text>`;
     wheelData.forEach((cat: any, i: number) => {
       const a1 = i * catAng + gap, a2 = (i + 1) * catAng - gap;
       const on = prefFams.has(cat.name);
@@ -296,15 +186,10 @@ import Nav from '../components/Nav.astro';
       let rot = mid; if (rot > 90 && rot < 270) rot += 180;
       html += `<text x="${pos.x}" y="${pos.y}" text-anchor="middle" dominant-baseline="middle" transform="rotate(${rot},${pos.x},${pos.y})" font-family="'Inter',sans-serif" font-size="8" font-weight="600" fill="#3b2a1c" opacity="${on ? 1 : 0.4}" style="pointer-events:none">${cat.name}</text>`;
       const subAng = (a2 - a1) / cat.subs.length;
-      cat.subs.forEach((_s: any, j: number) => {
-        const sa1 = a1 + j * subAng + gap * .4, sa2 = a1 + (j + 1) * subAng - gap * .4;
-        html += `<path d="${sector(or1, or2, sa1, sa2)}" fill="${cat.color}" opacity="${on ? 0.7 : 0.1}" stroke="#fff" stroke-width=".6" data-cat="${i}"></path>`;
-      });
+      cat.subs.forEach((_s: any, j: number) => { const sa1 = a1 + j * subAng + gap * .4, sa2 = a1 + (j + 1) * subAng - gap * .4; html += `<path d="${sector(or1, or2, sa1, sa2)}" fill="${cat.color}" opacity="${on ? 0.7 : 0.1}" stroke="#fff" stroke-width=".6" data-cat="${i}"></path>`; });
     });
     svg.innerHTML = html;
-    svg.querySelectorAll('path[data-cat]').forEach(p => {
-      p.addEventListener('click', () => showFamily(parseInt((p as HTMLElement).getAttribute('data-cat')!)));
-    });
+    svg.querySelectorAll('path[data-cat]').forEach(p => { p.addEventListener('click', () => showFamily(parseInt((p as HTMLElement).getAttribute('data-cat')!))); });
   }
 
   async function loadCommunity() {
@@ -319,44 +204,33 @@ import Nav from '../components/Nav.astro';
       const flavors: any[] = data.flavors || [];
       const maxC = Math.max(1, ...countries.map(x => x.users));
       const maxF = Math.max(1, ...flavors.map(x => x.users));
-      el.innerHTML = `
-        <div class="profile-label" style="min-width:0;margin-bottom:10px">Всего профилей в сообществе: <b style="color:var(--text)">${data.total_users || 0}</b></div>
-        <div class="comm-sub">🌍 Чаще всего открывают страны</div>
-        ${countries.length ? countries.map(x => `<div class="comm-row"><span class="l">${flagByName[x.origin] || '🌍'} ${x.origin}</span><div class="comm-bar"><i style="width:${x.users / maxC * 100}%"></i></div><span class="n">${x.users}</span></div>`).join('') : '<div class="profile-label" style="min-width:0">пока нет данных</div>'}
-        <div class="comm-sub">🎯 Популярные вкусы</div>
-        ${flavors.length ? flavors.map(x => `<div class="comm-row"><span class="l">${FLAVOR_LABELS[x.flavor] || x.flavor}</span><div class="comm-bar"><i style="width:${x.users / maxF * 100}%"></i></div><span class="n">${x.users}</span></div>`).join('') : '<div class="profile-label" style="min-width:0">пока нет данных</div>'}
-      `;
-    } catch (e) {
-      el.innerHTML = '<div class="empty-state">Не удалось загрузить статистику сообщества.</div>';
-    }
+      el.innerHTML = `<div class="profile-label" style="min-width:0;margin-bottom:10px">Всего профилей в сообществе: <b style="color:var(--text)">${data.total_users || 0}</b></div><div class="comm-sub">🌍 Чаще всего открывают страны</div>${countries.length ? countries.map(x => `<div class="comm-row"><span class="l">${flagByName[x.origin] || '🌍'} ${x.origin}</span><div class="comm-bar"><i style="width:${x.users / maxC * 100}%"></i></div><span class="n">${x.users}</span></div>`).join('') : '<div class="profile-label" style="min-width:0">пока нет данных</div>'}<div class="comm-sub">🎯 Популярные вкусы</div>${flavors.length ? flavors.map(x => `<div class="comm-row"><span class="l">${FLAVOR_LABELS[x.flavor] || x.flavor}</span><div class="comm-bar"><i style="width:${x.users / maxF * 100}%"></i></div><span class="n">${x.users}</span></div>`).join('') : '<div class="profile-label" style="min-width:0">пока нет данных</div>'}`;
+    } catch (e) { el.innerHTML = '<div class="empty-state">Не удалось загрузить статистику сообщества.</div>'; }
   }
 
   async function init() {
     const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { window.location.href = '/login'; return; }
 
-    if (!user) {
-      window.location.href = '/login';
-      return;
-    }
-
-    const [profilesRes, selectionsRes, guidesRes] = await Promise.all([
+    const [profilesRes, selectionsRes, guidesRes, cupsRes] = await Promise.all([
       supabase.from('taste_profiles').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
       supabase.from('coffee_selections').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
       supabase.from('guides').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
+      supabase.from('cups').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
     ]);
 
     const profiles = profilesRes.data || [];
     const selections = selectionsRes.data || [];
     const guides = guidesRes.data || [];
+    const cups = cupsRes.data || [];
     const latestProfile = profiles[0];
 
     const answers = latestProfile?.answers || null;
     const nameToKey: Record<string, string> = {};
     for (const [k, c] of Object.entries(DB) as [string, any][]) nameToKey[c.name] = k;
     const openedKeys = new Set<string>();
-    selections.forEach((s: any) => (s.coffees || []).forEach((c: any) => {
-      const k = nameToKey[c.origin]; if (k) openedKeys.add(k);
-    }));
+    selections.forEach((s: any) => (s.coffees || []).forEach((c: any) => { const k = nameToKey[c.origin]; if (k) openedKeys.add(k); }));
+    cups.forEach((c: any) => { const k = nameToKey[c.country]; if (k) openedKeys.add(k); });
     const topKeys = calcTop(answers);
     const recommendedFirst = topKeys.filter(k => !openedKeys.has(k)).slice(0, 3);
     const prefFams = new Set<string>();
@@ -364,206 +238,43 @@ import Nav from '../components/Nav.astro';
     const famColor: Record<string, string> = {};
     wheelData.forEach((c: any) => { famColor[c.name] = c.color; });
 
-    const statusLabels: Record<string, string> = {
-      selected: 'Выбрано', ordered: 'Заказано', received: 'Получено', tasted: 'Продегустировано'
-    };
-    const statusIcons: Record<string, string> = {
-      selected: '📋', ordered: '📦', received: '✅', tasted: '🏆'
-    };
-    const formatLabels: Record<string, string> = {
-      drip: 'Дрип-пакеты', beans: 'Зерно', mixed: 'Микс'
-    };
+    const statusLabels: Record<string, string> = { selected: 'Выбрано', ordered: 'Заказано', received: 'Получено', tasted: 'Продегустировано' };
+    const statusIcons: Record<string, string> = { selected: '📋', ordered: '📦', received: '✅', tasted: '🏆' };
+    const formatLabels: Record<string, string> = { drip: 'Дрип-пакеты', beans: 'Зерно', mixed: 'Микс' };
 
     page.innerHTML = `
-      <div class="account-header">
-        <div>
-          <h1>Личный кабинет</h1>
-          <div class="account-email">${user.email || ''}</div>
-        </div>
-        <button class="logout-btn" id="logoutBtn">Выйти</button>
-      </div>
+      <div class="account-header"><div><h1>Личный кабинет</h1><div class="account-email">${user.email || ''}</div></div><button class="logout-btn" id="logoutBtn">Выйти</button></div>
 
-      <div class="account-section">
-        <div class="account-section-title">🎯 Вкусовой профиль</div>
-        ${latestProfile ? `
-          <div class="profile-card">
-            <div class="profile-row">
-              <span class="profile-label">Регионы</span>
-              <span class="profile-value">${latestProfile.profile_type || '—'}</span>
-            </div>
-            <div class="profile-row">
-              <span class="profile-label">Метод</span>
-              <span class="profile-value">${latestProfile.brew_method || '—'}</span>
-            </div>
-            <div class="profile-row">
-              <span class="profile-label">Вкусы</span>
-              <div class="profile-tags">
-                ${(latestProfile.preferred_tastes || []).map((t: string) => `<span class="profile-tag">${t}</span>`).join('')}
-              </div>
-            </div>
-          </div>
-        ` : `
-          <div class="empty-state">
-            Вы ещё не проходили диагностику вкуса. <a href="/quiz">Пройти →</a>
-          </div>
-        `}
-      </div>
+      <div class="account-section"><div class="account-section-title">🎯 Вкусовой профиль</div>${latestProfile ? `<div class="profile-card"><div class="profile-row"><span class="profile-label">Регионы</span><span class="profile-value">${latestProfile.profile_type || '—'}</span></div><div class="profile-row"><span class="profile-label">Метод</span><span class="profile-value">${latestProfile.brew_method || '—'}</span></div><div class="profile-row"><span class="profile-label">Вкусы</span><div class="profile-tags">${(latestProfile.preferred_tastes || []).map((t: string) => `<span class="profile-tag">${t}</span>`).join('')}</div></div></div>` : `<div class="empty-state">Вы ещё не проходили диагностику вкуса. <a href="/quiz">Пройти →</a></div>`}</div>
 
       ${answers ? `
-      <div class="account-section">
-        <div class="account-section-title">🗺️ Карта вкуса</div>
-        <div class="profile-card tastemap-card">
-          <svg id="tasteWheel" class="tastemap-wheel" viewBox="0 0 360 360"></svg>
-          <div class="tastemap-side">
-            <div class="tm-row"><span class="profile-label">Кислотность</span><span class="profile-value">${ACID[answers.acidity] || '—'}</span></div>
-            <div class="tm-row"><span class="profile-label">Тело</span><span class="profile-value">${BODY[answers.body] || '—'}</span></div>
-            <div class="tm-row"><span class="profile-label">Сладость</span><span class="profile-value">${SWEET[answers.sweetness] || '—'}</span></div>
-            <div class="tm-fams">
-              ${[...prefFams].map(f => `<span class="tm-fam" style="background:${famColor[f] || 'var(--accent)'}">${f}</span>`).join('') || '<span class="profile-tag">—</span>'}
-            </div>
-            <div class="tm-hint">Нажмите на сегмент колеса — увидите ноты и в кофе каких стран они встречаются.</div>
-          </div>
-        </div>
-        <div id="tmInfo" class="info-panel"></div>
-      </div>
+      <div class="account-section"><div class="account-section-title">🗺️ Карта вкуса</div><div class="profile-card tastemap-card"><svg id="tasteWheel" class="tastemap-wheel" viewBox="0 0 360 360"></svg><div class="tastemap-side"><div class="tm-row"><span class="profile-label">Кислотность</span><span class="profile-value">${ACID[answers.acidity] || '—'}</span></div><div class="tm-row"><span class="profile-label">Тело</span><span class="profile-value">${BODY[answers.body] || '—'}</span></div><div class="tm-row"><span class="profile-label">Сладость</span><span class="profile-value">${SWEET[answers.sweetness] || '—'}</span></div><div class="tm-fams">${[...prefFams].map(f => `<span class="tm-fam" style="background:${famColor[f] || 'var(--accent)'}">${f}</span>`).join('') || '<span class="profile-tag">—</span>'}</div><div class="tm-hint">Нажмите на сегмент колеса — увидите ноты и в кофе каких стран они встречаются.</div></div></div><div id="tmInfo" class="info-panel"></div></div>
 
-      <div class="account-section">
-        <div class="account-section-title">🧭 Карта открытий</div>
-        <div class="profile-card">
-          <div class="disco-top">
-            <div class="disco-ring">${ringSVG(openedKeys.size, countryOrder.length)}</div>
-            <div>
-              <div class="disco-count">${openedKeys.size} / ${countryOrder.length}</div>
-              <div class="profile-label" style="min-width:0">стран открыто</div>
-            </div>
-          </div>
-          ${recommendedFirst.length ? `
-            <div class="disco-subtitle">Откройте первыми — под ваш вкус</div>
-            <div class="disco-rec">
-              ${recommendedFirst.map(k => { const c: any = DB[k]; return `
-                <a class="disco-rec-card" href="/countries?c=${k}">
-                  <span class="drc-flag">${c.flag}</span>
-                  <span class="drc-name">${c.name}</span>
-                  <span class="drc-why">${c.flavors.slice(0, 3).join(' · ')}</span>
-                </a>`; }).join('')}
-            </div>` : ''}
-          <div class="disco-subtitle">Весь мир кофе · нажмите на страну</div>
-          <div class="disco-grid">
-            ${countryOrder.map((k: string) => { const c: any = DB[k]; const open = openedKeys.has(k); return `<span class="disco-chip ${open ? 'open' : 'closed'}" data-k="${k}">${c.flag} ${c.name}${open ? ' ✓' : ''}</span>`; }).join('')}
-          </div>
-          <div id="discoInfo" class="info-panel"></div>
-          <div class="disco-hint">Пробуйте новые страны и отмечайте чашки — карта будет открываться, а профиль становиться точнее. (Дневник дегустаций — следующий шаг.)</div>
-        </div>
-      </div>
+      <div class="account-section"><div class="account-section-title">🧭 Карта открытий</div><div class="profile-card"><div class="disco-top"><div class="disco-ring">${ringSVG(openedKeys.size, countryOrder.length)}</div><div><div class="disco-count">${openedKeys.size} / ${countryOrder.length}</div><div class="profile-label" style="min-width:0">стран открыто</div></div></div>${recommendedFirst.length ? `<div class="disco-subtitle">Откройте первыми — под ваш вкус</div><div class="disco-rec">${recommendedFirst.map(k => { const c: any = DB[k]; return `<a class="disco-rec-card" href="/countries?c=${k}"><span class="drc-flag">${c.flag}</span><span class="drc-name">${c.name}</span><span class="drc-why">${c.flavors.slice(0, 3).join(' · ')}</span></a>`; }).join('')}</div>` : ''}<div class="disco-subtitle">Весь мир кофе · нажмите на страну</div><div class="disco-grid">${countryOrder.map((k: string) => { const c: any = DB[k]; const open = openedKeys.has(k); return `<span class="disco-chip ${open ? 'open' : 'closed'}" data-k="${k}">${c.flag} ${c.name}${open ? ' ✓' : ''}</span>`; }).join('')}</div><div id="discoInfo" class="info-panel"></div><div class="disco-hint">Пробуйте новые страны и записывайте чашки — карта открывается, а профиль становится точнее.</div></div></div>
       ` : ''}
 
-      <div class="account-section">
-        <div class="account-section-title">🌐 Сообщество</div>
-        <div class="profile-card" id="communityCard">
-          <div class="profile-label" style="min-width:0">Загружаем статистику…</div>
-        </div>
-      </div>
+      <div class="account-section"><div class="account-section-title" style="justify-content:space-between"><span>📔 Моё кофе</span><a href="/add-cup" class="add-cup-btn">+ Добавить чашку</a></div>${cups.length ? `<div class="profile-card">${cups.map((c: any) => `<div class="cup-item"><div class="cup-head">${c.name}${c.rating ? ` <span class="cup-star">${'★'.repeat(c.rating)}</span>` : ''}</div><div class="coffee-detail">${[c.roaster, c.country, c.process, c.brew_method].filter(Boolean).join(' · ') || '—'}</div><div class="coffee-detail">кислотность ${c.acidity ?? '–'} · сладость ${c.sweetness ?? '–'} · горечь ${c.bitterness ?? '–'} · тело ${c.body ?? '–'}</div>${c.notes && c.notes.length ? `<div class="profile-tags" style="margin-top:6px">${c.notes.map((n: string) => `<span class="profile-tag">${n}</span>`).join('')}</div>` : ''}${c.comment ? `<div class="coffee-detail" style="margin-top:4px;font-style:italic">${c.comment}</div>` : ''}</div>`).join('')}</div>` : `<div class="empty-state">Записывайте кофе, который пьёте дома или заказали сами — он наполнит вашу Карту вкуса и откроет страны.<br><a href="/add-cup">Добавить первую чашку →</a></div>`}</div>
 
-      <div class="account-section">
-        <div class="account-section-title">☕ Мои подборки</div>
-        ${selections.length ? selections.map((sel: any) => {
-          const coffees = sel.coffees || [];
-          const total = coffees.reduce((s: number, c: any) => s + (c.price || 0), 0);
-          return `
-          <div class="selection-card" data-sel-id="${sel.id}">
-            <div class="selection-header">
-              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-                <span class="selection-date">${new Date(sel.created_at).toLocaleDateString('ru-RU')}</span>
-                <span class="selection-format">${formatLabels[sel.format] || sel.format || 'Микс'}</span>
-                <span class="status-badge status-${sel.status}">${statusIcons[sel.status] || ''} ${statusLabels[sel.status] || sel.status}</span>
-              </div>
-            </div>
-            <div class="coffee-list">
-              ${coffees.map((c: any) => `
-                <div class="coffee-item">
-                  <div>
-                    <div class="coffee-name">${c.name || 'Кофе'}</div>
-                    <div class="coffee-detail">
-                      ${[c.roaster, c.origin, c.process, c.notes].filter(Boolean).join(' · ')}
-                    </div>
-                  </div>
-                  <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
-                    ${c.price ? `<span class="coffee-price">${c.price} ₽</span>` : ''}
-                    ${c.url ? `<a href="${c.url}" target="_blank" class="coffee-buy">Купить →</a>` : ''}
-                  </div>
-                </div>
-              `).join('')}
-            </div>
-            ${total > 0 ? `<div class="selection-total">Итого: <strong>${total.toLocaleString('ru-RU')} ₽</strong></div>` : ''}
-            <div class="selection-actions">
-              ${sel.status === 'selected' ? `<button class="sel-action-btn primary" data-action="ordered" data-id="${sel.id}">📦 Отметить «Заказано»</button>` : ''}
-              ${sel.status === 'ordered' ? `<button class="sel-action-btn primary" data-action="received" data-id="${sel.id}">✅ Получил!</button>` : ''}
-              ${sel.status === 'received' ? `
-                <button class="sel-action-btn primary" data-action="generate" data-id="${sel.id}">🤖 Сгенерировать гид</button>
-                <button class="sel-action-btn" data-action="tasted" data-id="${sel.id}">Продегустировал</button>
-              ` : ''}
-            </div>
-          </div>`;
-        }).join('') : `
-          <div class="empty-state">
-            Пока нет подборок. <a href="/quiz">Пройдите тест</a> — мы подберём кофе под ваш вкус.
-          </div>
-        `}
-      </div>
+      <div class="account-section"><div class="account-section-title">🌐 Сообщество</div><div class="profile-card" id="communityCard"><div class="profile-label" style="min-width:0">Загружаем статистику…</div></div></div>
 
-      <div class="account-section">
-        <div class="account-section-title">📖 Мои гиды</div>
-        ${guides.length ? guides.map((g: any) => `
-          <div class="guide-card">
-            <div class="guide-date">${new Date(g.created_at).toLocaleDateString('ru-RU')}</div>
-            <div class="guide-content">${g.content}</div>
-          </div>
-        `).join('') : `
-          <div class="empty-state">
-            Гиды появятся после того, как вы получите кофе и нажмёте «Сгенерировать гид».
-          </div>
-        `}
-      </div>
+      <div class="account-section"><div class="account-section-title">☕ Мои подборки</div>${selections.length ? selections.map((sel: any) => { const coffees = sel.coffees || []; const total = coffees.reduce((s: number, c: any) => s + (c.price || 0), 0); return `<div class="selection-card" data-sel-id="${sel.id}"><div class="selection-header"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="selection-date">${new Date(sel.created_at).toLocaleDateString('ru-RU')}</span><span class="selection-format">${formatLabels[sel.format] || sel.format || 'Микс'}</span><span class="status-badge status-${sel.status}">${statusIcons[sel.status] || ''} ${statusLabels[sel.status] || sel.status}</span></div></div><div class="coffee-list">${coffees.map((c: any) => `<div class="coffee-item"><div><div class="coffee-name">${c.name || 'Кофе'}</div><div class="coffee-detail">${[c.roaster, c.origin, c.process, c.notes].filter(Boolean).join(' · ')}</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0">${c.price ? `<span class="coffee-price">${c.price} ₽</span>` : ''}${c.url ? `<a href="${c.url}" target="_blank" class="coffee-buy">Купить →</a>` : ''}</div></div>`).join('')}</div>${total > 0 ? `<div class="selection-total">Итого: <strong>${total.toLocaleString('ru-RU')} ₽</strong></div>` : ''}<div class="selection-actions">${sel.status === 'selected' ? `<button class="sel-action-btn primary" data-action="ordered" data-id="${sel.id}">📦 Отметить «Заказано»</button>` : ''}${sel.status === 'ordered' ? `<button class="sel-action-btn primary" data-action="received" data-id="${sel.id}">✅ Получил!</button>` : ''}${sel.status === 'received' ? `<button class="sel-action-btn primary" data-action="generate" data-id="${sel.id}">🤖 Сгенерировать гид</button><button class="sel-action-btn" data-action="tasted" data-id="${sel.id}">Продегустировал</button>` : ''}</div></div>`; }).join('') : `<div class="empty-state">Пока нет подборок. <a href="/quiz">Пройдите тест</a> — мы подберём кофе под ваш вкус.</div>`}</div>
+
+      <div class="account-section"><div class="account-section-title">📖 Мои гиды</div>${guides.length ? guides.map((g: any) => `<div class="guide-card"><div class="guide-date">${new Date(g.created_at).toLocaleDateString('ru-RU')}</div><div class="guide-content">${g.content}</div></div>`).join('') : `<div class="empty-state">Гиды появятся после того, как вы получите кофе и нажмёте «Сгенерировать гид».</div>`}</div>
     `;
 
     renderTasteWheel(prefFams);
     loadCommunity();
-
-    page.querySelectorAll('.disco-chip[data-k]').forEach(ch => {
-      ch.addEventListener('click', () => showCountry((ch as HTMLElement).getAttribute('data-k')!));
-    });
-
-    document.getElementById('logoutBtn')?.addEventListener('click', async () => {
-      await supabase.auth.signOut();
-      window.location.href = '/';
-    });
-
+    page.querySelectorAll('.disco-chip[data-k]').forEach(ch => { ch.addEventListener('click', () => showCountry((ch as HTMLElement).getAttribute('data-k')!)); });
+    document.getElementById('logoutBtn')?.addEventListener('click', async () => { await supabase.auth.signOut(); window.location.href = '/'; });
     page.querySelectorAll('[data-action]').forEach(btn => {
       btn.addEventListener('click', async () => {
         const action = (btn as HTMLElement).dataset.action!;
         const id = (btn as HTMLElement).dataset.id!;
-
         if (action === 'generate') {
-          (btn as HTMLButtonElement).disabled = true;
-          (btn as HTMLButtonElement).textContent = 'Генерация...';
-          try {
-            const res = await fetch('/api/generate-guide', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ selectionId: id }),
-            });
-            if (!res.ok) throw new Error(await res.text());
-            init();
-          } catch (e: any) {
-            alert('Ошибка генерации: ' + e.message);
-            (btn as HTMLButtonElement).disabled = false;
-            (btn as HTMLButtonElement).textContent = '🤖 Сгенерировать гид';
-          }
-        } else {
-          (btn as HTMLButtonElement).disabled = true;
-          await supabase.from('coffee_selections').update({ status: action, updated_at: new Date().toISOString() }).eq('id', id);
-          init();
-        }
+          (btn as HTMLButtonElement).disabled = true; (btn as HTMLButtonElement).textContent = 'Генерация...';
+          try { const res = await fetch('/api/generate-guide', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ selectionId: id }) }); if (!res.ok) throw new Error(await res.text()); init(); }
+          catch (e: any) { alert('Ошибка генерации: ' + e.message); (btn as HTMLButtonElement).disabled = false; (btn as HTMLButtonElement).textContent = '🤖 Сгенерировать гид'; }
+        } else { (btn as HTMLButtonElement).disabled = true; await supabase.from('coffee_selections').update({ status: action, updated_at: new Date().toISOString() }).eq('id', id); init(); }
       });
     });
   }
