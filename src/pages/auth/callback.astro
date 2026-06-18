@@ -36,6 +36,29 @@ import Layout from '../../layouts/Layout.astro';
   });
 
   async function savePendingData(user: any) {
+    // Короткий флоу: сохранить только профиль вкуса (без подборки)
+    const pendingProfile = sessionStorage.getItem('pendingProfile');
+    if (pendingProfile) {
+      sessionStorage.removeItem('pendingProfile');
+      const pp = JSON.parse(pendingProfile);
+      try {
+        await fetch('/api/save-profile', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: user.id,
+            answers: pp.answers || {},
+            profileType: pp.profileType || '',
+            brewMethod: pp.brewMethod || null,
+            tastes: pp.tastes || [],
+            notes: [],
+          }),
+        });
+      } catch (e) { console.error('Pending profile save error:', e); }
+      return;
+    }
+
+    // Полный флоу: профиль + подборка
     const pending = sessionStorage.getItem('pendingSelection');
     if (!pending) return;
     sessionStorage.removeItem('pendingSelection');
