@@ -19,6 +19,11 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '';
 </Layout>
 
 <style is:global>
+  .result-cta {
+    display: flex; flex-direction: column; gap: 10px; align-items: center; margin-top: 24px;
+  }
+  .result-cta .btn-primary { width: 100%; max-width: 420px; }
+
   .equip-feedback {
     padding: 16px 18px; border-radius: var(--radius); margin: 14px 0;
     border: 1px solid var(--border); line-height: 1.6; font-size: .88rem;
@@ -345,6 +350,45 @@ function calcResults() {
   state.topCountries = sorted.slice(0,3).map(([k]) => k);
 }
 
+/* ═══ Сохранить профиль и перейти в кабинет (короткий флоу) ═══ */
+async function saveProfileAndAccount() {
+  const btn = document.getElementById('goToAccount');
+  if (btn) { btn.textContent = 'Сохраняем...'; btn.disabled = true; }
+
+  const profileData = {
+    answers: state.answers,
+    profileType: state.topCountries.map(k => DB[k].name).join(', '),
+    brewMethod: state.equipment || null,
+    tastes: state.answers.flavors,
+  };
+
+  let user = await getUser();
+  if (!user) {
+    sessionStorage.setItem('pendingProfile', JSON.stringify(profileData));
+    window.location.href = '/login';
+    return;
+  }
+
+  try {
+    await fetch('/api/save-profile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId: user.id,
+        answers: profileData.answers,
+        profileType: profileData.profileType,
+        brewMethod: profileData.brewMethod,
+        tastes: profileData.tastes,
+        notes: [],
+      }),
+    });
+    window.location.href = '/account';
+  } catch (e) {
+    alert('Ошибка сохранения: ' + e.message);
+    if (btn) { btn.textContent = 'Сохранить профиль и перейти в кабинет →'; btn.disabled = false; }
+  }
+}
+
 /* ═══ PHASE: RESULTS ═══ */
 function renderResults(card) {
   const top = state.topCountries;
@@ -387,9 +431,10 @@ function renderResults(card) {
           <p class="other-card-notes">${c.flavors.slice(0,3).join(', ')}</p>
         </a>`;}).join('')}
     </div>
-    <div class="quiz-nav" style="margin-top:24px">
-      <button class="btn-ghost" id="backToQuiz">← Пройти заново</button>
-      <button class="btn btn-primary" id="goToPractice" style="font-size:.88rem;padding:10px 22px">Хочу попробовать на практике →</button>
+    <div class="result-cta">
+      <button class="btn btn-primary" id="goToAccount" style="font-size:.92rem;padding:12px 26px">Сохранить профиль и перейти в кабинет →</button>
+      <button class="btn-ghost" id="goToPractice" style="font-size:.82rem">Или собрать дегустационный сет под профиль →</button>
+      <button class="btn-ghost" id="backToQuiz" style="font-size:.78rem;color:var(--text-muted)">← Пройти заново</button>
     </div>
   `;
 
@@ -397,6 +442,7 @@ function renderResults(card) {
     document.querySelectorAll('.meter-fill').forEach(el => { el.style.width = el.dataset.w; });
   }, 100);
 
+  document.getElementById('goToAccount').addEventListener('click', saveProfileAndAccount);
   document.getElementById('backToQuiz').addEventListener('click', () => {
     state = { phase:'quiz', step:0, answers:{flavors:[],acidity:null,body:null,sweetness:null}, topCountries:[], wantPractice:null, equipment:null, setFormat:null, setSize:null };
     renderStep();
@@ -455,6 +501,7 @@ function renderOfframp(card) {
       <p>Вы знаете свой вкус — ${m.name} и похожие регионы вам подходят. Когда будете готовы попробовать на практике — возвращайтесь, мы подберём зерно и соберём дегустационный сет.</p>
       <p style="font-size:.82rem;color:var(--text-muted)">А пока — погрузитесь в мир кофе:</p>
       <div class="offramp-links">
+        <a href="/account" class="offramp-link">👤 Личный кабинет</a>
         <a href="/blog" class="offramp-link">📖 Блог о кофе</a>
         <a href="https://www.threads.net/@shmelcoffee" target="_blank" class="offramp-link">🧵 Threads @shmelcoffee</a>
         <a href="https://t.me/shmel_coffee" target="_blank" class="offramp-link">✈️ Telegram @shmel_coffee</a>

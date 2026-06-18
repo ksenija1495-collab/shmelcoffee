@@ -11,9 +11,10 @@ import { wheelData } from '../data/wheel';
     <!-- HERO -->
     <div class="hero">
       <h1>Какой кофе — ваш?</h1>
-      <p class="subtitle">Пройдите диагностику вкуса — мы подберём зерно и соберём дегустационный сет под ваш профиль</p>
+      <p class="subtitle">Пройдите короткую диагностику вкуса — за 4 вопроса узнаете свой профиль и какие страны и обработки вам подходят</p>
       <div class="hero-actions">
         <a class="btn btn-primary" href="/quiz">Узнать свой вкус →</a>
+        <a class="btn btn-ghost home-account-btn" href="/account">Личный кабинет</a>
       </div>
     </div>
 
@@ -74,6 +75,9 @@ import { wheelData } from '../data/wheel';
 </Layout>
 
 <style>
+  .hero-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; align-items: center; }
+  .home-account-btn { white-space: nowrap; }
+
   .wheel-section {
     text-align: center; padding: 12px 0 32px;
     scroll-margin-top: 72px;
