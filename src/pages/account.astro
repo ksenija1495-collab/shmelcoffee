@@ -67,11 +67,22 @@ import Nav from '../components/Nav.astro';
   /* ─── Карта вкуса ─── */
   .tastemap-card { display: flex; gap: 22px; align-items: center; flex-wrap: wrap; }
   .tastemap-wheel { width: 210px; height: 210px; flex-shrink: 0; }
+  .tastemap-wheel path[data-cat] { cursor: pointer; transition: opacity .15s; }
+  .tastemap-wheel path[data-cat]:hover { opacity: 1 !important; }
   .tastemap-side { flex: 1; min-width: 190px; }
   .tm-row { display: flex; justify-content: space-between; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--border); }
   .tm-row:last-of-type { border-bottom: 0; }
   .tm-fams { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 12px; }
   .tm-fam { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: .74rem; color: #fff; font-weight: 600; }
+  .tm-hint { font-size: .74rem; color: var(--text-muted); margin-top: 10px; }
+  .info-panel { margin-top: 14px; padding: 14px 16px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--border); font-size: .84rem; display: none; }
+  .info-panel.show { display: block; animation: fadein .2s ease; }
+  @keyframes fadein { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+  .info-panel h4 { margin: 0 0 8px; font-size: .92rem; }
+  .tm-sub { padding: 5px 0; border-bottom: 1px dashed var(--border); }
+  .tm-sub:last-child { border-bottom: 0; }
+  .tm-sub b { color: var(--text); }
+  .tm-sub .org { color: var(--text-muted); font-size: .78rem; }
 
   /* ─── Карта открытий ─── */
   .disco-top { display: flex; align-items: center; gap: 16px; margin-bottom: 8px; }
@@ -89,10 +100,20 @@ import Nav from '../components/Nav.astro';
   .drc-name { font-weight: 700; font-size: .88rem; }
   .drc-why { font-size: .72rem; color: var(--text-muted); line-height: 1.35; }
   .disco-grid { display: flex; flex-wrap: wrap; gap: 6px; }
-  .disco-chip { padding: 6px 11px; border-radius: 20px; font-size: .74rem; border: 1px solid var(--border); }
+  .disco-chip { padding: 6px 11px; border-radius: 20px; font-size: .74rem; border: 1px solid var(--border); cursor: pointer; transition: all .15s; }
+  .disco-chip:hover { border-color: var(--accent); }
   .disco-chip.open { background: #e8f0e4; color: #4a7a45; border-color: #cfe0c8; font-weight: 600; }
   .disco-chip.closed { color: var(--text-muted); border-style: dashed; }
   .disco-hint { font-size: .78rem; color: var(--text-muted); margin-top: 16px; line-height: 1.55; }
+
+  /* ─── Сообщество ─── */
+  .comm-sub { font-size: .82rem; font-weight: 700; margin: 14px 0 8px; color: var(--text); }
+  .comm-sub:first-child { margin-top: 0; }
+  .comm-row { display: flex; align-items: center; gap: 10px; margin: 8px 0; font-size: .82rem; }
+  .comm-row .l { min-width: 130px; }
+  .comm-bar { flex: 1; height: 10px; background: var(--surface-2); border-radius: 6px; overflow: hidden; }
+  .comm-bar > i { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-warm)); }
+  .comm-row .n { font-weight: 700; min-width: 26px; text-align: right; }
 
   .selection-card {
     padding: 20px; background: var(--surface); border: 1px solid var(--border);
@@ -189,7 +210,6 @@ import Nav from '../components/Nav.astro';
 
   const page = document.getElementById('accountPage')!;
 
-  // ─── Маппинг: вкусы из квиза → семейства колеса ───
   const FLAVOR_TO_FAM: Record<string, string[]> = {
     fruity: ['Ягоды', 'Цитрус', 'Фрукты'],
     floral: ['Цветочный'],
@@ -198,11 +218,14 @@ import Nav from '../components/Nav.astro';
     spicy: ['Пряный', 'Обжарочный'],
     tropical: ['Фрукты'],
   };
+  const FLAVOR_LABELS: Record<string, string> = {
+    fruity: 'Фруктовые', floral: 'Цветочные и чайные', chocolate: 'Шоколад и орехи',
+    caramel: 'Карамель и мёд', spicy: 'Пряные', tropical: 'Тропические',
+  };
   const ACID: Record<string, string> = { high: 'Яркая, сочная', medium: 'Сбалансированная', low: 'Мягкая, гладкая' };
   const BODY: Record<string, string> = { light: 'Лёгкое, чайное', med: 'Среднее, шелковистое', heavy: 'Плотное, сиропистое' };
   const SWEET: Record<string, string> = { fruitSw: 'Фруктовая', honeySw: 'Медовая, карамельная', chocoSw: 'Шоколадная', drySw: 'Сухая, ореховая' };
 
-  // Пересчёт топ-стран из ответов квиза (та же логика, что в /quiz)
   function calcTop(answers: any): string[] {
     if (!answers) return [];
     const scores: Record<string, number> = {};
@@ -228,6 +251,30 @@ import Nav from '../components/Nav.astro';
     </svg>`;
   }
 
+  // Клик по сегменту колеса → какие ноты и в кофе каких стран
+  function showFamily(idx: number) {
+    const cat: any = wheelData[idx];
+    const el = document.getElementById('tmInfo');
+    if (!el || !cat) return;
+    el.innerHTML = `<h4 style="color:${cat.color}">${cat.name}</h4>` +
+      cat.subs.map((s: any) => `<div class="tm-sub"><b>${s.name}</b> <span class="org">— ${s.org}</span></div>`).join('');
+    el.classList.add('show');
+  }
+  (window as any).showFamily = showFamily;
+
+  // Клик по стране → детали
+  function showCountry(k: string) {
+    const c: any = DB[k];
+    const el = document.getElementById('discoInfo');
+    if (!el || !c) return;
+    el.innerHTML = `<h4 style="margin:0 0 6px">${c.flag} ${c.name}</h4>
+      <div class="profile-label" style="min-width:0;margin-bottom:6px">${c.region || ''}</div>
+      <div class="profile-tags" style="margin-bottom:10px">${(c.flavors || []).map((f: string) => `<span class="profile-tag">${f}</span>`).join('')}</div>
+      <a href="/countries?c=${k}" style="color:var(--accent);font-weight:600;font-size:.82rem">Подробнее о стране →</a>`;
+    el.classList.add('show');
+  }
+  (window as any).showCountry = showCountry;
+
   function renderTasteWheel(prefFams: Set<string>) {
     const svg = document.getElementById('tasteWheel');
     if (!svg) return;
@@ -240,21 +287,48 @@ import Nav from '../components/Nav.astro';
       return `M${A.x},${A.y} A${ro},${ro},0,${lg},1,${B.x},${B.y} L${C.x},${C.y} A${ri},${ri},0,${lg},0,${D.x},${D.y}Z`;
     };
     let html = `<circle cx="${cx}" cy="${cy}" r="${ir1 - 4}" fill="var(--surface-2)"/>
-      <text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="middle" font-family="'Cormorant Garamond',serif" font-size="13" font-weight="600" fill="var(--text)">ВКУС</text>`;
+      <text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="middle" font-family="'Cormorant Garamond',serif" font-size="13" font-weight="600" fill="var(--text)" style="pointer-events:none">ВКУС</text>`;
     wheelData.forEach((cat: any, i: number) => {
       const a1 = i * catAng + gap, a2 = (i + 1) * catAng - gap;
       const on = prefFams.has(cat.name);
-      html += `<path d="${sector(ir1, ir2, a1, a2)}" fill="${cat.color}" opacity="${on ? 1 : 0.16}" stroke="#fff" stroke-width="1"/>`;
+      html += `<path d="${sector(ir1, ir2, a1, a2)}" fill="${cat.color}" opacity="${on ? 1 : 0.16}" stroke="#fff" stroke-width="1" data-cat="${i}"><title>${cat.name}</title></path>`;
       const mid = (a1 + a2) / 2, pos = p2((ir1 + ir2) / 2, mid);
       let rot = mid; if (rot > 90 && rot < 270) rot += 180;
       html += `<text x="${pos.x}" y="${pos.y}" text-anchor="middle" dominant-baseline="middle" transform="rotate(${rot},${pos.x},${pos.y})" font-family="'Inter',sans-serif" font-size="8" font-weight="600" fill="#3b2a1c" opacity="${on ? 1 : 0.4}" style="pointer-events:none">${cat.name}</text>`;
       const subAng = (a2 - a1) / cat.subs.length;
       cat.subs.forEach((_s: any, j: number) => {
         const sa1 = a1 + j * subAng + gap * .4, sa2 = a1 + (j + 1) * subAng - gap * .4;
-        html += `<path d="${sector(or1, or2, sa1, sa2)}" fill="${cat.color}" opacity="${on ? 0.7 : 0.1}" stroke="#fff" stroke-width=".6"/>`;
+        html += `<path d="${sector(or1, or2, sa1, sa2)}" fill="${cat.color}" opacity="${on ? 0.7 : 0.1}" stroke="#fff" stroke-width=".6" data-cat="${i}"></path>`;
       });
     });
     svg.innerHTML = html;
+    svg.querySelectorAll('path[data-cat]').forEach(p => {
+      p.addEventListener('click', () => showFamily(parseInt((p as HTMLElement).getAttribute('data-cat')!)));
+    });
+  }
+
+  async function loadCommunity() {
+    const el = document.getElementById('communityCard');
+    if (!el) return;
+    try {
+      const { data, error } = await supabase.rpc('get_community_stats');
+      if (error || !data) { el.innerHTML = '<div class="empty-state">Статистика появится, когда наберётся больше данных.</div>'; return; }
+      const flagByName: Record<string, string> = {};
+      for (const [, c] of Object.entries(DB) as [string, any][]) flagByName[c.name] = c.flag;
+      const countries: any[] = data.countries || [];
+      const flavors: any[] = data.flavors || [];
+      const maxC = Math.max(1, ...countries.map(x => x.users));
+      const maxF = Math.max(1, ...flavors.map(x => x.users));
+      el.innerHTML = `
+        <div class="profile-label" style="min-width:0;margin-bottom:10px">Всего профилей в сообществе: <b style="color:var(--text)">${data.total_users || 0}</b></div>
+        <div class="comm-sub">🌍 Чаще всего открывают страны</div>
+        ${countries.length ? countries.map(x => `<div class="comm-row"><span class="l">${flagByName[x.origin] || '🌍'} ${x.origin}</span><div class="comm-bar"><i style="width:${x.users / maxC * 100}%"></i></div><span class="n">${x.users}</span></div>`).join('') : '<div class="profile-label" style="min-width:0">пока нет данных</div>'}
+        <div class="comm-sub">🎯 Популярные вкусы</div>
+        ${flavors.length ? flavors.map(x => `<div class="comm-row"><span class="l">${FLAVOR_LABELS[x.flavor] || x.flavor}</span><div class="comm-bar"><i style="width:${x.users / maxF * 100}%"></i></div><span class="n">${x.users}</span></div>`).join('') : '<div class="profile-label" style="min-width:0">пока нет данных</div>'}
+      `;
+    } catch (e) {
+      el.innerHTML = '<div class="empty-state">Не удалось загрузить статистику сообщества.</div>';
+    }
   }
 
   async function init() {
@@ -276,7 +350,6 @@ import Nav from '../components/Nav.astro';
     const guides = guidesRes.data || [];
     const latestProfile = profiles[0];
 
-    // ─── Данные для Карты вкуса и Карты открытий ───
     const answers = latestProfile?.answers || null;
     const nameToKey: Record<string, string> = {};
     for (const [k, c] of Object.entries(DB) as [string, any][]) nameToKey[c.name] = k;
@@ -297,7 +370,6 @@ import Nav from '../components/Nav.astro';
     const statusIcons: Record<string, string> = {
       selected: '📋', ordered: '📦', received: '✅', tasted: '🏆'
     };
-
     const formatLabels: Record<string, string> = {
       drip: 'Дрип-пакеты', beans: 'Зерно', mixed: 'Микс'
     };
@@ -349,8 +421,10 @@ import Nav from '../components/Nav.astro';
             <div class="tm-fams">
               ${[...prefFams].map(f => `<span class="tm-fam" style="background:${famColor[f] || 'var(--accent)'}">${f}</span>`).join('') || '<span class="profile-tag">—</span>'}
             </div>
+            <div class="tm-hint">Нажмите на сегмент колеса — увидите ноты и в кофе каких стран они встречаются.</div>
           </div>
         </div>
+        <div id="tmInfo" class="info-panel"></div>
       </div>
 
       <div class="account-section">
@@ -373,14 +447,22 @@ import Nav from '../components/Nav.astro';
                   <span class="drc-why">${c.flavors.slice(0, 3).join(' · ')}</span>
                 </a>`; }).join('')}
             </div>` : ''}
-          <div class="disco-subtitle">Весь мир кофе</div>
+          <div class="disco-subtitle">Весь мир кофе · нажмите на страну</div>
           <div class="disco-grid">
-            ${countryOrder.map((k: string) => { const c: any = DB[k]; const open = openedKeys.has(k); return `<span class="disco-chip ${open ? 'open' : 'closed'}">${c.flag} ${c.name}${open ? ' ✓' : ''}</span>`; }).join('')}
+            ${countryOrder.map((k: string) => { const c: any = DB[k]; const open = openedKeys.has(k); return `<span class="disco-chip ${open ? 'open' : 'closed'}" data-k="${k}">${c.flag} ${c.name}${open ? ' ✓' : ''}</span>`; }).join('')}
           </div>
+          <div id="discoInfo" class="info-panel"></div>
           <div class="disco-hint">Пробуйте новые страны и отмечайте чашки — карта будет открываться, а профиль становиться точнее. (Дневник дегустаций — следующий шаг.)</div>
         </div>
       </div>
       ` : ''}
+
+      <div class="account-section">
+        <div class="account-section-title">🌐 Сообщество</div>
+        <div class="profile-card" id="communityCard">
+          <div class="profile-label" style="min-width:0">Загружаем статистику…</div>
+        </div>
+      </div>
 
       <div class="account-section">
         <div class="account-section-title">☕ Мои подборки</div>
@@ -444,8 +526,12 @@ import Nav from '../components/Nav.astro';
       </div>
     `;
 
-    // отрисовать колесо Карты вкуса
     renderTasteWheel(prefFams);
+    loadCommunity();
+
+    page.querySelectorAll('.disco-chip[data-k]').forEach(ch => {
+      ch.addEventListener('click', () => showCountry((ch as HTMLElement).getAttribute('data-k')!));
+    });
 
     document.getElementById('logoutBtn')?.addEventListener('click', async () => {
       await supabase.auth.signOut();
