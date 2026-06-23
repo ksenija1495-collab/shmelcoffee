@@ -1,0 +1,152 @@
+---
+export const prerender = true;
+import Layout from '../layouts/Layout.astro';
+import Nav from '../components/Nav.astro';
+import { DB, countryOrder } from '../data/countries';
+---
+
+<Layout title="Добавить на полку — Shmelco" description="Добавьте зерно или оборудование на свою полку">
+  <Nav />
+  <div class="container">
+    <div class="shelf-form-page">
+      <a href="/account" class="sf-back">← В кабинет</a>
+      <h1 id="sfTitle">Добавить на полку</h1>
+      <p class="sf-sub">Что у вас есть дома — зерно или оборудование. Можно с фото.</p>
+      <div class="sf-card">
+        <div class="kind-toggle">
+          <button type="button" class="kind-btn" data-kind="bean">🫘 Зерно</button>
+          <button type="button" class="kind-btn" data-kind="equipment">⚙️ Оборудование</button>
+        </div>
+        <label class="fl">Название *</label>
+        <input type="text" id="f_name" placeholder="напр. Эфиопия Гедео / Воронка V60"/>
+        <div id="beanFields">
+          <label class="fl">Обжарщик</label>
+          <input type="text" id="f_roaster" placeholder="напр. Tasty Coffee"/>
+          <div class="row2">
+            <div><label class="fl">Страна</label><select id="f_country"></select></div>
+            <div><label class="fl">Обработка</label><select id="f_process"></select></div>
+          </div>
+        </div>
+        <div id="equipFields" style="display:none">
+          <label class="fl">Категория</label>
+          <select id="f_category"></select>
+        </div>
+        <label class="fl">Фото</label>
+        <input type="file" id="f_photo" accept="image/*"/>
+        <div id="preview" class="photo-preview"></div>
+        <button type="button" class="btn btn-primary sf-save" id="saveBtn">Добавить на полку</button>
+        <div id="msg" class="sf-msg"></div>
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<style is:global>
+  .shelf-form-page { padding-top: 88px; max-width: 600px; margin: 0 auto; padding-bottom: 100px; }
+  .sf-back { font-size: .8rem; color: var(--text-muted); text-decoration: none; }
+  .sf-back:hover { color: var(--accent); }
+  .shelf-form-page h1 { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.6rem; font-weight: 600; margin: 12px 0 4px; }
+  .sf-sub { font-size: .84rem; color: var(--text-dim); margin-bottom: 20px; }
+  .sf-card { padding: 22px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); }
+  .sf-card .fl { display: block; font-size: .8rem; font-weight: 600; color: var(--text); margin: 14px 0 6px; }
+  .sf-card input[type=text], .sf-card select { width: 100%; padding: 11px 12px; border: 1px solid var(--border); border-radius: 10px; font-size: .92rem; background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; }
+  .sf-card input[type=file] { font-size: .82rem; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .kind-toggle { display: flex; gap: 8px; margin-bottom: 6px; }
+  .kind-btn { flex: 1; padding: 11px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg); font-size: .88rem; cursor: pointer; font-family: 'Inter', sans-serif; transition: .15s; }
+  .kind-btn.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .photo-preview { margin-top: 10px; }
+  .photo-preview img { max-width: 100%; max-height: 180px; border-radius: 10px; border: 1px solid var(--border); }
+  .sf-save { width: 100%; margin-top: 20px; }
+  .sf-msg { margin-top: 12px; font-size: .84rem; text-align: center; min-height: 20px; }
+  .sf-msg.error { color: var(--accent-warm); }
+  @media (max-width: 600px) { .shelf-form-page { padding-top: 72px; } .row2 { grid-template-columns: 1fr; } }
+</style>
+
+<script>
+  import { createClient } from '@supabase/supabase-js';
+  import { DB, countryOrder } from '../data/countries';
+
+  const supabase = createClient(
+    import.meta.env.PUBLIC_SUPABASE_URL,
+    import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+    { auth: { flowType: 'implicit' } }
+  );
+
+  const PROCESSES = ['Мытая (Washed)','Натуральная (Natural)','Хани (Honey)','Анаэробная','Carbonic maceration','Wet-hulled','Другая'];
+  const CATEGORIES = ['Воронка','Кофемолка','Весы','Чайник с тонким носиком','Эспрессо-машина','Гейзерная','Френч-пресс','Аэропресс','Кемекс','Турка','Капсульная','Другое'];
+  let kind = 'bean';
+  let photoFile: File | null = null;
+
+  function fill(id: string, arr: string[], ph: string) {
+    const s = document.getElementById(id) as HTMLSelectElement;
+    s.innerHTML = `<option value="">${ph}</option>` + arr.map(x => `<option>${x}</option>`).join('');
+  }
+
+  async function guard() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { window.location.href = '/login'; return null; }
+    return user;
+  }
+
+  function setKind(k: string) {
+    kind = k;
+    document.querySelectorAll('.kind-btn').forEach(b => b.classList.toggle('on', (b as HTMLElement).dataset.kind === k));
+    (document.getElementById('beanFields') as HTMLElement).style.display = k === 'bean' ? 'block' : 'none';
+    (document.getElementById('equipFields') as HTMLElement).style.display = k === 'equipment' ? 'block' : 'none';
+    document.getElementById('sfTitle')!.textContent = k === 'bean' ? 'Добавить зерно' : 'Добавить оборудование';
+  }
+
+  function build() {
+    fill('f_country', countryOrder.map((k: string) => (DB as any)[k].name), 'выберите страну');
+    fill('f_process', PROCESSES, 'выберите обработку');
+    fill('f_category', CATEGORIES, 'выберите категорию');
+    document.querySelectorAll('.kind-btn').forEach(b => b.addEventListener('click', () => setKind((b as HTMLElement).dataset.kind!)));
+    const params = new URLSearchParams(window.location.search);
+    setKind(params.get('kind') === 'equipment' ? 'equipment' : 'bean');
+    const fileInp = document.getElementById('f_photo') as HTMLInputElement;
+    fileInp.addEventListener('change', () => {
+      photoFile = fileInp.files && fileInp.files[0] ? fileInp.files[0] : null;
+      const prev = document.getElementById('preview')!;
+      if (photoFile) { prev.innerHTML = `<img src="${URL.createObjectURL(photoFile)}"/>`; } else { prev.innerHTML = ''; }
+    });
+    document.getElementById('saveBtn')!.addEventListener('click', save);
+  }
+
+  async function save() {
+    const user = await guard();
+    if (!user) return;
+    const name = (document.getElementById('f_name') as HTMLInputElement).value.trim();
+    const msg = document.getElementById('msg')!;
+    if (!name) { msg.className = 'sf-msg error'; msg.textContent = 'Добавьте название'; return; }
+    const btn = document.getElementById('saveBtn') as HTMLButtonElement;
+    btn.disabled = true; btn.textContent = 'Сохраняем...';
+    let photo_url: string | null = null;
+    try {
+      if (photoFile) {
+        const ext = (photoFile.name.split('.').pop() || 'jpg').toLowerCase();
+        const path = `${user.id}/${Date.now()}.${ext}`;
+        const { error: upErr } = await supabase.storage.from('shelf').upload(path, photoFile, { upsert: false, contentType: photoFile.type });
+        if (upErr) throw upErr;
+        const { data: pub } = supabase.storage.from('shelf').getPublicUrl(path);
+        photo_url = pub.publicUrl;
+      }
+      const payload: any = {
+        user_id: user.id, kind, name,
+        roaster: kind === 'bean' ? ((document.getElementById('f_roaster') as HTMLInputElement).value.trim() || null) : null,
+        country: kind === 'bean' ? ((document.getElementById('f_country') as HTMLSelectElement).value || null) : null,
+        process: kind === 'bean' ? ((document.getElementById('f_process') as HTMLSelectElement).value || null) : null,
+        category: kind === 'equipment' ? ((document.getElementById('f_category') as HTMLSelectElement).value || null) : null,
+        photo_url, source: 'manual',
+      };
+      const { error } = await supabase.from('shelf_items').insert(payload);
+      if (error) throw error;
+      window.location.href = '/account';
+    } catch (e: any) {
+      msg.className = 'sf-msg error'; msg.textContent = 'Ошибка: ' + (e.message || e);
+      btn.disabled = false; btn.textContent = 'Добавить на полку';
+    }
+  }
+
+  (async () => { if (await guard()) build(); })();
+</script>
