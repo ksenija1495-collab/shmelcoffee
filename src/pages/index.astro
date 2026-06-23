@@ -9,21 +9,23 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '';
 
 <Layout title="А ты знаешь свой вкус кофе? — Shmelco" description="Путешествие в мир кофе: узнай свой вкус, колесо вкусов и география вкусов.">
   <Nav />
-  <div class="container">
 
-    <section class="hero">
-      <div class="hero-photo" id="heroPhoto">
-        <img src="https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=1200&q=80" alt="Чашка кофе" loading="eager" onerror="document.getElementById('heroPhoto').classList.add('noimg')"/>
-      </div>
+  <section class="hero-full" id="heroFull">
+    <img src="https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=1600&q=80" alt="" loading="eager" onerror="document.getElementById('heroFull').classList.add('noimg')"/>
+    <div class="hero-overlay"></div>
+    <div class="hero-content">
       <div class="hero-eyebrow">Путешествие в мир кофе</div>
       <h1>А ты знаешь свой вкус кофе?</h1>
-      <p class="subtitle">Проведу тебя за руку через зёрна, обработки и методы заваривания, пока ты не поймёшь, какой кофе именно твой.</p>
+      <p class="hero-sub">Проведу тебя за руку через зёрна, обработки и методы заваривания, пока ты не поймёшь, какой кофе именно твой.</p>
       <p class="hero-mini">У каждого человека свой вкус. Где-то рядом может быть твой вкусовой близнец. Или полная противоположность! Найди их.</p>
       <div class="hero-actions">
         <a class="btn btn-primary" href="/quiz">Узнать свой вкус →</a>
-        <a class="btn btn-ghost home-account-btn" href="/account">Войти в кабинет</a>
+        <a class="btn hero-ghost" href="/account">Войти в кабинет</a>
       </div>
-    </section>
+    </div>
+  </section>
+
+  <div class="container">
 
     <section class="curio">
       <p class="curio-fact">В одной чашке кофе больше <b>800 ароматов</b>. Больше, чем в вине.</p>
@@ -52,7 +54,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '';
       <h2 class="sec-heading">Карта вкусов сообщества</h2>
       <p class="sec-sub">Нет «правильного» вкуса, есть твой. Посмотри, что любят другие, и где среди них ты</p>
       <div id="commCard" class="comm-card"><div class="comm-empty">Загружаем…</div></div>
-      <a class="btn btn-primary" href="/quiz" style="margin-top:20px">Найти свой профиль →</a>
+      <a class="btn btn-primary" href="/quiz" style="margin-top:22px">Найти свой профиль →</a>
     </section>
 
     <section class="steps-section">
@@ -81,77 +83,93 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '';
 </Layout>
 
 <style>
-  .container > section { margin-bottom: 64px; }
-  .hero { text-align: center; padding-top: 92px; }
-  .hero-photo { width: 100%; max-width: 640px; height: 260px; margin: 0 auto 28px; border-radius: var(--radius); overflow: hidden; background: #2b1d14; box-shadow: var(--shadow); }
-  .hero-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .hero-photo.noimg { background: linear-gradient(135deg, #3b271e, #8a5a2b); }
-  .hero-photo.noimg img { display: none; }
-  .hero-eyebrow { text-transform: uppercase; letter-spacing: .16em; font-size: .72rem; color: var(--accent); font-weight: 700; margin-bottom: 12px; }
-  .hero-mini { font-size: .9rem; color: var(--text-muted); margin-top: 10px; max-width: 560px; margin-left: auto; margin-right: auto; line-height: 1.55; }
-  .hero-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; align-items: center; margin-top: 24px; }
-  .home-account-btn { white-space: nowrap; }
+  .hero-full { position: relative; width: 100vw; margin-left: calc(50% - 50vw); min-height: 560px; height: 80vh; max-height: 660px; display: flex; align-items: center; justify-content: center; background: #2b1d14; overflow: hidden; }
+  .hero-full img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .hero-full.noimg img { display: none; }
+  .hero-overlay { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(43,29,20,.30) 0%, rgba(43,29,20,.55) 55%, rgba(43,29,20,.78) 100%); }
+  .hero-content { position: relative; z-index: 2; text-align: center; color: #fff; padding: 90px 24px 40px; max-width: 780px; }
+  .hero-eyebrow { text-transform: uppercase; letter-spacing: .22em; font-size: .72rem; color: #e9d8c2; font-weight: 600; margin-bottom: 18px; }
+  .hero-content h1 { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 3.6rem; line-height: 1.08; font-weight: 600; color: #fff; margin-bottom: 18px; letter-spacing: -.01em; }
+  .hero-sub { font-size: 1.05rem; color: #f3ece2; max-width: 600px; margin: 0 auto 14px; line-height: 1.6; }
+  .hero-mini { font-size: .92rem; color: #d8c8b8; max-width: 560px; margin: 0 auto 28px; line-height: 1.55; }
+  .hero-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .hero-ghost { background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.5); color: #fff; backdrop-filter: blur(4px); }
+  .hero-ghost:hover { background: rgba(255,255,255,.22); color: #fff; border-color: #fff; }
 
-  .curio { text-align: center; padding: 30px 22px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
-  .curio-fact { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.5rem; font-weight: 500; line-height: 1.3; margin: 0 0 16px; }
+  .container > section { margin-bottom: 72px; }
+  .container > section:first-child { margin-top: 56px; }
+
+  .curio { text-align: center; max-width: 820px; margin-left: auto; margin-right: auto; padding: 36px 28px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow); }
+  .curio-fact { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.9rem; font-weight: 500; line-height: 1.25; margin: 0 0 18px; }
   .curio-fact b { color: var(--accent); font-weight: 600; }
-  .curio-lead { font-size: .9rem; color: var(--text-dim); margin: 0 0 12px; }
-  .curio-factors { display: flex; gap: 10px; justify-content: center; align-items: center; flex-wrap: wrap; }
-  .cf { font-weight: 700; color: var(--text); background: var(--surface-2); border: 1px solid var(--border); padding: 6px 16px; border-radius: 20px; font-size: .9rem; }
+  .curio-lead { font-size: .95rem; color: var(--text-dim); margin: 0 0 14px; }
+  .curio-factors { display: flex; gap: 12px; justify-content: center; align-items: center; flex-wrap: wrap; }
+  .cf { font-weight: 600; color: var(--text); background: var(--surface-2); border: 1px solid var(--border); padding: 8px 20px; border-radius: 24px; font-size: .95rem; }
   .cf-sep { color: var(--border-hover); }
 
-  .sec-heading { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.6rem; font-weight: 600; margin-bottom: 6px; text-align: center; }
-  .sec-sub { color: var(--text-muted); font-size: .86rem; margin: 0 auto 24px; text-align: center; max-width: 560px; line-height: 1.6; }
+  .sec-heading { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 2rem; font-weight: 600; margin-bottom: 8px; text-align: center; letter-spacing: -.01em; }
+  .sec-sub { color: var(--text-dim); font-size: .9rem; margin: 0 auto 28px; text-align: center; max-width: 600px; line-height: 1.65; }
 
   .wheel-section { text-align: center; scroll-margin-top: 72px; }
+  .wheel-svg { max-width: 560px; }
 
-  .map-wrap { max-width: 640px; margin: 0 auto; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; box-shadow: var(--shadow); }
+  .map-wrap { max-width: 860px; margin: 0 auto; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 18px; box-shadow: var(--shadow); }
   .geo-map { width: 100%; display: block; }
   .geo-map path[data-k] { transition: fill .15s; }
-  .geo-info { max-width: 520px; margin: 14px auto 0; display: none; }
-  .geo-info.active { display: block; padding: 18px 20px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); animation: fadein .2s ease; }
+  .geo-info { max-width: 560px; margin: 16px auto 0; display: none; }
+  .geo-info.active { display: block; padding: 20px 22px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow); animation: fadein .2s ease; }
   @keyframes fadein { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
-  .geo-info h3 { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.3rem; font-weight: 600; margin-bottom: 2px; }
-  .geo-region { font-size: .76rem; color: var(--text-muted); margin-bottom: 10px; }
+  .geo-info h3 { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.4rem; font-weight: 600; margin-bottom: 2px; }
+  .geo-region { font-size: .78rem; color: var(--text-muted); margin-bottom: 10px; }
   .geo-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
-  .geo-tag { padding: 4px 11px; border-radius: 20px; background: var(--surface-2); border: 1px solid var(--border); font-size: .78rem; color: var(--text-dim); }
-  .geo-link { color: var(--accent); font-weight: 600; font-size: .82rem; text-decoration: none; }
+  .geo-tag { padding: 5px 12px; border-radius: 20px; background: var(--surface-2); border: 1px solid var(--border); font-size: .8rem; color: var(--text-dim); }
+  .geo-link { color: var(--accent); font-weight: 600; font-size: .84rem; text-decoration: none; }
   .geo-link:hover { text-decoration: underline; }
 
   .comm-section { text-align: center; }
-  .comm-card { max-width: 560px; margin: 0 auto; padding: 24px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); text-align: left; }
-  .comm-empty { color: var(--text-muted); font-size: .86rem; text-align: center; padding: 8px 0; }
-  .comm-flex { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; justify-content: center; }
-  .comm-donut { flex-shrink: 0; }
-  .comm-legend { flex: 1; min-width: 200px; }
-  .leg-row { display: flex; align-items: center; gap: 8px; font-size: .82rem; margin: 5px 0; }
-  .leg-dot { width: 11px; height: 11px; border-radius: 3px; flex-shrink: 0; }
+  .comm-card { max-width: 860px; margin: 0 auto; padding: 28px 32px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow); text-align: left; }
+  .comm-empty { color: var(--text-muted); font-size: .88rem; text-align: center; padding: 16px 0; }
+  .comm-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 36px; align-items: start; }
+  .comm-left { display: flex; flex-direction: column; align-items: center; }
+  .comm-total { text-align: center; font-size: .84rem; color: var(--text-muted); margin-top: 6px; }
+  .comm-h { font-size: .74rem; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 12px; }
+  .leg-row { display: flex; align-items: center; gap: 9px; font-size: .84rem; margin: 7px 0; }
+  .leg-dot { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
   .leg-name { flex: 1; color: var(--text-dim); }
   .leg-n { font-weight: 700; color: var(--text); }
-  .comm-h { font-size: .74rem; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .05em; margin: 20px 0 10px; }
-  .comm-row { display: flex; align-items: center; gap: 10px; margin: 8px 0; font-size: .82rem; }
-  .comm-row .l { min-width: 120px; }
+  .comm-legend { width: 100%; margin-top: 16px; }
+  .comm-row { display: flex; align-items: center; gap: 10px; margin: 9px 0; font-size: .84rem; }
+  .comm-row .l { min-width: 116px; }
   .comm-bar { flex: 1; height: 10px; background: var(--surface-2); border-radius: 6px; overflow: hidden; }
   .comm-bar > i { display: block; height: 100%; background: var(--accent); border-radius: 6px; }
   .comm-row .n { font-weight: 700; min-width: 24px; text-align: right; color: var(--text); }
 
-  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; max-width: 720px; margin: 0 auto; }
-  .step { text-align: center; padding: 22px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); }
-  .step-n { width: 34px; height: 34px; border-radius: 50%; background: var(--accent); color: #fff; font-weight: 700; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; }
-  .step-t { font-weight: 700; font-size: .88rem; }
-  .step-d { font-size: .78rem; color: var(--text-muted); margin-top: 4px; line-height: 1.45; }
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; max-width: 820px; margin: 0 auto; }
+  .step { text-align: center; padding: 26px 18px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow); }
+  .step-n { width: 36px; height: 36px; border-radius: 50%; background: var(--accent); color: #fff; font-weight: 700; display: flex; align-items: center; justify-content: center; margin: 0 auto 14px; }
+  .step-t { font-weight: 700; font-size: .92rem; }
+  .step-d { font-size: .82rem; color: var(--text-muted); margin-top: 5px; line-height: 1.45; }
 
   .final-cta { text-align: center; }
-  .final-cta .sec-heading { margin-bottom: 18px; }
+  .final-cta .sec-heading { margin-bottom: 20px; }
 
-  .contacts-section { margin-bottom: 56px; }
-  .contacts-grid { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
-  .contact-card { display: inline-flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px 18px; border-radius: 8px; background: var(--surface); border: 1px solid var(--border); text-decoration: none; color: inherit; transition: all .2s; box-shadow: var(--shadow); }
+  .contacts-section { margin-bottom: 64px; }
+  .contacts-grid { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .contact-card { display: inline-flex; flex-direction: column; align-items: center; gap: 2px; padding: 12px 22px; border-radius: 10px; background: var(--surface); border: 1px solid var(--border); text-decoration: none; color: inherit; transition: all .2s; box-shadow: var(--shadow); }
   .contact-card:hover { border-color: var(--border-hover); box-shadow: var(--shadow-hover); }
-  .contact-name { font-weight: 600; font-size: .82rem; }
-  .contact-handle { font-size: .76rem; color: var(--accent); font-weight: 500; }
+  .contact-name { font-weight: 600; font-size: .84rem; }
+  .contact-handle { font-size: .78rem; color: var(--accent); font-weight: 500; }
 
-  @media (max-width: 768px) { .steps { grid-template-columns: 1fr; } .contacts-grid { flex-direction: column; align-items: center; } .container > section { margin-bottom: 48px; } .hero { padding-top: 80px; } .hero-photo { height: 200px; } }
+  @media (max-width: 768px) {
+    .hero-content h1 { font-size: 2.4rem; }
+    .hero-full { min-height: 480px; height: 70vh; }
+    .curio-fact { font-size: 1.5rem; }
+    .sec-heading { font-size: 1.6rem; }
+    .comm-grid2 { grid-template-columns: 1fr; gap: 24px; }
+    .steps { grid-template-columns: 1fr; }
+    .contacts-grid { flex-direction: column; align-items: center; }
+    .container > section { margin-bottom: 52px; }
+  }
 </style>
 
 <script is:inline src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
@@ -223,9 +241,9 @@ async function drawMap(){
 const FLC={fruity:'#C47070',floral:'#D4A0B8',chocolate:'#8B6B4A',caramel:'#D4B870',spicy:'#C0A060',tropical:'#C49080'};
 const FL={fruity:'Фруктовые',floral:'Цветочные и чайные',chocolate:'Шоколад и орехи',caramel:'Карамель и мёд',spicy:'Пряные',tropical:'Тропические'};
 function donut(flavors,total){
-  const sum=flavors.reduce((s,x)=>s+x.users,0)||1; const cx=70,cy=70,r0=42,r1=64; let a0=-Math.PI/2; let s='';
+  const sum=flavors.reduce((s,x)=>s+x.users,0)||1; const cx=85,cy=85,r0=52,r1=80; let a0=-Math.PI/2; let s='';
   flavors.forEach(x=>{ const a1=a0+(x.users/sum)*2*Math.PI; const A=[cx+r1*Math.cos(a0),cy+r1*Math.sin(a0)],B=[cx+r1*Math.cos(a1),cy+r1*Math.sin(a1)],Cc=[cx+r0*Math.cos(a1),cy+r0*Math.sin(a1)],D=[cx+r0*Math.cos(a0),cy+r0*Math.sin(a0)]; const big=(a1-a0)>Math.PI?1:0; s+=`<path d="M${A} A${r1} ${r1} 0 ${big} 1 ${B} L${Cc} A${r0} ${r0} 0 ${big} 0 ${D} Z" fill="${FLC[x.flavor]||'#BA7517'}"/>`; a0=a1; });
-  return `<svg width="140" height="140" viewBox="0 0 140 140">${s}<text x="70" y="66" text-anchor="middle" font-family="'Cormorant Garamond',serif" font-size="24" font-weight="600" fill="var(--text)">${total}</text><text x="70" y="86" text-anchor="middle" font-family="Inter,sans-serif" font-size="10" fill="var(--text-muted)">профилей</text></svg>`;
+  return `<svg width="170" height="170" viewBox="0 0 170 170">${s}<text x="85" y="80" text-anchor="middle" font-family="'Cormorant Garamond',serif" font-size="30" font-weight="600" fill="var(--text)">${total}</text><text x="85" y="102" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" fill="var(--text-muted)">профилей</text></svg>`;
 }
 async function loadCommunity(){
   const el=document.getElementById('commCard'); if(!el) return;
@@ -235,14 +253,11 @@ async function loadCommunity(){
     if(!res.ok){ el.innerHTML='<div class="comm-empty">Пока нет данных.</div>'; return; }
     let data=await res.json(); if(Array.isArray(data)) data=data[0];
     const flagByName={}; for(const k of Object.keys(DB)) flagByName[DB[k].name]=DB[k].flag;
-    const total=(data&&data.total_users)||0; const flavors=((data&&data.flavors)||[]).slice(0,6); const countries=((data&&data.countries)||[]).slice(0,5);
+    const total=(data&&data.total_users)||0; const flavors=((data&&data.flavors)||[]).slice(0,6); const countries=((data&&data.countries)||[]).slice(0,6);
     if(!flavors.length&&!countries.length){ el.innerHTML='<div class="comm-empty">Станешь одним из первых. Пройди тест и появишься на карте.</div>'; return; }
     const maxC=Math.max(1,...countries.map(x=>x.users));
-    let html='<div class="comm-flex">';
-    html+=`<div class="comm-donut">${donut(flavors,total)}</div>`;
-    html+='<div class="comm-legend">'+flavors.map(x=>`<div class="leg-row"><span class="leg-dot" style="background:${FLC[x.flavor]||'#BA7517'}"></span><span class="leg-name">${FL[x.flavor]||x.flavor}</span><span class="leg-n">${x.users}</span></div>`).join('')+'</div>';
-    html+='</div>';
-    if(countries.length){ html+='<div class="comm-h">Чаще открывают страны</div>'+countries.map(x=>`<div class="comm-row"><span class="l">${flagByName[x.origin]||''} ${x.origin}</span><div class="comm-bar"><i style="width:${Math.round(x.users/maxC*100)}%"></i></div><span class="n">${x.users}</span></div>`).join(''); }
+    let html='<div class="comm-grid2"><div class="comm-left">'+donut(flavors,total)+`<div class="comm-total">вкусовые профили сообщества</div><div class="comm-legend">`+flavors.map(x=>`<div class="leg-row"><span class="leg-dot" style="background:${FLC[x.flavor]||'#BA7517'}"></span><span class="leg-name">${FL[x.flavor]||x.flavor}</span><span class="leg-n">${x.users}</span></div>`).join('')+'</div></div>';
+    html+='<div class="comm-right"><div class="comm-h">Чаще открывают страны</div>'+(countries.length?countries.map(x=>`<div class="comm-row"><span class="l">${flagByName[x.origin]||''} ${x.origin}</span><div class="comm-bar"><i style="width:${Math.round(x.users/maxC*100)}%"></i></div><span class="n">${x.users}</span></div>`).join(''):'<div class="comm-empty" style="text-align:left">Пока никто не открыл страны.</div>')+'</div></div>';
     el.innerHTML=html;
   }catch(e){ el.innerHTML='<div class="comm-empty">Не удалось загрузить статистику.</div>'; }
 }
