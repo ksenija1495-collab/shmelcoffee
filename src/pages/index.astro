@@ -2,72 +2,84 @@
 import Layout from '../layouts/Layout.astro';
 import Nav from '../components/Nav.astro';
 import { wheelData } from '../data/wheel';
+import { DB, countryOrder } from '../data/countries';
+const SUPA_URL = import.meta.env.PUBLIC_SUPABASE_URL || '';
+const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '';
 ---
 
-<Layout title="Какой кофе — ваш? — Shmelco">
+<Layout title="А ты знаешь свой вкус кофе? — Shmelco" description="Путешествие в мир кофе: узнай свой вкус, исследуй колесо вкусов и географию вкусов.">
   <Nav />
   <div class="container">
 
     <!-- HERO -->
     <div class="hero">
-      <h1>Какой кофе — ваш?</h1>
-      <p class="subtitle">Пройдите короткую диагностику вкуса — за 4 вопроса узнаете свой профиль и какие страны и обработки вам подходят</p>
+      <div class="hero-eyebrow">Путешествие в мир кофе</div>
+      <h1>А ты знаешь свой вкус кофе?</h1>
+      <p class="subtitle">Проведу тебя за руку — через зёрна, обработки и методы заваривания — пока ты не поймёшь, какой кофе именно твой.</p>
+      <p class="hero-mini">У каждого свой вкус. Где-то рядом — твой вкусовой близнец. Или полная противоположность.</p>
       <div class="hero-actions">
         <a class="btn btn-primary" href="/quiz">Узнать свой вкус →</a>
-        <a class="btn btn-ghost home-account-btn" href="/account">Личный кабинет</a>
+        <a class="btn btn-ghost home-account-btn" href="/account">Войти в кабинет</a>
       </div>
     </div>
 
-    <!-- BENEFITS -->
-    <div class="benefits">
-      <a class="benefit" href="/quiz" style="text-decoration:none;color:inherit">
-        <div class="benefit-icon">🎯</div>
-        <div class="benefit-title">Поймите свой профиль</div>
-        <div class="benefit-desc">4 вопроса — и вы узнаете, какие страны и обработки подходят именно вам</div>
-      </a>
-      <a class="benefit" href="/quiz" style="text-decoration:none;color:inherit">
-        <div class="benefit-icon">☕</div>
-        <div class="benefit-title">Попробуйте на практике</div>
-        <div class="benefit-desc">Дегустационный сет от российских обжарщиков — под ваш вкус, с гидом</div>
-      </a>
-      <a class="benefit" href="#wheel" style="text-decoration:none;color:inherit">
-        <div class="benefit-icon">📖</div>
-        <div class="benefit-title">Научитесь различать</div>
-        <div class="benefit-desc">Колесо вкусов, заметки к каждому лоту и карта предпочтений</div>
-      </a>
+    <!-- FACTS -->
+    <div class="facts">
+      <div class="fact"><div class="fact-num">800+</div><div class="fact-t">ароматов в чашке</div><div class="fact-d">больше, чем в бокале вина</div></div>
+      <div class="fact"><div class="fact-num">3</div><div class="fact-t">рычага вкуса</div><div class="fact-d">страна · обработка · метод</div></div>
+      <div class="fact"><div class="fact-num">—</div><div class="fact-t">нет «правильного» вкуса</div><div class="fact-d">есть твой</div></div>
     </div>
 
     <!-- WHEEL -->
     <div class="wheel-section" id="wheel">
-      <h2 class="wheel-heading">Колесо вкусов кофе</h2>
-      <p class="wheel-sub">Стандарт SCA · Нажмите на сегмент — узнаете, в кофе каких стран встречается этот вкус</p>
+      <h2 class="sec-heading">Колесо вкусов</h2>
+      <p class="sec-sub">Стандарт SCA · нажми на сегмент — увидишь, в кофе каких стран живёт этот вкус</p>
       <svg id="wheelSvg" class="wheel-svg" viewBox="0 0 620 620"></svg>
       <div class="wheel-tooltip" id="wheelTooltip">
         <div class="wheel-tooltip-title" id="tooltipTitle"></div>
         <div class="wheel-tooltip-origins" id="tooltipOrigins"></div>
       </div>
       <div class="wheel-info-panel" id="wheelInfoPanel"></div>
-      <a href="/quiz" class="btn btn-primary" style="margin-top:20px">Узнать свой вкус →</a>
+    </div>
+
+    <!-- GEOGRAPHY -->
+    <div class="geo-section" id="geo">
+      <h2 class="sec-heading">География вкусов</h2>
+      <p class="sec-sub">Эфиопия — жасмин и ягода. Бразилия — шоколад и орех. Нажми на страну — открой её палитру</p>
+      <div class="geo-grid" id="geoGrid"></div>
+      <div class="geo-info" id="geoInfo"></div>
+    </div>
+
+    <!-- WE ARE ALL DIFFERENT -->
+    <div class="diff-section">
+      <h2 class="sec-heading">Мы все разные</h2>
+      <p class="diff-text">Нет «правильного» вкуса — есть твой. Пройди тест, узнай свой профиль и загляни в карту вкусов сообщества: кто рядом с тобой, а кто — полная противоположность.</p>
+      <div class="diff-stat" id="diffStat" style="display:none">Уже <b id="commCount">—</b> человек определили свой вкус</div>
+      <a class="btn btn-primary" href="/quiz" style="margin-top:18px">Найти свой профиль →</a>
+    </div>
+
+    <!-- HOW IT WORKS -->
+    <div class="steps-section">
+      <h2 class="sec-heading">Как это работает</h2>
+      <div class="steps">
+        <div class="step"><div class="step-n">1</div><div class="step-t">Короткая диагностика</div><div class="step-d">4 вопроса о вкусе</div></div>
+        <div class="step"><div class="step-n">2</div><div class="step-t">Карта вкуса и открытий</div><div class="step-d">что любишь и что ещё не пробовал</div></div>
+        <div class="step"><div class="step-n">3</div><div class="step-t">Исследуй и записывай</div><div class="step-d">зёрна, страны, методы — карта открывается</div></div>
+      </div>
+    </div>
+
+    <!-- FINAL CTA -->
+    <div class="final-cta">
+      <h2 class="sec-heading">Готов узнать, какой кофе — твой?</h2>
+      <a class="btn btn-primary" href="/quiz">Начать путешествие →</a>
     </div>
 
     <!-- CONTACTS -->
     <div class="contacts-section">
       <div class="contacts-grid">
-        <a href="https://t.me/shmel_coffee" target="_blank" class="contact-card">
-          <span class="contact-icon">✈️</span>
-          <span class="contact-name">Telegram</span>
-          <span class="contact-handle">@shmel_coffee</span>
-        </a>
-        <a href="https://www.threads.net/@shmelcoffee" target="_blank" class="contact-card">
-          <span class="contact-icon">🧵</span>
-          <span class="contact-name">Threads</span>
-          <span class="contact-handle">@shmelcoffee</span>
-        </a>
-        <a href="https://t.me/ksenijashmel" target="_blank" class="contact-card">
-          <span class="contact-icon">👩‍💻</span>
-          <span class="contact-name">Связаться</span>
-          <span class="contact-handle">@ksenijashmel</span>
-        </a>
+        <a href="https://t.me/shmel_coffee" target="_blank" class="contact-card"><span class="contact-icon">✈️</span><span class="contact-name">Telegram</span><span class="contact-handle">@shmel_coffee</span></a>
+        <a href="https://www.threads.net/@shmelcoffee" target="_blank" class="contact-card"><span class="contact-icon">🧵</span><span class="contact-name">Threads</span><span class="contact-handle">@shmelcoffee</span></a>
+        <a href="https://t.me/ksenijashmel" target="_blank" class="contact-card"><span class="contact-icon">👩‍💻</span><span class="contact-name">Связаться</span><span class="contact-handle">@ksenijashmel</span></a>
       </div>
     </div>
 
@@ -75,156 +87,132 @@ import { wheelData } from '../data/wheel';
 </Layout>
 
 <style>
-  .hero-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; align-items: center; }
+  .hero-eyebrow { text-transform: uppercase; letter-spacing: .14em; font-size: .72rem; color: var(--accent); font-weight: 700; margin-bottom: 10px; }
+  .hero-mini { font-size: .9rem; color: var(--text-muted); margin-top: 8px; max-width: 560px; margin-left: auto; margin-right: auto; line-height: 1.5; }
+  .hero-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; align-items: center; margin-top: 22px; }
   .home-account-btn { white-space: nowrap; }
 
-  .wheel-section {
-    text-align: center; padding: 12px 0 32px;
-    scroll-margin-top: 72px;
-  }
-  .wheel-heading {
-    font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.5rem;
-    font-weight: 600; margin-bottom: 4px;
-  }
-  .wheel-sub {
-    color: var(--text-muted); font-size: .82rem; margin-bottom: 20px;
-  }
+  .facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 12px 0 40px; }
+  .fact { text-align: center; padding: 20px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); }
+  .fact-num { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 2.2rem; font-weight: 600; color: var(--accent); line-height: 1; }
+  .fact-t { font-weight: 700; font-size: .9rem; margin-top: 8px; }
+  .fact-d { font-size: .78rem; color: var(--text-muted); margin-top: 3px; }
 
-  .contacts-section {
-    padding: 24px 0 48px;
-  }
-  .contacts-grid {
-    display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;
-  }
-  .contact-card {
-    display: inline-flex; align-items: center; gap: 8px;
-    padding: 10px 18px; border-radius: 8px;
-    background: var(--surface); border: 1px solid var(--border);
-    text-decoration: none; color: inherit; transition: all .2s;
-    box-shadow: var(--shadow);
-  }
-  .contact-card:hover {
-    border-color: var(--border-hover); box-shadow: var(--shadow-hover);
-  }
+  .sec-heading { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.5rem; font-weight: 600; margin-bottom: 4px; text-align: center; }
+  .sec-sub { color: var(--text-muted); font-size: .84rem; margin-bottom: 22px; text-align: center; max-width: 540px; margin-left: auto; margin-right: auto; line-height: 1.5; }
+
+  .wheel-section { text-align: center; padding: 12px 0 40px; scroll-margin-top: 72px; }
+
+  .geo-section { padding: 24px 0 44px; }
+  .geo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; max-width: 640px; margin: 0 auto; }
+  .geo-card { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 14px 8px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); cursor: pointer; transition: all .18s; font-family: 'Inter', sans-serif; }
+  .geo-card:hover { border-color: var(--accent); box-shadow: var(--shadow-hover); transform: translateY(-2px); }
+  .geo-card.active { border-color: var(--accent); background: rgba(168,124,79,.07); }
+  .geo-flag { font-size: 1.7rem; }
+  .geo-name { font-size: .8rem; font-weight: 600; color: var(--text); }
+  .geo-info { max-width: 560px; margin: 16px auto 0; padding: 0; border-radius: var(--radius); display: none; }
+  .geo-info.active { display: block; padding: 18px 20px; background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow); animation: fadein .2s ease; }
+  @keyframes fadein { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+  .geo-info h3 { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.3rem; font-weight: 600; margin-bottom: 2px; }
+  .geo-region { font-size: .78rem; color: var(--text-muted); margin-bottom: 10px; }
+  .geo-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  .geo-tag { padding: 4px 11px; border-radius: 20px; background: var(--surface-2); border: 1px solid var(--border); font-size: .78rem; color: var(--text-dim); }
+  .geo-link { color: var(--accent); font-weight: 600; font-size: .82rem; text-decoration: none; }
+  .geo-link:hover { text-decoration: underline; }
+
+  .diff-section { text-align: center; padding: 24px 0 44px; }
+  .diff-text { font-size: .92rem; color: var(--text-dim); max-width: 560px; margin: 0 auto; line-height: 1.6; }
+  .diff-stat { margin-top: 16px; font-size: .86rem; color: var(--text-muted); }
+  .diff-stat b { color: var(--accent); font-size: 1.05rem; }
+
+  .steps-section { padding: 24px 0 44px; }
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; max-width: 720px; margin: 0 auto; }
+  .step { text-align: center; padding: 20px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); }
+  .step-n { width: 34px; height: 34px; border-radius: 50%; background: var(--accent); color: #fff; font-weight: 700; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px; }
+  .step-t { font-weight: 700; font-size: .88rem; }
+  .step-d { font-size: .78rem; color: var(--text-muted); margin-top: 4px; line-height: 1.4; }
+
+  .final-cta { text-align: center; padding: 30px 0 40px; }
+  .final-cta .sec-heading { margin-bottom: 16px; }
+
+  .contacts-section { padding: 8px 0 48px; }
+  .contacts-grid { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .contact-card { display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border-radius: 8px; background: var(--surface); border: 1px solid var(--border); text-decoration: none; color: inherit; transition: all .2s; box-shadow: var(--shadow); }
+  .contact-card:hover { border-color: var(--border-hover); box-shadow: var(--shadow-hover); }
   .contact-icon { font-size: 1.1rem; }
   .contact-name { font-weight: 600; font-size: .82rem; }
   .contact-handle { font-size: .76rem; color: var(--accent); font-weight: 500; }
 
   @media (max-width: 768px) {
+    .facts { grid-template-columns: 1fr; }
+    .steps { grid-template-columns: 1fr; }
     .contacts-grid { flex-direction: column; align-items: center; }
   }
 </style>
 
-<script define:vars={{ wheelData }}>
-function polarToXY(cx,cy,r,deg){
-  const rad=(deg-90)*Math.PI/180;
-  return{x:cx+r*Math.cos(rad),y:cy+r*Math.sin(rad)};
-}
-function arcSector(cx,cy,ri,ro,a1,a2){
-  const p1=polarToXY(cx,cy,ro,a1), p2=polarToXY(cx,cy,ro,a2);
-  const p3=polarToXY(cx,cy,ri,a2), p4=polarToXY(cx,cy,ri,a1);
-  const lg=(a2-a1)>180?1:0;
-  return `M${p1.x},${p1.y} A${ro},${ro},0,${lg},1,${p2.x},${p2.y} L${p3.x},${p3.y} A${ri},${ri},0,${lg},0,${p4.x},${p4.y}Z`;
-}
-function hexToHSL(hex){
-  let r=parseInt(hex.slice(1,3),16)/255, g=parseInt(hex.slice(3,5),16)/255, b=parseInt(hex.slice(5,7),16)/255;
-  const mx=Math.max(r,g,b), mn=Math.min(r,g,b);
-  let h,s,l=(mx+mn)/2;
-  if(mx===mn){h=s=0;}else{
-    const d=mx-mn; s=l>.5?d/(2-mx-mn):d/(mx+mn);
-    if(mx===r)h=((g-b)/d+(g<b?6:0))/6;
-    else if(mx===g)h=((b-r)/d+2)/6;
-    else h=((r-g)/d+4)/6;
-  }
-  return{h:Math.round(h*360),s:Math.round(s*100),l:Math.round(l*100)};
-}
+<script define:vars={{ wheelData, DB, countryOrder, SUPA_URL, SUPA_KEY }}>
+function polarToXY(cx,cy,r,deg){ const rad=(deg-90)*Math.PI/180; return{x:cx+r*Math.cos(rad),y:cy+r*Math.sin(rad)}; }
+function arcSector(cx,cy,ri,ro,a1,a2){ const p1=polarToXY(cx,cy,ro,a1), p2=polarToXY(cx,cy,ro,a2); const p3=polarToXY(cx,cy,ri,a2), p4=polarToXY(cx,cy,ri,a1); const lg=(a2-a1)>180?1:0; return `M${p1.x},${p1.y} A${ro},${ro},0,${lg},1,${p2.x},${p2.y} L${p3.x},${p3.y} A${ri},${ri},0,${lg},0,${p4.x},${p4.y}Z`; }
+function hexToHSL(hex){ let r=parseInt(hex.slice(1,3),16)/255, g=parseInt(hex.slice(3,5),16)/255, b=parseInt(hex.slice(5,7),16)/255; const mx=Math.max(r,g,b), mn=Math.min(r,g,b); let h,s,l=(mx+mn)/2; if(mx===mn){h=s=0;}else{ const d=mx-mn; s=l>.5?d/(2-mx-mn):d/(mx+mn); if(mx===r)h=((g-b)/d+(g<b?6:0))/6; else if(mx===g)h=((b-r)/d+2)/6; else h=((r-g)/d+4)/6; } return{h:Math.round(h*360),s:Math.round(s*100),l:Math.round(l*100)}; }
 function buildWheel(){
-  const svg=document.getElementById('wheelSvg');
-  if(!svg) return;
-  const cx=310,cy=310, ir1=70,ir2=155, or1=160,or2=260, gap=1.2;
-  const n=wheelData.length, catAng=360/n;
-  let html='';
+  const svg=document.getElementById('wheelSvg'); if(!svg) return;
+  const cx=310,cy=310, ir1=70,ir2=155, or1=160,or2=260, gap=1.2; const n=wheelData.length, catAng=360/n; let html='';
   html+=`<circle cx="${cx}" cy="${cy}" r="${ir1-5}" fill="#F8F7ED"/>`;
   html+=`<text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="middle" font-family="'Cormorant Garamond',Georgia,serif" font-size="14" font-weight="600" fill="#462918">ВКУСЫ</text>`;
   wheelData.forEach((cat,i)=>{
     const a1=i*catAng+gap, a2=(i+1)*catAng-gap;
     html+=`<path d="${arcSector(cx,cy,ir1,ir2,a1,a2)}" fill="${cat.color}" data-type="cat" data-idx="${i}" style="cursor:pointer;stroke:#F8F7ED;stroke-width:1.5"/>`;
-    const midA=(a1+a2)/2, lR=(ir1+ir2)/2;
-    const pos=polarToXY(cx,cy,lR,midA);
-    let rot=midA; if(rot>90&&rot<270) rot+=180;
+    const midA=(a1+a2)/2, lR=(ir1+ir2)/2; const pos=polarToXY(cx,cy,lR,midA); let rot=midA; if(rot>90&&rot<270) rot+=180;
     html+=`<text x="${pos.x}" y="${pos.y}" text-anchor="middle" dominant-baseline="middle" transform="rotate(${rot},${pos.x},${pos.y})" font-family="'Inter',sans-serif" font-size="10" font-weight="600" fill="#462918" style="pointer-events:none">${cat.name}</text>`;
     const subAng=(a2-a1)/cat.subs.length;
     cat.subs.forEach((sub,j)=>{
-      const sa1=a1+j*subAng+gap*.4, sa2=a1+(j+1)*subAng-gap*.4;
-      const hsl=hexToHSL(cat.color);
-      const lShift=(j%2===0)?4:-4;
+      const sa1=a1+j*subAng+gap*.4, sa2=a1+(j+1)*subAng-gap*.4; const hsl=hexToHSL(cat.color); const lShift=(j%2===0)?4:-4;
       html+=`<path d="${arcSector(cx,cy,or1,or2,sa1,sa2)}" fill="hsl(${hsl.h},${hsl.s}%,${hsl.l+lShift}%)" data-type="sub" data-cat="${i}" data-sub="${j}" style="cursor:pointer;stroke:#F8F7ED;stroke-width:1"/>`;
-      const smA=(sa1+sa2)/2, sR=(or1+or2)/2;
-      const sp=polarToXY(cx,cy,sR,smA);
-      let sr=smA; if(sr>90&&sr<270) sr+=180;
+      const smA=(sa1+sa2)/2, sR=(or1+or2)/2; const sp=polarToXY(cx,cy,sR,smA); let sr=smA; if(sr>90&&sr<270) sr+=180;
       html+=`<text x="${sp.x}" y="${sp.y}" text-anchor="middle" dominant-baseline="middle" transform="rotate(${sr},${sp.x},${sp.y})" font-family="'Inter',sans-serif" font-size="8" font-weight="500" fill="#462918" style="pointer-events:none">${sub.name}</text>`;
     });
   });
   svg.innerHTML = html;
   svg.querySelectorAll('path[data-type]').forEach(p => {
     p.addEventListener('mouseenter', e => {
-      const cat=wheelData[p.dataset.type==='cat'?p.dataset.idx:p.dataset.cat];
-      const tt=document.getElementById('wheelTooltip');
-      if(p.dataset.type==='cat'){
-        document.getElementById('tooltipTitle').textContent=cat.name;
-        document.getElementById('tooltipOrigins').textContent='Нажмите для подробностей';
-      } else {
-        const sub=cat.subs[p.dataset.sub];
-        document.getElementById('tooltipTitle').textContent=sub.name;
-        document.getElementById('tooltipOrigins').innerHTML=sub.org;
-      }
-      tt.classList.add('visible');
-      tt.style.left=(e.clientX+14)+'px'; tt.style.top=(e.clientY+14)+'px';
+      const cat=wheelData[p.dataset.type==='cat'?p.dataset.idx:p.dataset.cat]; const tt=document.getElementById('wheelTooltip');
+      if(p.dataset.type==='cat'){ document.getElementById('tooltipTitle').textContent=cat.name; document.getElementById('tooltipOrigins').textContent='Нажмите для подробностей'; }
+      else { const sub=cat.subs[p.dataset.sub]; document.getElementById('tooltipTitle').textContent=sub.name; document.getElementById('tooltipOrigins').innerHTML=sub.org; }
+      tt.classList.add('visible'); tt.style.left=(e.clientX+14)+'px'; tt.style.top=(e.clientY+14)+'px';
     });
-    p.addEventListener('mousemove', e => {
-      const tt=document.getElementById('wheelTooltip');
-      tt.style.left=(e.clientX+14)+'px'; tt.style.top=(e.clientY+14)+'px';
-    });
-    p.addEventListener('mouseleave', ()=>{
-      document.getElementById('wheelTooltip').classList.remove('visible');
-    });
-    p.addEventListener('click', ()=>{
-      const idx=p.dataset.type==='cat'?p.dataset.idx:p.dataset.cat;
-      showWheelCat(parseInt(idx));
-    });
+    p.addEventListener('mousemove', e => { const tt=document.getElementById('wheelTooltip'); tt.style.left=(e.clientX+14)+'px'; tt.style.top=(e.clientY+14)+'px'; });
+    p.addEventListener('mouseleave', ()=>{ document.getElementById('wheelTooltip').classList.remove('visible'); });
+    p.addEventListener('click', ()=>{ const idx=p.dataset.type==='cat'?p.dataset.idx:p.dataset.cat; showWheelCat(parseInt(idx)); });
     p.style.transition='opacity .15s, filter .15s';
     p.addEventListener('mouseenter',()=>{p.style.opacity='.8';p.style.filter='brightness(1.1)';});
     p.addEventListener('mouseleave',()=>{p.style.opacity='1';p.style.filter='none';});
   });
 }
-const countryMap={
-  'Эфиопия':'ethiopia','Кения':'kenya','Колумбия':'colombia','Бразилия':'brazil',
-  'Гватемала':'guatemala','Коста-Рика':'costarica','Панама':'panama','Руанда':'rwanda',
-  'Индонезия':'indonesia','Йемен':'yemen','Гондурас':'honduras','Перу':'peru'
-};
-function linkOrigins(text){
-  let out=text;
-  for(const [name,key] of Object.entries(countryMap)){
-    out=out.replace(new RegExp(name,'g'),`<a href="/countries?c=${key}" style="color:var(--accent);text-decoration:underline;text-decoration-color:var(--border)">${name}</a>`);
-  }
-  return out;
-}
+const countryMap={ 'Эфиопия':'ethiopia','Кения':'kenya','Колумбия':'colombia','Бразилия':'brazil','Гватемала':'guatemala','Коста-Рика':'costarica','Панама':'panama','Руанда':'rwanda','Индонезия':'indonesia','Йемен':'yemen','Гондурас':'honduras','Перу':'peru' };
+function linkOrigins(text){ let out=text; for(const [name,key] of Object.entries(countryMap)){ out=out.replace(new RegExp(name,'g'),`<a href="/countries?c=${key}" style="color:var(--accent);text-decoration:underline;text-decoration-color:var(--border)">${name}</a>`); } return out; }
 function showWheelCat(idx){
-  const cat=wheelData[idx];
-  const panel=document.getElementById('wheelInfoPanel');
-  panel.innerHTML=`
-    <h3>${cat.name}</h3>
-    <div class="wheel-flavor-list">
-      ${cat.subs.map(s=>`
-        <div class="wheel-flavor-item">
-          <div class="wheel-flavor-name">${s.name}</div>
-          <div class="wheel-flavor-origins">${linkOrigins(s.org)}</div>
-        </div>
-      `).join('')}
-    </div>
-  `;
-  panel.classList.add('active');
-  panel.scrollIntoView({behavior:'smooth',block:'nearest'});
+  const cat=wheelData[idx]; const panel=document.getElementById('wheelInfoPanel');
+  panel.innerHTML=`<h3>${cat.name}</h3><div class="wheel-flavor-list">${cat.subs.map(s=>`<div class="wheel-flavor-item"><div class="wheel-flavor-name">${s.name}</div><div class="wheel-flavor-origins">${linkOrigins(s.org)}</div></div>`).join('')}</div>`;
+  panel.classList.add('active'); panel.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
-buildWheel();
+function buildGeo(){
+  const grid=document.getElementById('geoGrid'); if(!grid) return;
+  grid.innerHTML = countryOrder.map(k=>{ const c=DB[k]; return `<button class="geo-card" data-k="${k}"><span class="geo-flag">${c.flag}</span><span class="geo-name">${c.name}</span></button>`; }).join('');
+  grid.querySelectorAll('.geo-card').forEach(btn=>{ btn.addEventListener('click', ()=>{ grid.querySelectorAll('.geo-card').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); showGeo(btn.dataset.k); }); });
+}
+function showGeo(k){
+  const c=DB[k]; const el=document.getElementById('geoInfo');
+  el.innerHTML=`<h3>${c.flag} ${c.name}</h3><div class="geo-region">${c.region||''}</div><div class="geo-tags">${(c.flavors||[]).map(f=>`<span class="geo-tag">${f}</span>`).join('')}</div><a href="/countries?c=${k}" class="geo-link">Подробнее о стране →</a>`;
+  el.classList.add('active'); el.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+async function loadCommunityCount(){
+  if(!SUPA_URL||!SUPA_KEY) return;
+  try{
+    const res=await fetch(`${SUPA_URL}/rest/v1/rpc/get_community_stats`,{ method:'POST', headers:{ 'Content-Type':'application/json','apikey':SUPA_KEY,'Authorization':`Bearer ${SUPA_KEY}` }, body:'{}' });
+    if(!res.ok) return; const data=await res.json();
+    const total = data && (data.total_users ?? (Array.isArray(data)&&data[0]&&data[0].total_users));
+    if(total && total>0){ document.getElementById('commCount').textContent=total; document.getElementById('diffStat').style.display='block'; }
+  }catch(e){}
+}
+buildWheel(); buildGeo(); loadCommunityCount();
 </script>
