@@ -45,7 +45,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '';
 
     <section class="geo-section" id="geo">
       <h2 class="sec-heading">География вкусов</h2>
-      <p class="sec-sub">Кофе растёт вдоль экватора. Подсвеченные страны кликабельны: нажми и увидишь их палитру вкусов</p>
+      <p class="sec-sub">Кофе растёт вдоль экватора. Подсвеченные страны кликабельны: наведи и нажми, чтобы увидеть палитру вкусов</p>
       <div class="map-wrap"><svg id="geoMap" class="geo-map" viewBox="0 110 640 90"><text x="320" y="155" text-anchor="middle" font-family="'Inter',sans-serif" font-size="13" fill="var(--text-muted)">Загружаем карту…</text></svg></div>
       <div class="geo-info" id="geoInfo"></div>
     </section>
@@ -115,34 +115,34 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '';
 
   .map-wrap { max-width: 860px; margin: 0 auto; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 18px; box-shadow: var(--shadow); }
   .geo-map { width: 100%; display: block; }
-  .geo-map path[data-k] { transition: fill .15s; }
+  .geo-map path[data-k] { transition: fill .15s; cursor: pointer; }
   .geo-info { max-width: 560px; margin: 16px auto 0; display: none; }
   .geo-info.active { display: block; padding: 20px 22px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow); animation: fadein .2s ease; }
   @keyframes fadein { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
   .geo-info h3 { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.4rem; font-weight: 600; margin-bottom: 2px; }
-  .geo-region { font-size: .78rem; color: var(--text-muted); margin-bottom: 10px; }
-  .geo-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
-  .geo-tag { padding: 5px 12px; border-radius: 20px; background: var(--surface-2); border: 1px solid var(--border); font-size: .8rem; color: var(--text-dim); }
+  .geo-region { font-size: .78rem; color: var(--text-muted); margin-bottom: 12px; }
+  .geo-tags { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 14px; }
+  .geo-tag { padding: 5px 13px; border-radius: 20px; background: rgba(168,124,79,.1); border: 1px solid rgba(168,124,79,.22); font-size: .8rem; color: var(--accent); font-weight: 600; }
   .geo-link { color: var(--accent); font-weight: 600; font-size: .84rem; text-decoration: none; }
   .geo-link:hover { text-decoration: underline; }
 
   .comm-section { text-align: center; }
-  .comm-card { max-width: 860px; margin: 0 auto; padding: 28px 32px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow); text-align: left; }
-  .comm-empty { color: var(--text-muted); font-size: .88rem; text-align: center; padding: 16px 0; }
-  .comm-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 36px; align-items: start; }
-  .comm-left { display: flex; flex-direction: column; align-items: center; }
-  .comm-total { text-align: center; font-size: .84rem; color: var(--text-muted); margin-top: 6px; }
-  .comm-h { font-size: .74rem; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 12px; }
-  .leg-row { display: flex; align-items: center; gap: 9px; font-size: .84rem; margin: 7px 0; }
-  .leg-dot { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
-  .leg-name { flex: 1; color: var(--text-dim); }
-  .leg-n { font-weight: 700; color: var(--text); }
-  .comm-legend { width: 100%; margin-top: 16px; }
-  .comm-row { display: flex; align-items: center; gap: 10px; margin: 9px 0; font-size: .84rem; }
-  .comm-row .l { min-width: 116px; }
-  .comm-bar { flex: 1; height: 10px; background: var(--surface-2); border-radius: 6px; overflow: hidden; }
-  .comm-bar > i { display: block; height: 100%; background: var(--accent); border-radius: 6px; }
-  .comm-row .n { font-weight: 700; min-width: 24px; text-align: right; color: var(--text); }
+  .comm-card { max-width: 760px; margin: 0 auto; padding: 24px 28px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow); }
+  .comm-empty { color: var(--text-muted); font-size: .88rem; text-align: center; padding: 14px 0; }
+  .comm-compact { display: flex; align-items: center; gap: 28px; flex-wrap: wrap; justify-content: center; }
+  .comm-num { text-align: center; flex-shrink: 0; }
+  .comm-num b { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 2.8rem; font-weight: 600; color: var(--accent); display: block; line-height: 1; }
+  .comm-num span { font-size: .72rem; color: var(--text-muted); }
+  .comm-mid { flex: 1; min-width: 260px; }
+  .cs-bar { display: flex; height: 20px; border-radius: 10px; overflow: hidden; box-shadow: inset 0 0 0 1px rgba(70,41,24,.05); }
+  .cs-seg { height: 100%; }
+  .cs-legwrap { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 12px; }
+  .cs-leg { display: flex; align-items: center; gap: 6px; font-size: .8rem; color: var(--text-dim); }
+  .cs-leg i { width: 11px; height: 11px; border-radius: 3px; flex-shrink: 0; }
+  .comm-cc { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border); }
+  .cc-h { font-size: .72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; }
+  .cc-chip { font-size: .82rem; background: var(--surface-2); border: 1px solid var(--border); border-radius: 20px; padding: 5px 13px; color: var(--text-dim); }
+  .cc-chip b { color: var(--text); margin-left: 3px; }
 
   .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; max-width: 820px; margin: 0 auto; }
   .step { text-align: center; padding: 26px 18px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow); }
@@ -165,7 +165,6 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '';
     .hero-full { min-height: 480px; height: 70vh; }
     .curio-fact { font-size: 1.5rem; }
     .sec-heading { font-size: 1.6rem; }
-    .comm-grid2 { grid-template-columns: 1fr; gap: 24px; }
     .steps { grid-template-columns: 1fr; }
     .contacts-grid { flex-direction: column; align-items: center; }
     .container > section { margin-bottom: 52px; }
@@ -217,7 +216,7 @@ const countryMap={ 'Эфиопия':'ethiopia','Кения':'kenya','Колум�
 function linkOrigins(text){ let out=text; for(const [name,key] of Object.entries(countryMap)){ out=out.replace(new RegExp(name,'g'),`<a href="/countries?c=${key}" style="color:var(--accent);text-decoration:underline;text-decoration-color:var(--border)">${name}</a>`); } return out; }
 function showWheelCat(idx){ const cat=wheelData[idx]; const panel=document.getElementById('wheelInfoPanel'); panel.innerHTML=`<h3>${cat.name}</h3><div class="wheel-flavor-list">${cat.subs.map(s=>`<div class="wheel-flavor-item"><div class="wheel-flavor-name">${s.name}</div><div class="wheel-flavor-origins">${linkOrigins(s.org)}</div></div>`).join('')}</div>`; panel.classList.add('active'); panel.scrollIntoView({behavior:'smooth',block:'nearest'}); }
 
-function showGeo(k){ const c=DB[k]; const el=document.getElementById('geoInfo'); if(!c||!el) return; el.innerHTML=`<h3>${c.flag} ${c.name}</h3><div class="geo-region">${c.region||''}</div><div class="geo-tags">${(c.flavors||[]).map(f=>`<span class="geo-tag">${f}</span>`).join('')}</div><a href="/countries?c=${k}" class="geo-link">Подробнее о стране →</a>`; el.classList.add('active'); }
+function showGeo(k){ const c=DB[k]; const el=document.getElementById('geoInfo'); if(!c||!el) return; el.innerHTML=`<h3>${c.flag} ${c.name}</h3><div class="geo-region">${c.region||''}</div><div class="geo-tags">${(c.flavors||[]).map(f=>`<span class="geo-tag">${f}</span>`).join('')}</div><a href="/countries?c=${k}" class="geo-link" style="color:var(--accent)">Подробнее о стране →</a>`; el.classList.add('active'); }
 const ENG={ ethiopia:'Ethiopia',kenya:'Kenya',rwanda:'Rwanda',yemen:'Yemen',colombia:'Colombia',brazil:'Brazil',guatemala:'Guatemala',honduras:'Honduras',costarica:'Costa Rica',panama:'Panama',peru:'Peru',indonesia:'Indonesia' };
 async function drawMap(){
   const svg=document.getElementById('geoMap'); if(!svg) return;
@@ -230,21 +229,20 @@ async function drawMap(){
     const path=window.d3.geoPath(proj);
     const nameToKey={}; Object.entries(ENG).forEach(([k,v])=>nameToKey[v]=k);
     let html='';
-    feats.forEach(f=>{ const d=path(f); if(!d) return; const k=nameToKey[f.properties.name]; if(k){ html+=`<path d="${d}" fill="#BA7517" stroke="var(--surface)" stroke-width="0.5" style="cursor:pointer" data-k="${k}"></path>`; } else { html+=`<path d="${d}" fill="var(--surface-2)" stroke="var(--border)" stroke-width="0.4"></path>`; } });
+    feats.forEach(f=>{ const d=path(f); if(!d) return; const k=nameToKey[f.properties.name]; if(k){ html+=`<path d="${d}" fill="#BA7517" stroke="var(--surface)" stroke-width="0.6" data-k="${k}"><title>${DB[k].flag} ${DB[k].name}</title></path>`; } else { html+=`<path d="${d}" fill="var(--surface-2)" stroke="var(--border)" stroke-width="0.4"></path>`; } });
     svg.innerHTML=html;
     const yTop=proj([0,32])[1], yBot=proj([0,-34])[1];
     svg.setAttribute('viewBox', `0 ${Math.round(yTop)} ${W} ${Math.round(yBot-yTop)}`);
-    svg.querySelectorAll('path[data-k]').forEach(p=>p.addEventListener('click',()=>{ svg.querySelectorAll('path[data-k]').forEach(q=>q.setAttribute('fill','#BA7517')); p.setAttribute('fill','#854F0B'); showGeo(p.dataset.k); }));
+    svg.querySelectorAll('path[data-k]').forEach(p=>{
+      p.addEventListener('mouseenter',()=>{ if(p.dataset.sel!=='1') p.setAttribute('fill','#9a6212'); });
+      p.addEventListener('mouseleave',()=>{ if(p.dataset.sel!=='1') p.setAttribute('fill','#BA7517'); });
+      p.addEventListener('click',()=>{ svg.querySelectorAll('path[data-k]').forEach(q=>{q.setAttribute('fill','#BA7517');q.dataset.sel='';}); p.setAttribute('fill','#854F0B'); p.dataset.sel='1'; showGeo(p.dataset.k); });
+    });
   }catch(e){ svg.innerHTML='<text x="320" y="155" text-anchor="middle" font-family="Inter,sans-serif" font-size="13" fill="var(--text-muted)">Не удалось загрузить карту</text>'; }
 }
 
 const FLC={fruity:'#C47070',floral:'#D4A0B8',chocolate:'#8B6B4A',caramel:'#D4B870',spicy:'#C0A060',tropical:'#C49080'};
 const FL={fruity:'Фруктовые',floral:'Цветочные и чайные',chocolate:'Шоколад и орехи',caramel:'Карамель и мёд',spicy:'Пряные',tropical:'Тропические'};
-function donut(flavors,total){
-  const sum=flavors.reduce((s,x)=>s+x.users,0)||1; const cx=85,cy=85,r0=52,r1=80; let a0=-Math.PI/2; let s='';
-  flavors.forEach(x=>{ const a1=a0+(x.users/sum)*2*Math.PI; const A=[cx+r1*Math.cos(a0),cy+r1*Math.sin(a0)],B=[cx+r1*Math.cos(a1),cy+r1*Math.sin(a1)],Cc=[cx+r0*Math.cos(a1),cy+r0*Math.sin(a1)],D=[cx+r0*Math.cos(a0),cy+r0*Math.sin(a0)]; const big=(a1-a0)>Math.PI?1:0; s+=`<path d="M${A} A${r1} ${r1} 0 ${big} 1 ${B} L${Cc} A${r0} ${r0} 0 ${big} 0 ${D} Z" fill="${FLC[x.flavor]||'#BA7517'}"/>`; a0=a1; });
-  return `<svg width="170" height="170" viewBox="0 0 170 170">${s}<text x="85" y="80" text-anchor="middle" font-family="'Cormorant Garamond',serif" font-size="30" font-weight="600" fill="var(--text)">${total}</text><text x="85" y="102" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" fill="var(--text-muted)">профилей</text></svg>`;
-}
 async function loadCommunity(){
   const el=document.getElementById('commCard'); if(!el) return;
   if(!SUPA_URL||!SUPA_KEY){ el.innerHTML='<div class="comm-empty">Статистика появится позже.</div>'; return; }
@@ -255,9 +253,11 @@ async function loadCommunity(){
     const flagByName={}; for(const k of Object.keys(DB)) flagByName[DB[k].name]=DB[k].flag;
     const total=(data&&data.total_users)||0; const flavors=((data&&data.flavors)||[]).slice(0,6); const countries=((data&&data.countries)||[]).slice(0,6);
     if(!flavors.length&&!countries.length){ el.innerHTML='<div class="comm-empty">Станешь одним из первых. Пройди тест и появишься на карте.</div>'; return; }
-    const maxC=Math.max(1,...countries.map(x=>x.users));
-    let html='<div class="comm-grid2"><div class="comm-left">'+donut(flavors,total)+`<div class="comm-total">вкусовые профили сообщества</div><div class="comm-legend">`+flavors.map(x=>`<div class="leg-row"><span class="leg-dot" style="background:${FLC[x.flavor]||'#BA7517'}"></span><span class="leg-name">${FL[x.flavor]||x.flavor}</span><span class="leg-n">${x.users}</span></div>`).join('')+'</div></div>';
-    html+='<div class="comm-right"><div class="comm-h">Чаще открывают страны</div>'+(countries.length?countries.map(x=>`<div class="comm-row"><span class="l">${flagByName[x.origin]||''} ${x.origin}</span><div class="comm-bar"><i style="width:${Math.round(x.users/maxC*100)}%"></i></div><span class="n">${x.users}</span></div>`).join(''):'<div class="comm-empty" style="text-align:left">Пока никто не открыл страны.</div>')+'</div></div>';
+    const fsum=flavors.reduce((s,x)=>s+x.users,0)||1;
+    const stack=flavors.map(x=>`<span class="cs-seg" style="width:${(x.users/fsum*100).toFixed(1)}%;background:${FLC[x.flavor]||'#BA7517'}" title="${FL[x.flavor]||x.flavor}"></span>`).join('');
+    const leg=flavors.map(x=>`<span class="cs-leg"><i style="background:${FLC[x.flavor]||'#BA7517'}"></i>${FL[x.flavor]||x.flavor}</span>`).join('');
+    let html=`<div class="comm-compact"><div class="comm-num"><b>${total}</b><span>профилей сообщества</span></div><div class="comm-mid"><div class="cs-bar">${stack}</div><div class="cs-legwrap">${leg}</div></div></div>`;
+    if(countries.length){ html+='<div class="comm-cc"><span class="cc-h">Чаще открывают:</span>'+countries.map(x=>`<span class="cc-chip">${flagByName[x.origin]||''} ${x.origin}<b>${x.users}</b></span>`).join('')+'</div>'; }
     el.innerHTML=html;
   }catch(e){ el.innerHTML='<div class="comm-empty">Не удалось загрузить статистику.</div>'; }
 }
