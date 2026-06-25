@@ -121,21 +121,9 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '';
   .geo-info.active { display: block; padding: 20px 22px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow); animation: fadein .2s ease; }
   @keyframes fadein { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
   .geo-info h3 { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.4rem; font-weight: 600; margin-bottom: 2px; }
-  .geo-region { font-size: .78rem; color: var(--text-muted); margin-bottom: 12px; }
-  .geo-tags { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 14px; }
-  .geo-tag { padding: 5px 13px; border-radius: 20px; background: rgba(168,124,79,.1); border: 1px solid rgba(168,124,79,.22); font-size: .8rem; color: var(--accent); font-weight: 600; }
-  .geo-link { color: var(--accent); font-weight: 600; font-size: .84rem; text-decoration: none; }
-  .geo-link:hover { text-decoration: underline; }
 
   .wheel-info-panel { max-width: 620px; margin: 18px auto 0; display: none; }
   .wheel-info-panel.active { display: block; padding: 22px 24px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow); text-align: left; animation: fadein .2s ease; }
-  .wheel-info-panel h3 { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.5rem; font-weight: 600; margin: 0 0 14px; text-align: center; }
-  .wheel-flavor-list { display: grid; gap: 12px; }
-  .wheel-flavor-item { padding: 12px 14px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; }
-  .wheel-flavor-name { font-weight: 700; font-size: .92rem; margin-bottom: 4px; }
-  .wheel-flavor-origins { font-size: .84rem; color: var(--text-dim); line-height: 1.55; }
-  .wheel-flavor-origins a { color: var(--accent); font-weight: 600; text-decoration: underline; text-decoration-color: var(--accent); text-underline-offset: 2px; cursor: pointer; }
-  .wheel-flavor-origins a:hover { background: rgba(168,124,79,.12); }
   .wheel-tooltip { position: fixed; z-index: 50; pointer-events: none; background: var(--text); color: #fff; padding: 8px 12px; border-radius: 8px; font-size: .8rem; max-width: 240px; opacity: 0; transition: opacity .12s; box-shadow: 0 6px 20px rgba(0,0,0,.25); }
   .wheel-tooltip.visible { opacity: 1; }
   .wheel-tooltip-title { font-weight: 700; margin-bottom: 2px; }
@@ -143,21 +131,6 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '';
 
   .comm-section { text-align: center; }
   .comm-card { max-width: 760px; margin: 0 auto; padding: 24px 28px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow); }
-  .comm-empty { color: var(--text-muted); font-size: .88rem; text-align: center; padding: 14px 0; }
-  .comm-compact { display: flex; align-items: center; gap: 28px; flex-wrap: wrap; justify-content: center; }
-  .comm-num { text-align: center; flex-shrink: 0; }
-  .comm-num b { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 2.8rem; font-weight: 600; color: var(--accent); display: block; line-height: 1; }
-  .comm-num span { font-size: .72rem; color: var(--text-muted); }
-  .comm-mid { flex: 1; min-width: 260px; }
-  .cs-bar { display: flex; height: 20px; border-radius: 10px; overflow: hidden; box-shadow: inset 0 0 0 1px rgba(70,41,24,.05); }
-  .cs-seg { height: 100%; }
-  .cs-legwrap { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 12px; }
-  .cs-leg { display: flex; align-items: center; gap: 6px; font-size: .8rem; color: var(--text-dim); }
-  .cs-leg i { width: 11px; height: 11px; border-radius: 3px; flex-shrink: 0; }
-  .comm-cc { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; justify-content: center; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border); }
-  .cc-h { font-size: .72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; }
-  .cc-chip { display: inline-flex; align-items: center; gap: 8px; font-size: .82rem; background: var(--surface-2); border: 1px solid var(--border); border-radius: 20px; padding: 5px 6px 5px 13px; color: var(--text-dim); }
-  .cc-n { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 20px; padding: 0 7px; background: var(--accent); color: #fff; font-size: .74rem; font-weight: 700; border-radius: 11px; }
 
   .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; max-width: 820px; margin: 0 auto; }
   .step { text-align: center; padding: 26px 18px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow); }
@@ -184,6 +157,40 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '';
     .contacts-grid { flex-direction: column; align-items: center; }
     .container > section { margin-bottom: 52px; }
   }
+</style>
+
+<style is:global>
+  /* Блоки, которые рисует скрипт через innerHTML — Astro scoped-стили до них не доходят, поэтому здесь глобально (с привязкой к id-контейнерам, чтобы не текло) */
+  #commCard .comm-empty { color: var(--text-muted); font-size: .88rem; text-align: center; padding: 14px 0; }
+  #commCard .comm-compact { display: flex; align-items: center; gap: 28px; flex-wrap: wrap; justify-content: center; }
+  #commCard .comm-num { text-align: center; flex-shrink: 0; }
+  #commCard .comm-num b { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 2.8rem; font-weight: 600; color: var(--accent); display: block; line-height: 1; }
+  #commCard .comm-num span { font-size: .72rem; color: var(--text-muted); }
+  #commCard .comm-mid { flex: 1; min-width: 260px; }
+  #commCard .cs-bar { display: flex; height: 20px; border-radius: 10px; overflow: hidden; box-shadow: inset 0 0 0 1px rgba(70,41,24,.05); }
+  #commCard .cs-seg { height: 100%; }
+  #commCard .cs-legwrap { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 12px; }
+  #commCard .cs-leg { display: flex; align-items: center; gap: 6px; font-size: .8rem; color: var(--text-dim); }
+  #commCard .cs-leg i { width: 11px; height: 11px; border-radius: 3px; flex-shrink: 0; }
+  #commCard .comm-cc { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; justify-content: center; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border); }
+  #commCard .cc-h { font-size: .72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; }
+  #commCard .cc-chip { display: inline-flex; align-items: center; gap: 8px; font-size: .82rem; background: var(--surface-2); border: 1px solid var(--border); border-radius: 20px; padding: 5px 6px 5px 13px; color: var(--text-dim); }
+  #commCard .cc-n { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 20px; padding: 0 7px; background: var(--accent); color: #fff; font-size: .74rem; font-weight: 700; border-radius: 11px; }
+
+  #wheelInfoPanel h3 { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.5rem; font-weight: 600; margin: 0 0 14px; text-align: center; }
+  #wheelInfoPanel .wheel-flavor-list { display: grid; gap: 12px; }
+  #wheelInfoPanel .wheel-flavor-item { padding: 12px 14px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; }
+  #wheelInfoPanel .wheel-flavor-name { font-weight: 700; font-size: .92rem; margin-bottom: 4px; }
+  #wheelInfoPanel .wheel-flavor-origins { font-size: .84rem; color: var(--text-dim); line-height: 1.55; }
+  #wheelInfoPanel .wheel-flavor-origins a { color: var(--accent); font-weight: 600; text-decoration: underline; text-decoration-color: var(--accent); text-underline-offset: 2px; cursor: pointer; }
+  #wheelInfoPanel .wheel-flavor-origins a:hover { background: rgba(168,124,79,.12); }
+
+  #geoInfo h3 { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.4rem; font-weight: 600; margin-bottom: 2px; }
+  #geoInfo .geo-region { font-size: .78rem; color: var(--text-muted); margin-bottom: 12px; }
+  #geoInfo .geo-tags { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 14px; }
+  #geoInfo .geo-tag { padding: 5px 13px; border-radius: 20px; background: rgba(168,124,79,.1); border: 1px solid rgba(168,124,79,.22); font-size: .8rem; color: var(--accent); font-weight: 600; }
+  #geoInfo .geo-link { color: var(--accent); font-weight: 600; font-size: .84rem; text-decoration: none; }
+  #geoInfo .geo-link:hover { text-decoration: underline; }
 </style>
 
 <script is:inline src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
