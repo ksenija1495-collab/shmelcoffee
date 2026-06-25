@@ -21,15 +21,11 @@ export const POST: APIRoute = async ({ request }) => {
 
   if (beanErr || !bean) return new Response('Shelf item not found', { status: 404 });
 
-  // Paywall: персональная генерация доступна только по активной подписке
-  const { data: sub } = await supabase
-    .from('subscriptions')
-    .select('active_until')
-    .eq('user_id', bean.user_id)
-    .maybeSingle();
-  if (!sub || new Date(sub.active_until) <= new Date()) {
-    return new Response('subscription_required', { status: 402 });
-  }
+  // Оплата: списываем 1 кредит-гид атомарно; нет кредитов → 402
+  const { data: consumed } = await supabase.rpc('consume_guide_credit', { p_user: bean.user_id });
+  if (!consumed) return new Response('payment_required', { status: 402 });
+
+  const refund = async () => { await supabase.rpc('add_guide_credits', { p_user: bean.user_id, p_amount: 1 }); };
 
   const { data: profile } = await supabase
     .from('taste_profiles')
@@ -62,9 +58,10 @@ export const POST: APIRoute = async ({ request }) => {
       selection_id: null,
       content,
     });
-    if (insertErr) return new Response(insertErr.message, { status: 500 });
+    if (insertErr) { await refund(); return new Response(insertErr.message, { status: 500 }); }
     return new Response(JSON.stringify({ ok: true }), { status: 200 });
   } catch (e: any) {
+    await refund();
     return new Response(`OpenAI error: ${e.message}`, { status: 500 });
   }
 };

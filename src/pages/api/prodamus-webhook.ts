@@ -3,8 +3,8 @@ import { createClient } from '@supabase/supabase-js';
 
 export const prerender = false;
 
-const MS_31_DAYS = 32 * 24 * 60 * 60 * 1000;
 const PAID = ['success', 'paid', 'active', 'succeeded', 'completed'];
+const UNIT_PRICE = 99; // ₽ за 1 гид; пакеты кратны 99 → N кредитов
 
 export const GET: APIRoute = async () =>
   new Response('prodamus webhook ok', { status: 200 });
@@ -14,7 +14,6 @@ export const POST: APIRoute = async ({ request, url }) => {
   const provided = url.searchParams.get('secret');
   if (!secret || provided !== secret) return new Response('forbidden', { status: 403 });
 
-  // Parse body: form-encoded (Prodamus default) or JSON
   const ct = request.headers.get('content-type') || '';
   const raw = await request.text();
   const params: Record<string, string> = {};
@@ -25,11 +24,12 @@ export const POST: APIRoute = async ({ request, url }) => {
   }
 
   const status = (params['payment_status'] || params['status'] || '').toLowerCase();
-  const isPaid = PAID.includes(status);
-  if (!isPaid) return new Response('ignored', { status: 200 });
+  if (!PAID.includes(status)) return new Response('ignored', { status: 200 });
 
   const orderId = params['order_id'] || params['order_num'] || params['_param_uid'] || params['customer_extra'] || '';
   const email = params['customer_email'] || params['email'] || '';
+  const sum = parseFloat(params['sum'] || params['order_sum'] || params['amount'] || String(UNIT_PRICE)) || UNIT_PRICE;
+  const credits = Math.max(1, Math.round(sum / UNIT_PRICE));
 
   const supabase = createClient(
     import.meta.env.PUBLIC_SUPABASE_URL,
@@ -49,11 +49,7 @@ export const POST: APIRoute = async ({ request, url }) => {
   }
   if (!uid) return new Response('user_not_found', { status: 200 });
 
-  const until = new Date(Date.now() + MS_31_DAYS).toISOString();
-  const { error } = await supabase.from('subscriptions').upsert(
-    { user_id: uid, active_until: until, plan: 'pro', provider: 'prodamus', updated_at: new Date().toISOString() },
-    { onConflict: 'user_id' }
-  );
+  const { error } = await supabase.rpc('add_guide_credits', { p_user: uid, p_amount: credits });
   if (error) return new Response(error.message, { status: 500 });
   return new Response('ok', { status: 200 });
 };
