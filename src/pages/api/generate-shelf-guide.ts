@@ -21,6 +21,16 @@ export const POST: APIRoute = async ({ request }) => {
 
   if (beanErr || !bean) return new Response('Shelf item not found', { status: 404 });
 
+  // Paywall: персональная генерация доступна только по активной подписке
+  const { data: sub } = await supabase
+    .from('subscriptions')
+    .select('active_until')
+    .eq('user_id', bean.user_id)
+    .maybeSingle();
+  if (!sub || new Date(sub.active_until) <= new Date()) {
+    return new Response('subscription_required', { status: 402 });
+  }
+
   const { data: profile } = await supabase
     .from('taste_profiles')
     .select('*')
@@ -35,18 +45,7 @@ export const POST: APIRoute = async ({ request }) => {
 
   const beanDesc = `${bean.name}${bean.roaster ? `, обжарщик ${bean.roaster}` : ''}${bean.country ? `, страна ${bean.country}` : ''}${bean.process ? `, обработка ${bean.process}` : ''}`;
 
-  const prompt = `Ты — эксперт по specialty кофе из Shmelco Coffee Guide. Пользователь добавил на свою полку зерно и хочет персональный гид: как раскрыть это зерно и продегустировать его под свой вкус.
-
-${profileContext}
-
-Зерно: ${beanDesc}.
-
-Напиши гид в формате HTML (без обёрток <html>, только контент с <h2>, <h3>, <p>, <ul>):
-1. Чего ожидать от этого зерна (вкус, аромат, тело) с учётом страны и обработки.
-2. Как заварить под профиль пользователя: метод, температура воды, пропорция (ratio), помол, время. Если в профиле есть метод — опирайся на него.
-3. На что обратить внимание при дегустации; с чем сравнить в жизни (аналогии для новичка).
-4. 2 совета, что попробовать дальше, если понравится или нет.
-Пиши по-русски, тепло, как друг, который шарит в кофе. Без менторства.`;
+  const prompt = `Ты — эксперт по specialty кофе из Shmelco Coffee Guide. Пользователь добавил на свою полку зерно и хочет персональный гид: как раскрыть это зерно и продегустировать его под свой вкус.\n\n${profileContext}\n\nЗерно: ${beanDesc}.\n\nНапиши гид в формате HTML (без обёрток <html>, только контент с <h2>, <h3>, <p>, <ul>):\n1. Чего ожидать от этого зерна (вкус, аромат, тело) с учётом страны и обработки.\n2. Как заварить под профиль пользователя: метод, температура воды, пропорция (ratio), помол, время. Если в профиле есть метод — опирайся на него.\n3. На что обратить внимание при дегустации; с чем сравнить в жизни (аналогии для новичка).\n4. 2 совета, что попробовать дальше, если понравится или нет.\nПиши по-русски, тепло, как друг, который шарит в кофе. Без менторства.`;
 
   try {
     const openai = new OpenAI({ apiKey: import.meta.env.OPENAI_API_KEY });

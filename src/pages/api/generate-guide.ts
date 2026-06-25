@@ -21,6 +21,16 @@ export const POST: APIRoute = async ({ request }) => {
 
   if (selErr || !selection) return new Response('Selection not found', { status: 404 });
 
+  // Paywall: персональная генерация доступна только по активной подписке
+  const { data: sub } = await supabase
+    .from('subscriptions')
+    .select('active_until')
+    .eq('user_id', selection.user_id)
+    .maybeSingle();
+  if (!sub || new Date(sub.active_until) <= new Date()) {
+    return new Response('subscription_required', { status: 402 });
+  }
+
   const { data: profile } = await supabase
     .from('taste_profiles')
     .select('*')
@@ -37,26 +47,7 @@ export const POST: APIRoute = async ({ request }) => {
     ? `Вкусовой профиль пользователя: ${profile.profile_type}. Предпочитает: ${(profile.preferred_tastes || []).join(', ')}. Метод заваривания: ${profile.brew_method || 'не указан'}.`
     : 'Вкусовой профиль не заполнен.';
 
-  const prompt = `Ты — эксперт по specialty кофе из Shmelco Coffee Guide. Пользователь получил дегустационный сет. Составь персональный гид по дегустации этих кофе.
-
-${profileContext}
-
-Кофе в сете:
-${coffeeList}
-
-Формат: ${selection.format === 'drip' ? 'дрип-пакеты' : selection.format === 'beans' ? 'зерно для воронки/фильтра' : 'микс'}
-
-Напиши гид в формате HTML (без обёрток <html>, только контент с <h2>, <h3>, <p>, <ul>):
-1. Краткое введение (2-3 предложения, тёплый тон)
-2. Для каждого кофе:
-   - Что ожидать (вкусовой профиль, аромат)
-   - Как лучше заварить (температура, пропорции, время)
-   - На что обратить внимание при дегустации
-   - С чем сравнить в жизни (аналогии для новичка)
-3. Порядок дегустации (от лёгкого к тёмному)
-4. 2-3 совета по развитию вкусового восприятия
-
-Пиши на русском, дружелюбно, без менторства. Как друг который шарит в кофе.`;
+  const prompt = `Ты — эксперт по specialty кофе из Shmelco Coffee Guide. Пользователь получил дегустационный сет. Составь персональный гид по дегустации этих кофе.\n\n${profileContext}\n\nКофе в сете:\n${coffeeList}\n\nФормат: ${selection.format === 'drip' ? 'дрип-пакеты' : selection.format === 'beans' ? 'зерно для воронки/фильтра' : 'микс'}\n\nНапиши гид в формате HTML (без обёрток <html>, только контент с <h2>, <h3>, <p>, <ul>):\n1. Краткое введение (2-3 предложения, тёплый тон)\n2. Для каждого кофе:\n   - Что ожидать (вкусовой профиль, аромат)\n   - Как лучше заварить (температура, пропорции, время)\n   - На что обратить внимание при дегустации\n   - С чем сравнить в жизни (аналогии для новичка)\n3. Порядок дегустации (от лёгкого к тёмному)\n4. 2-3 совета по развитию вкусового восприятия\n\nПиши на русском, дружелюбно, без менторства. Как друг который шарит в кофе.`;
 
   try {
     const openai = new OpenAI({ apiKey: import.meta.env.OPENAI_API_KEY });
