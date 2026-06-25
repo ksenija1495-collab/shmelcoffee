@@ -147,7 +147,6 @@ import Nav from '../components/Nav.astro';
   .gg-body ul { margin: 6px 0 6px 18px; }
   .gg-body li { margin: 3px 0; }
   .pro-card { margin: 18px 0; padding: 20px; border-radius: var(--radius); border: 1px solid var(--accent); background: rgba(168,124,79,.07); }
-  .pro-card.active { border-color: #cfe0c8; background: #eef5ea; color: #3f6b3a; font-size: .88rem; line-height: 1.6; }
   .pro-title { font-family: 'Cormorant Garamond', serif; font-size: 1.25rem; font-weight: 600; margin-bottom: 6px; }
   .pro-desc { font-size: .84rem; color: var(--text-dim); line-height: 1.6; margin-bottom: 14px; }
   .my-guides-h { font-weight: 700; font-size: .95rem; margin: 22px 0 10px; }
@@ -242,17 +241,19 @@ import Nav from '../components/Nav.astro';
     return supabase.from('shelf_items').insert({ user_id: user.id, kind: 'bean', name: c.name || 'Кофе', roaster: c.roaster || null, country: c.origin || null, process: c.process || null, source: 'selection' });
   }
 
+  function guideWord(n: number): string { const a = Math.abs(n) % 100, b = a % 10; if (a > 10 && a < 20) return 'гидов'; if (b > 1 && b < 5) return 'гида'; if (b === 1) return 'гид'; return 'гидов'; }
+
   async function init() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { window.location.href = '/login'; return; }
 
-    const [profilesRes, selectionsRes, guidesRes, cupsRes, shelfRes, subRes] = await Promise.all([
+    const [profilesRes, selectionsRes, guidesRes, cupsRes, shelfRes, creditsRes] = await Promise.all([
       supabase.from('taste_profiles').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
       supabase.from('coffee_selections').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
       supabase.from('guides').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
       supabase.from('cups').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
       supabase.from('shelf_items').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
-      supabase.from('subscriptions').select('active_until').eq('user_id', user.id).maybeSingle(),
+      supabase.from('guide_credits').select('balance').eq('user_id', user.id).maybeSingle(),
     ]);
 
     const profiles = profilesRes.data || [];
@@ -260,10 +261,9 @@ import Nav from '../components/Nav.astro';
     const guides = guidesRes.data || [];
     const cups = cupsRes.data || [];
     const shelf = shelfRes.data || [];
-    const sub: any = subRes.data;
-    const isPro = !!(sub && new Date(sub.active_until) > new Date());
-    const proUntil = sub ? new Date(sub.active_until).toLocaleDateString('ru-RU') : '';
-    const subscribeUrl = PRODAMUS_URL ? PRODAMUS_URL + (PRODAMUS_URL.includes('?') ? '&' : '?') + 'order_id=' + encodeURIComponent(user.id) + '&customer_email=' + encodeURIComponent(user.email || '') : '';
+    const creditsRow: any = creditsRes.data;
+    const credits = creditsRow?.balance || 0;
+    const buyUrl = PRODAMUS_URL ? PRODAMUS_URL + (PRODAMUS_URL.includes('?') ? '&' : '?') + 'order_id=' + encodeURIComponent(user.id) + '&customer_email=' + encodeURIComponent(user.email || '') : '';
 
     const latestProfile = profiles[0];
     const topNamesSet = new Set((latestProfile?.profile_type || '').split(',').map((s: string) => s.trim()).filter(Boolean));
@@ -303,24 +303,22 @@ import Nav from '../components/Nav.astro';
       : `<div class="empty-state">Записывайте кофе, который пьёте дома или заказали сами — он наполнит вашу Карту вкуса.<br><a href="/add-cup">Добавить первую чашку →</a></div>`;
 
     const shelfPanel = shelf.length
-      ? `<div class="shelf-grid">${shelf.map((s: any) => `<div class="shelf-card">${s.photo_url ? `<img src="${s.photo_url}" class="shelf-photo" alt=""/>` : `<div class="shelf-noimg">${s.kind === 'bean' ? '🫘' : '⚙️'}</div>`}<div class="shelf-body"><div class="shelf-name">${s.name}</div><div class="shelf-meta">${s.kind === 'bean' ? ([s.roaster, s.country, s.process].filter(Boolean).join(' · ') || 'зерно') : (s.category || 'оборудование')}</div>${s.kind === 'bean' ? (isPro ? `<button class="shelf-guide-btn" data-shelf-guide="${s.id}">🤖 Сгенерировать гид</button>` : `<button class="shelf-guide-btn locked" data-subscribe="1">🔒 Гид по зерну · подписка</button>`) : ''}</div><button class="shelf-del" data-shelf-del="${s.id}" title="удалить">×</button></div>`).join('')}</div>`
+      ? `<div class="shelf-grid">${shelf.map((s: any) => `<div class="shelf-card">${s.photo_url ? `<img src="${s.photo_url}" class="shelf-photo" alt=""/>` : `<div class="shelf-noimg">${s.kind === 'bean' ? '🫘' : '⚙️'}</div>`}<div class="shelf-body"><div class="shelf-name">${s.name}</div><div class="shelf-meta">${s.kind === 'bean' ? ([s.roaster, s.country, s.process].filter(Boolean).join(' · ') || 'зерно') : (s.category || 'оборудование')}</div>${s.kind === 'bean' ? (credits > 0 ? `<button class="shelf-guide-btn" data-shelf-guide="${s.id}">🤖 Сгенерировать гид</button>` : `<button class="shelf-guide-btn locked" data-buy="1">🔒 Купить гид · 99 ₽</button>`) : ''}</div><button class="shelf-del" data-shelf-del="${s.id}" title="удалить">×</button></div>`).join('')}</div>`
       : `<div class="empty-state">Полка пуста. Добавьте зерно или оборудование, что у вас есть — можно с фото.</div>`;
 
     const selectionsPanel = selections.length
-      ? selections.map((sel: any) => { const coffees = sel.coffees || []; const total = coffees.reduce((s: number, c: any) => s + (c.price || 0), 0); return `<div class="selection-card" data-sel-id="${sel.id}"><div class="selection-header"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="selection-date">${new Date(sel.created_at).toLocaleDateString('ru-RU')}</span><span class="selection-format">${formatLabels[sel.format] || sel.format || 'Микс'}</span><span class="status-badge status-${sel.status}">${statusIcons[sel.status] || ''} ${statusLabels[sel.status] || sel.status}</span></div></div><div class="coffee-list">${coffees.map((c: any, ci: number) => { const why = c.why || (c.origin && topNamesSet.has(c.origin) ? ('Под ваш профиль — ' + c.origin) : 'Для сравнения и расширения вкуса'); return `<div class="coffee-item"><div><div class="coffee-name">${c.name || 'Кофе'}</div><div class="coffee-detail">${[c.roaster, c.origin, c.process, c.notes].filter(Boolean).join(' · ')}</div><div class="coffee-why">${why}</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">${c.price ? `<span class="coffee-price">${c.price} ₽</span>` : ''}<div style="display:flex;gap:6px">${c.url ? `<a href="${c.url}" target="_blank" class="coffee-buy">Купить →</a>` : ''}<button class="coffee-shelf-one" data-sid="${sel.id}" data-ci="${ci}">+ Полка</button></div></div></div>`; }).join('')}</div>${total > 0 ? `<div class="selection-total">Итого: <strong>${total.toLocaleString('ru-RU')} ₽</strong></div>` : ''}<div class="selection-actions">${sel.status === 'selected' ? `<button class="sel-action-btn primary" data-action="ordered" data-id="${sel.id}">📦 Отметить «Заказано»</button>` : ''}${sel.status === 'ordered' ? `<button class="sel-action-btn primary" data-action="received" data-id="${sel.id}">✅ Получил!</button>` : ''}${sel.status === 'received' ? `${isPro ? `<button class="sel-action-btn primary" data-action="generate" data-id="${sel.id}">🤖 Сгенерировать гид</button>` : `<button class="sel-action-btn" data-subscribe="1">🔒 Гид · подписка</button>`}<button class="sel-action-btn" data-action="tasted" data-id="${sel.id}">Продегустировал</button>` : ''}<button class="sel-action-btn" data-shelf-all="${sel.id}">📥 Всё на полку</button><button class="sel-action-btn sel-del" data-sel-del="${sel.id}">🗑 Удалить</button></div></div>`; }).join('')
+      ? selections.map((sel: any) => { const coffees = sel.coffees || []; const total = coffees.reduce((s: number, c: any) => s + (c.price || 0), 0); return `<div class="selection-card" data-sel-id="${sel.id}"><div class="selection-header"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="selection-date">${new Date(sel.created_at).toLocaleDateString('ru-RU')}</span><span class="selection-format">${formatLabels[sel.format] || sel.format || 'Микс'}</span><span class="status-badge status-${sel.status}">${statusIcons[sel.status] || ''} ${statusLabels[sel.status] || sel.status}</span></div></div><div class="coffee-list">${coffees.map((c: any, ci: number) => { const why = c.why || (c.origin && topNamesSet.has(c.origin) ? ('Под ваш профиль — ' + c.origin) : 'Для сравнения и расширения вкуса'); return `<div class="coffee-item"><div><div class="coffee-name">${c.name || 'Кофе'}</div><div class="coffee-detail">${[c.roaster, c.origin, c.process, c.notes].filter(Boolean).join(' · ')}</div><div class="coffee-why">${why}</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">${c.price ? `<span class="coffee-price">${c.price} ₽</span>` : ''}<div style="display:flex;gap:6px">${c.url ? `<a href="${c.url}" target="_blank" class="coffee-buy">Купить →</a>` : ''}<button class="coffee-shelf-one" data-sid="${sel.id}" data-ci="${ci}">+ Полка</button></div></div></div>`; }).join('')}</div>${total > 0 ? `<div class="selection-total">Итого: <strong>${total.toLocaleString('ru-RU')} ₽</strong></div>` : ''}<div class="selection-actions">${sel.status === 'selected' ? `<button class="sel-action-btn primary" data-action="ordered" data-id="${sel.id}">📦 Отметить «Заказано»</button>` : ''}${sel.status === 'ordered' ? `<button class="sel-action-btn primary" data-action="received" data-id="${sel.id}">✅ Получил!</button>` : ''}${sel.status === 'received' ? `${credits > 0 ? `<button class="sel-action-btn primary" data-action="generate" data-id="${sel.id}">🤖 Сгенерировать гид</button>` : `<button class="sel-action-btn" data-buy="1">🔒 Купить гид · 99 ₽</button>`}<button class="sel-action-btn" data-action="tasted" data-id="${sel.id}">Продегустировал</button>` : ''}<button class="sel-action-btn" data-shelf-all="${sel.id}">📥 Всё на полку</button><button class="sel-action-btn sel-del" data-sel-del="${sel.id}">🗑 Удалить</button></div></div>`; }).join('')
       : `<div class="empty-state">Пока нет подборок. <a href="/quiz">Пройдите тест</a> — мы подберём кофе под ваш вкус.</div>`;
 
     const generalGuideHtml = `<div class="general-guide"><div class="gg-head">Общий гид Shmelco · бесплатно, всегда с тобой</div>${generalGuide.map((s: any) => `<details class="gg-sec"><summary>${s.title}</summary><div class="gg-body">${s.body}</div></details>`).join('')}</div>`;
-    const proCardHtml = isPro
-      ? `<div class="pro-card active">✓ Подписка PRO активна до <b>${proUntil}</b>. Генерируй персональные гиды по любому зерну с полки и по подборкам — без ограничений.</div>`
-      : `<div class="pro-card"><div class="pro-title">Персональный гид по зерну</div><div class="pro-desc">AI соберёт гид под конкретное зерно и твой вкусовой профиль: что ожидать, как заварить под тебя, на что обратить внимание. По подписке — безлимит генераций.</div><button class="btn btn-primary" data-subscribe="1">Оформить подписку</button></div>`;
+    const buyCardHtml = `<div class="pro-card"><div class="pro-title">Персональный гид по зерну</div><div class="pro-desc">AI соберёт гид под конкретное зерно и твой вкусовой профиль: что ожидать, как заварить под тебя, на что обратить внимание.${credits > 0 ? ` У тебя сейчас <b>${credits}</b> ${guideWord(credits)} — сгенерируй на полке или по подборке.` : ' Разовая оплата — 99&nbsp;₽ за гид.'}</div><button class="btn btn-primary" data-buy="1">${credits > 0 ? 'Купить ещё · 99 ₽' : 'Купить гид · 99 ₽'}</button></div>`;
     const myGuidesHtml = guides.length
       ? guides.map((g: any) => `<div class="guide-card"><div class="guide-date">${new Date(g.created_at).toLocaleDateString('ru-RU')}</div><div class="guide-content">${g.content}</div></div>`).join('')
-      : `<div class="empty-state">Персональные гиды появятся, когда сгенерируешь гид по зерну с полки или по подборке (по подписке).</div>`;
-    const guidesPanel = `${generalGuideHtml}${proCardHtml}<div class="my-guides-h">Мои персональные гиды</div>${myGuidesHtml}`;
+      : `<div class="empty-state">Персональные гиды появятся, когда сгенерируешь гид по зерну с полки или по подборке.</div>`;
+    const guidesPanel = `${generalGuideHtml}${buyCardHtml}<div class="my-guides-h">Мои персональные гиды</div>${myGuidesHtml}`;
 
     page.innerHTML = `
-      <div class="account-header"><div><h1>Личный кабинет</h1><div class="account-email">${user.email || ''}</div></div><div style="display:flex;align-items:center;gap:10px">${isPro ? `<span class="pro-badge">PRO · до ${proUntil}</span>` : ''}<button class="logout-btn" id="logoutBtn">Выйти</button></div></div>
+      <div class="account-header"><div><h1>Личный кабинет</h1><div class="account-email">${user.email || ''}</div></div><div style="display:flex;align-items:center;gap:10px">${credits > 0 ? `<span class="pro-badge">${credits} ${guideWord(credits)}</span>` : ''}<button class="logout-btn" id="logoutBtn">Выйти</button></div></div>
 
       <div class="acc-tabs" id="accTabs">
         <button class="acc-tab" data-tab="profile">🎯 Профиль</button>
@@ -348,13 +346,13 @@ import Nav from '../components/Nav.astro';
     page.querySelectorAll('.disco-chip[data-k]').forEach(ch => { ch.addEventListener('click', () => showCountry((ch as HTMLElement).getAttribute('data-k')!)); });
     document.getElementById('logoutBtn')?.addEventListener('click', async () => { await supabase.auth.signOut(); window.location.href = '/'; });
 
-    page.querySelectorAll('[data-subscribe]').forEach(b => b.addEventListener('click', () => {
-      if (subscribeUrl) { window.open(subscribeUrl, '_blank'); }
-      else { alert('Оформление подписки скоро будет доступно. Напишите нам в Telegram @ksenijashmel.'); }
+    page.querySelectorAll('[data-buy]').forEach(b => b.addEventListener('click', () => {
+      if (buyUrl) { window.open(buyUrl, '_blank'); }
+      else { alert('Оплата скоро будет доступна. Напишите нам в Telegram @ksenijashmel.'); }
     }));
 
     page.querySelectorAll('[data-shelf-del]').forEach(b => b.addEventListener('click', async () => { await supabase.from('shelf_items').delete().eq('id', (b as HTMLElement).dataset.shelfDel); init(); }));
-    page.querySelectorAll('[data-shelf-guide]').forEach(b => b.addEventListener('click', async () => { const el = b as HTMLButtonElement; el.disabled = true; el.textContent = 'Генерация…'; try { const res = await fetch('/api/generate-shelf-guide', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ shelfId: el.dataset.shelfGuide }) }); if (res.status === 402) { alert('Генерация гида по зерну доступна по подписке.'); el.disabled = false; el.textContent = '🤖 Сгенерировать гид'; return; } if (!res.ok) throw new Error(await res.text()); init(); } catch (e: any) { alert('Ошибка: ' + e.message); el.disabled = false; el.textContent = '🤖 Сгенерировать гид'; } }));
+    page.querySelectorAll('[data-shelf-guide]').forEach(b => b.addEventListener('click', async () => { const el = b as HTMLButtonElement; el.disabled = true; el.textContent = 'Генерация…'; try { const res = await fetch('/api/generate-shelf-guide', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ shelfId: el.dataset.shelfGuide }) }); if (res.status === 402) { alert('Нужен оплаченный гид. Нажми «Купить гид · 99 ₽».'); init(); return; } if (!res.ok) throw new Error(await res.text()); init(); } catch (e: any) { alert('Ошибка: ' + e.message); el.disabled = false; el.textContent = '🤖 Сгенерировать гид'; } }));
     page.querySelectorAll('[data-sel-del]').forEach(b => b.addEventListener('click', async () => { if (!confirm('Удалить подборку?')) return; await supabase.from('coffee_selections').delete().eq('id', (b as HTMLElement).dataset.selDel); init(); }));
     page.querySelectorAll('[data-shelf-all]').forEach(b => b.addEventListener('click', async () => { const sel = selections.find((s: any) => s.id === (b as HTMLElement).dataset.shelfAll); if (!sel) return; const rows = (sel.coffees || []).map((c: any) => ({ user_id: user.id, kind: 'bean', name: c.name || 'Кофе', roaster: c.roaster || null, country: c.origin || null, process: c.process || null, source: 'selection' })); if (rows.length) await supabase.from('shelf_items').insert(rows); init(); }));
     page.querySelectorAll('.coffee-shelf-one').forEach(b => b.addEventListener('click', async () => { const el = b as HTMLElement; const sel = selections.find((s: any) => s.id === el.dataset.sid); if (!sel) return; const c = (sel.coffees || [])[parseInt(el.dataset.ci!)]; if (!c) return; await addCoffeeToShelf(user, c); el.textContent = '✓ на полке'; (el as HTMLButtonElement).disabled = true; }));
@@ -365,7 +363,7 @@ import Nav from '../components/Nav.astro';
         const id = (btn as HTMLElement).dataset.id!;
         if (action === 'generate') {
           (btn as HTMLButtonElement).disabled = true; (btn as HTMLButtonElement).textContent = 'Генерация...';
-          try { const res = await fetch('/api/generate-guide', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ selectionId: id }) }); if (res.status === 402) { alert('Генерация персонального гида доступна по подписке.'); (btn as HTMLButtonElement).disabled = false; (btn as HTMLButtonElement).textContent = '🤖 Сгенерировать гид'; return; } if (!res.ok) throw new Error(await res.text()); init(); }
+          try { const res = await fetch('/api/generate-guide', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ selectionId: id }) }); if (res.status === 402) { alert('Нужен оплаченный гид. Нажми «Купить гид · 99 ₽».'); init(); return; } if (!res.ok) throw new Error(await res.text()); init(); }
           catch (e: any) { alert('Ошибка генерации: ' + e.message); (btn as HTMLButtonElement).disabled = false; (btn as HTMLButtonElement).textContent = '🤖 Сгенерировать гид'; }
         } else {
           (btn as HTMLButtonElement).disabled = true;
