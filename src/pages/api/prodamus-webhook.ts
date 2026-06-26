@@ -51,5 +51,13 @@ export const POST: APIRoute = async ({ request, url }) => {
 
   const { error } = await supabase.rpc('add_guide_credits', { p_user: uid, p_amount: credits });
   if (error) return new Response(error.message, { status: 500 });
+
+  // аналитика: фиксируем покупку (по событию на каждый купленный кредит)
+  try {
+    for (let i = 0; i < credits; i++) {
+      await supabase.rpc('log_event', { p_type: 'purchase', p_user: uid });
+    }
+  } catch { /* не критично */ }
+
   return new Response('ok', { status: 200 });
 };
