@@ -10,7 +10,6 @@ export const POST: APIRoute = async ({ request }) => {
   if (!token) return new Response('unauthorized', { status: 401 });
 
   const body = await request.json().catch(() => ({}));
-  // Поддерживаем массивы (мульти-выбор) и старый одиночный формат
   const beans: any[] = Array.isArray(body.beans) ? body.beans : (body.bean ? [body.bean] : []);
   const methods: string[] = Array.isArray(body.methods) ? body.methods : (body.method ? [String(body.method)] : []);
   const cleanBeans = beans.filter((b) => b && b.name).slice(0, 6);
@@ -45,21 +44,63 @@ export const POST: APIRoute = async ({ request }) => {
   const beansList = cleanBeans
     .map((b, i) => `${i + 1}. ${b.name}${b.roaster ? `, обжарщик ${b.roaster}` : ''}${b.country ? `, страна ${b.country}` : ''}${b.process ? `, обработка ${b.process}` : ''}`)
     .join('\n');
-  const methodsText = cleanMethods.length ? cleanMethods.join(', ') : 'способ на выбор пользователя';
+  const methodsText = cleanMethods.length ? cleanMethods.join(', ') : 'Воронка V60';
+  const planDays = Math.min(10, Math.max(7, cleanBeans.length * Math.max(cleanMethods.length, 1)));
 
-  const prompt = `Ты — эксперт SCA из Shmelco Coffee Guide. Пользователь выбрал зёрна и способы заваривания, чтобы заваривать и сравнивать. Составь персональный гид под его вкус.\n\n${profileContext}\n\nЗёрна (${cleanBeans.length}):\n${beansList}\n\nСпособы заваривания (${cleanMethods.length || 1}): ${methodsText}\n\nНапиши гид в формате HTML (без обёрток <html>, только контент: <h2>, <h3>, <p>, <ul>):\n1. Коротко по каждому зерну: чего ожидать (вкус, аромат, тело) с учётом страны и обработки.\n2. По каждому выбранному способу — точный рецепт: помол, пропорция (ratio в граммах и мл), температура воды, время, по шагам.\n3. Какое зерно на каком способе раскрывается лучше и почему. Если зёрен и способов несколько — дай рекомендации по парам «зерно + способ».\n4. План сравнительной дегустации: в каком порядке пробовать (от лёгкого к плотному), на что обращать внимание, как фиксировать различия.\n5. Если вышло слишком кисло или слишком горько — что менять (помол, температура, время).\nПиши по-русски, тепло, как друг, который шарит в кофе. Без менторства.`;
+  const sys = 'Ты — эксперт SCA из Shmelco Coffee Guide. Отвечай ТОЛЬКО валидным JSON по заданной схеме, без markdown. Пиши по-русски, тепло и по делу. НЕ описывай общие рецепты способов (помол/пропорции/шаги) — они известны; давай только персональное под конкретные зёрна и профиль.';
 
-  const maxTok = Math.min(3500, 1100 + cleanBeans.length * 330 + Math.max(cleanMethods.length, 1) * 220);
+  const prompt = `${profileContext}
+
+Зёрна (${cleanBeans.length}):
+${beansList}
+
+Способы заваривания (${cleanMethods.length || 1}): ${methodsText}
+
+Составь персональный гид по дегустации и план на ${planDays} дней (комбинируй зёрна и способы, от лёгкого к плотному).
+
+Верни JSON строго по схеме:
+{
+  "title": "короткий заголовок гида",
+  "beans": [
+    {
+      "name": "название зерна (как дано)",
+      "roaster": "обжарщик или пусто",
+      "country": "страна (как дано у зерна, на русском)",
+      "family": "одна из: fruity, floral, chocolate, caramel, spicy, tropical",
+      "tags": ["2-4 короткие вкусовые ноты"],
+      "expect": "2-3 предложения: вкус, аромат, тело с учётом страны и обработки",
+      "brewTip": "1 короткий совет, как заваривать это зерно под профиль (без полного рецепта)"
+    }
+  ],
+  "methods": [
+    {
+      "name": "точное название способа из списка выше",
+      "perBean": [{ "bean": "название зерна", "tip": "короткая подстройка ИМЕННО этого способа под это зерно (1 фраза)" }]
+    }
+  ],
+  "weekPlan": [
+    { "day": "День 1", "bean": "название зерна", "method": "способ", "focus": "на что обратить внимание" }
+  ],
+  "nextTips": ["что попробовать дальше 1", "2", "3"]
+}
+
+Требования: methods.name — ровно из списка способов; в weekPlan ${planDays} дней; nextTips ровно 2-3 пункта; НЕ повторяй общие рецепты — только персональные подстройки.`;
+
+  const maxTok = Math.min(2800, 900 + cleanBeans.length * 280 + Math.max(cleanMethods.length, 1) * 160 + planDays * 55);
 
   try {
     const openai = new OpenAI({ apiKey: import.meta.env.OPENAI_API_KEY });
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
-      messages: [{ role: 'user', content: prompt }],
+      messages: [{ role: 'system', content: sys }, { role: 'user', content: prompt }],
       max_tokens: maxTok,
       temperature: 0.7,
+      response_format: { type: 'json_object' },
     });
-    const content = completion.choices[0]?.message?.content || 'Не удалось сгенерировать гид.';
+    const raw = completion.choices[0]?.message?.content || '{}';
+    let content = raw;
+    try { content = JSON.stringify(JSON.parse(raw)); } catch { /* keep raw */ }
+
     const { error } = await admin.from('guides').insert({ user_id: user.id, selection_id: null, content });
     if (error) { await refund(); return new Response(error.message, { status: 500 }); }
     return new Response(JSON.stringify({ ok: true }), { status: 200 });

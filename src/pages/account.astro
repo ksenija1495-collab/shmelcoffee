@@ -150,6 +150,43 @@ import Nav from '../components/Nav.astro';
   .my-guides-h { font-weight: 700; font-size: .95rem; margin: 22px 0 10px; }
   .passport-btn { display: inline-block; margin-top: 14px; text-decoration: none; }
 
+  .guide-rich { padding: 22px; }
+  .gr-title { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.4rem; font-weight: 600; margin: 2px 0 14px; }
+  .gr-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
+  .gr-tab { font-size: .78rem; font-weight: 600; padding: 7px 13px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text-dim); cursor: pointer; font-family: 'Inter', sans-serif; }
+  .gr-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .gr-pane { display: none; }
+  .gr-pane.active { display: block; animation: fadein .2s ease; }
+  .gb-grid, .gm-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+  .gb-card, .gm-card { padding: 16px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface-2); }
+  .gb-head, .gm-head { display: flex; align-items: center; gap: 12px; }
+  .gb-ico { font-size: 1.5rem; line-height: 1; flex-shrink: 0; }
+  .gb-name, .gm-name { font-weight: 700; font-size: .95rem; color: var(--text); }
+  .gb-roaster { font-size: .76rem; color: var(--text-muted); margin-top: 1px; }
+  .gb-expect { font-size: .85rem; color: var(--text-dim); line-height: 1.6; margin-top: 10px; }
+  .gb-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
+  .gb-tag { font-size: .72rem; padding: 3px 10px; border-radius: 20px; background: rgba(168,124,79,.12); border: 1px solid rgba(168,124,79,.25); color: var(--accent); font-weight: 600; }
+  .gb-tip { font-size: .8rem; color: var(--text-dim); margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border); }
+  .gm-params { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+  .gm-param { display: flex; flex-direction: column; gap: 2px; padding: 7px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; min-width: 78px; }
+  .gm-param span { font-size: .62rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: .04em; }
+  .gm-param b { font-size: .82rem; color: var(--text); }
+  .gm-steps { margin: 8px 0 0 18px; padding: 0; font-size: .84rem; color: var(--text-dim); line-height: 1.65; }
+  .gm-steps li { margin: 3px 0; }
+  .gm-perbean { margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--border); }
+  .gm-pb-h { font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--text-muted); margin-bottom: 6px; }
+  .gm-pb { font-size: .82rem; color: var(--text-dim); line-height: 1.5; margin: 4px 0; }
+  .gm-pb b { color: var(--text); }
+  .gp-grid { display: grid; grid-template-columns: 1fr; gap: 8px; }
+  .gp-day { display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-2); }
+  .gp-dn { font-size: .7rem; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .05em; }
+  .gp-dmain { font-weight: 700; font-size: .88rem; color: var(--text); }
+  .gp-df { font-size: .8rem; color: var(--text-dim); line-height: 1.5; }
+  .gr-next { margin-top: 18px; padding: 16px; border-radius: 12px; background: rgba(168,124,79,.07); border: 1px solid var(--accent); }
+  .gr-next-h { font-weight: 700; font-size: .9rem; margin-bottom: 8px; }
+  .gr-next ul { margin: 0 0 0 18px; padding: 0; font-size: .84rem; color: var(--text-dim); line-height: 1.6; }
+  @media (min-width: 560px) { .gb-grid { grid-template-columns: 1fr 1fr; } }
+
   @media (max-width: 768px) { .account-page { padding-top: 72px; } .account-header h1 { font-size: 1.4rem; } .coffee-item { flex-direction: column; align-items: flex-start; } .coffee-price { margin-top: 4px; } .tastemap-wheel { width: 200px; height: 200px; margin: 0 auto; } }
 </style>
 
@@ -158,6 +195,7 @@ import Nav from '../components/Nav.astro';
   import { wheelData } from '../data/wheel';
   import { DB, countryOrder } from '../data/countries';
   import { generalGuide } from '../data/generalGuide';
+  import { BREW_METHODS, FAMILY_ICON } from '../data/methods';
 
   const supabase = createClient(
     import.meta.env.PUBLIC_SUPABASE_URL,
@@ -173,6 +211,60 @@ import Nav from '../components/Nav.astro';
   const ACID: Record<string, string> = { high: 'Яркая, сочная', medium: 'Сбалансированная', low: 'Мягкая, гладкая' };
   const BODY: Record<string, string> = { light: 'Лёгкое, чайное', med: 'Среднее, шелковистое', heavy: 'Плотное, сиропистое' };
   const SWEET: Record<string, string> = { fruitSw: 'Фруктовая', honeySw: 'Медовая, карамельная', chocoSw: 'Шоколадная', drySw: 'Сухая, ореховая' };
+
+  const METHOD_BY_LABEL: Record<string, any> = {};
+  (BREW_METHODS as any[]).forEach((m) => { METHOD_BY_LABEL[m.label] = m; });
+  const FLAG_BY_NAME: Record<string, string> = {};
+  for (const [, c] of Object.entries(DB) as [string, any][]) FLAG_BY_NAME[c.name] = c.flag;
+  const esc = (s: any) => String(s == null ? '' : s);
+
+  function renderGuide(content: string, gid: string, dateStr: string): string {
+    let data: any = null;
+    try { const p = JSON.parse(content); if (p && (Array.isArray(p.beans) || Array.isArray(p.methods))) data = p; } catch (e) {}
+    if (!data) return `<div class="guide-card"><div class="guide-date">${dateStr}</div><div class="guide-content">${content}</div></div>`;
+
+    const beansHtml = (data.beans || []).map((b: any) => {
+      const flag = FLAG_BY_NAME[esc(b.country)] || '';
+      const fam = (FAMILY_ICON as any)[esc(b.family)] || '';
+      const ico = flag || fam || '☕';
+      const sub = [b.roaster, b.country].filter(Boolean).map(esc).join(' · ');
+      const tags = (b.tags || []).map((t: string) => `<span class="gb-tag">${esc(t)}</span>`).join('');
+      return `<div class="gb-card"><div class="gb-head"><span class="gb-ico">${ico}${(fam && flag) ? ' ' + fam : ''}</span><div><div class="gb-name">${esc(b.name)}</div>${sub ? `<div class="gb-roaster">${sub}</div>` : ''}</div></div>${b.expect ? `<div class="gb-expect">${esc(b.expect)}</div>` : ''}${tags ? `<div class="gb-tags">${tags}</div>` : ''}${b.brewTip ? `<div class="gb-tip">💡 ${esc(b.brewTip)}</div>` : ''}</div>`;
+    }).join('');
+
+    const methodsHtml = (data.methods || []).map((m: any) => {
+      const md = METHOD_BY_LABEL[esc(m.name)] || null;
+      const ico = md ? md.ico : '⚙️';
+      const grind = md ? md.grind : (m.grind || '');
+      const ratio = md ? md.ratio : (m.ratio || '');
+      const temp = md ? md.temp : (m.temp || '');
+      const time = md ? md.time : (m.time || '');
+      const steps: string[] = md ? md.steps : (m.steps || []);
+      const params = ([['Помол', grind], ['Пропорция', ratio], ['Вода', temp], ['Время', time]] as [string, string][]).filter(p => p[1]).map(p => `<div class="gm-param"><span>${p[0]}</span><b>${esc(p[1])}</b></div>`).join('');
+      const stepsHtml = (steps || []).map((s: string) => `<li>${esc(s)}</li>`).join('');
+      const perBean = (m.perBean || []).map((pb: any) => `<div class="gm-pb"><b>${esc(pb.bean)}:</b> ${esc(pb.tip)}</div>`).join('');
+      return `<div class="gm-card"><div class="gm-head"><span class="gb-ico">${ico}</span><div class="gm-name">${esc(m.name)}</div></div>${params ? `<div class="gm-params">${params}</div>` : ''}${stepsHtml ? `<ol class="gm-steps">${stepsHtml}</ol>` : ''}${perBean ? `<div class="gm-perbean"><div class="gm-pb-h">Под твои зёрна</div>${perBean}</div>` : ''}</div>`;
+    }).join('');
+
+    const plan = data.weekPlan || [];
+    const planHtml = plan.map((d: any) => `<div class="gp-day"><div class="gp-dn">${esc(d.day)}</div><div class="gp-dmain">${esc(d.bean)} · ${esc(d.method)}</div>${d.focus ? `<div class="gp-df">${esc(d.focus)}</div>` : ''}</div>`).join('');
+    const tips = (data.nextTips || []).map((t: string) => `<li>${esc(t)}</li>`).join('');
+    const hasPlan = plan.length > 0;
+
+    return `<div class="guide-card guide-rich">
+      <div class="guide-date">${dateStr}</div>
+      <h3 class="gr-title">${esc(data.title || 'Персональный гид по кофе')}</h3>
+      <div class="gr-tabs">
+        <button class="gr-tab active" data-gt="${gid}|beans">☕ Зёрна</button>
+        <button class="gr-tab" data-gt="${gid}|methods">⚗️ Способы</button>
+        ${hasPlan ? `<button class="gr-tab" data-gt="${gid}|plan">📅 План недели</button>` : ''}
+      </div>
+      <div class="gr-pane active" data-gp="${gid}|beans"><div class="gb-grid">${beansHtml}</div></div>
+      <div class="gr-pane" data-gp="${gid}|methods"><div class="gm-grid">${methodsHtml}</div></div>
+      ${hasPlan ? `<div class="gr-pane" data-gp="${gid}|plan"><div class="gp-grid">${planHtml}</div></div>` : ''}
+      ${tips ? `<div class="gr-next"><div class="gr-next-h">Что попробовать дальше</div><ul>${tips}</ul></div>` : ''}
+    </div>`;
+  }
 
   function calcTop(answers: any): string[] {
     if (!answers) return [];
@@ -313,7 +405,7 @@ import Nav from '../components/Nav.astro';
     const createCardHtml = `<div class="pro-card"><div class="pro-title">Персональный гид по зерну</div><div class="pro-desc">Выбери зерно (с полки или впиши своё) и способ заваривания — AI соберёт рецепт и дегустацию под твой вкус.${credits > 0 ? ` У тебя сейчас <b>${credits}</b> ${guideWord(credits)}.` : ' Разовая оплата — 99&nbsp;₽ за гид.'}</div>${credits > 0 ? `<a class="btn btn-primary" href="/generate" style="text-decoration:none">✨ Создать гид →</a>` : `<button class="btn btn-primary" data-buy="1">Купить гид · 99 ₽</button>`}</div>`;
     const generalGuideHtml = `<div class="general-guide"><div class="gg-head">Общий гид Shmelco · бесплатно, всегда с тобой</div>${generalGuide.map((s: any) => `<details class="gg-sec"><summary>${s.title}</summary><div class="gg-body">${s.body}</div></details>`).join('')}</div>`;
     const myGuidesHtml = guides.length
-      ? guides.map((g: any) => `<div class="guide-card"><div class="guide-date">${new Date(g.created_at).toLocaleDateString('ru-RU')}</div><div class="guide-content">${g.content}</div></div>`).join('')
+      ? guides.map((g: any) => renderGuide(g.content, g.id, new Date(g.created_at).toLocaleDateString('ru-RU'))).join('')
       : `<div class="empty-state">Пока нет персональных гидов. ${credits > 0 ? '<a href="/generate">Создать первый гид →</a>' : 'Купи гид и собери первый рецепт под своё зерно и способ.'}</div>`;
     const guidesPanel = `${createCardHtml}${generalGuideHtml}<div class="my-guides-h">Мои персональные гиды</div>${myGuidesHtml}`;
 
@@ -345,6 +437,13 @@ import Nav from '../components/Nav.astro';
     loadCommunity();
     page.querySelectorAll('.disco-chip[data-k]').forEach(ch => { ch.addEventListener('click', () => showCountry((ch as HTMLElement).getAttribute('data-k')!)); });
     document.getElementById('logoutBtn')?.addEventListener('click', async () => { await supabase.auth.signOut(); window.location.href = '/'; });
+
+    page.querySelectorAll('.gr-tab').forEach(t => t.addEventListener('click', () => {
+      const key = (t as HTMLElement).getAttribute('data-gt')!;
+      const card = (t as HTMLElement).closest('.guide-rich'); if (!card) return;
+      card.querySelectorAll('.gr-tab').forEach(x => x.classList.toggle('active', x.getAttribute('data-gt') === key));
+      card.querySelectorAll('.gr-pane').forEach(p => p.classList.toggle('active', p.getAttribute('data-gp') === key));
+    }));
 
     page.querySelectorAll('[data-buy]').forEach(b => b.addEventListener('click', () => {
       if (buyUrl) { window.open(buyUrl, '_blank'); }
