@@ -82,6 +82,7 @@ import Nav from '../components/Nav.astro';
   const sel = (id: string) => document.getElementById(id) as HTMLSelectElement;
   const manualFilled = () => state.manualOn && !!(inp('mName') && inp('mName').value.trim());
   const beanCount = () => state.beans.size + (manualFilled() ? 1 : 0);
+  const vid = (n: number) => { const a = n % 100, b = n % 10; if (a > 10 && a < 20) return 'видов'; if (b > 1 && b < 5) return 'вида'; if (b === 1) return 'вид'; return 'видов'; };
 
   async function init() {
     const { data: { user } } = await supabase.auth.getUser();
@@ -142,7 +143,7 @@ import Nav from '../components/Nav.astro';
       methodCnt.classList.toggle('full', state.methods.size >= MAX_METHODS);
       const ok = bc >= 1 && state.methods.size >= 1;
       if (genBtn) genBtn.disabled = !ok;
-      if (note) note.textContent = ok ? `Готово — ${bc} ${bc === 1 ? 'зерно' : 'зёрен'} × ${state.methods.size} ${state.methods.size === 1 ? 'способ' : 'способа'}` : 'Выбери хотя бы одно зерно и способ';
+      if (note) note.textContent = ok ? `готово: ${bc} ${vid(bc)} зерна и ${state.methods.size} ${vid(state.methods.size)} заварки` : 'Выбери хотя бы одно зерно и способ';
     }
 
     page.querySelectorAll('.bean-card').forEach(c => c.addEventListener('click', () => {
