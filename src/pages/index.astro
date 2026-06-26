@@ -28,6 +28,24 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '';
 
   <div class="container">
 
+    <section class="preview-section">
+      <div class="preview-grid">
+        <div class="preview-text">
+          <h2 class="sec-heading prev-h">Что ты получишь</h2>
+          <p class="preview-lead">За&nbsp;2&nbsp;минуты — твой вкусовой профиль и&nbsp;красивый паспорт, которым можно поделиться. Плюс карта стран, которые стоит открыть первыми, и&nbsp;персональные гиды под твоё зерно.</p>
+          <a class="btn btn-primary" href="/quiz">Узнать свой вкус →</a>
+        </div>
+        <div class="preview-card">
+          <div class="pv-eyebrow">Пример паспорта</div>
+          <div class="pv-emoji">🍓</div>
+          <div class="pv-arch">Фруктовый&nbsp;исследователь</div>
+          <div class="pv-line">ищет яркость и&nbsp;сочную кислотность</div>
+          <div class="pv-fams"><span class="pv-fam">Ягоды</span><span class="pv-fam">Цитрус</span><span class="pv-fam">Цветочный</span></div>
+          <div class="pv-stat"><b>5&nbsp;/&nbsp;12</b> стран ждут открытия</div>
+        </div>
+      </div>
+    </section>
+
     <section class="curio">
       <p class="curio-fact">В одной чашке кофе больше <b>800&nbsp;ароматов</b>. Больше,&nbsp;чем&nbsp;в&nbsp;вине.</p>
       <p class="curio-lead">Если знать, можно управлять вкусом через&nbsp;выбор:</p>
@@ -56,6 +74,16 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '';
       <p class="sec-sub">Нет «правильного» вкуса, есть твой. Посмотри, что любят другие, и&nbsp;где среди них&nbsp;ты</p>
       <div id="commCard" class="comm-card"><div class="comm-empty">Загружаем…</div></div>
       <a class="btn btn-primary" href="/quiz" style="margin-top:22px">Найти свой профиль →</a>
+    </section>
+
+    <section class="twin-section">
+      <h2 class="sec-heading">У каждого есть вкусовой близнец</h2>
+      <p class="sec-sub">Где-то рядом — человек, который любит ровно твой кофе. А&nbsp;где-то — полная противоположность. Найди и&nbsp;тех, и&nbsp;других.</p>
+      <div class="twin-grid">
+        <div class="twin-card"><div class="twin-emoji">🤝</div><div class="twin-t">Вкусовой близнец</div><div class="twin-d">Тот, у&nbsp;кого профиль совпадает с&nbsp;твоим. Делитесь находками и&nbsp;зёрнами.</div></div>
+        <div class="twin-card opp"><div class="twin-emoji">🌗</div><div class="twin-t">Противоположность</div><div class="twin-d">Полный контраст вкуса — отличный повод попробовать что-то совсем новое.</div></div>
+      </div>
+      <a class="btn btn-primary" href="/quiz" style="margin-top:24px">Найти своих →</a>
     </section>
 
     <section class="steps-section">
@@ -100,6 +128,19 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '';
   .container > section { margin-bottom: 72px; }
   .container > section:first-child { margin-top: 56px; }
 
+  .preview-grid { display: grid; grid-template-columns: 1.05fr .95fr; gap: 30px; align-items: center; max-width: 900px; margin: 0 auto; }
+  .prev-h { text-align: left; margin-bottom: 12px; }
+  .preview-lead { font-size: .98rem; color: var(--text-dim); line-height: 1.6; margin-bottom: 22px; }
+  .preview-card { background: linear-gradient(160deg, #fffaf2 0%, #f6ecdc 100%); border: 1px solid var(--border); border-radius: 20px; box-shadow: var(--shadow-hover); padding: 26px 24px; text-align: center; }
+  .pv-eyebrow { text-transform: uppercase; letter-spacing: .18em; font-size: .62rem; color: var(--accent); font-weight: 700; }
+  .pv-emoji { font-size: 2.2rem; margin: 8px 0 2px; }
+  .pv-arch { font-family: 'Cormorant Garamond', serif; font-size: 1.5rem; font-weight: 700; line-height: 1.1; }
+  .pv-line { font-size: .84rem; color: var(--text-dim); margin-bottom: 12px; }
+  .pv-fams { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-bottom: 14px; }
+  .pv-fam { font-size: .74rem; padding: 4px 11px; border-radius: 20px; background: rgba(168,124,79,.12); border: 1px solid rgba(168,124,79,.25); color: var(--accent); font-weight: 600; }
+  .pv-stat { font-size: .82rem; color: var(--text-muted); border-top: 1px solid var(--border); padding-top: 12px; }
+  .pv-stat b { font-family: 'Cormorant Garamond', serif; font-size: 1.1rem; color: var(--accent); }
+
   .curio { text-align: center; max-width: 820px; margin-left: auto; margin-right: auto; padding: 36px 28px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow); }
   .curio-fact { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.9rem; font-weight: 500; line-height: 1.25; margin: 0 0 18px; }
   .curio-fact b { color: var(--accent); font-weight: 600; }
@@ -132,6 +173,14 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '';
   .comm-section { text-align: center; }
   .comm-card { max-width: 760px; margin: 0 auto; padding: 24px 28px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow); }
 
+  .twin-section { text-align: center; }
+  .twin-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; max-width: 720px; margin: 0 auto; }
+  .twin-card { padding: 26px 22px; border-radius: var(--radius-lg); border: 1px solid var(--border); background: var(--surface); box-shadow: var(--shadow); }
+  .twin-card.opp { background: var(--surface-2); }
+  .twin-emoji { font-size: 2rem; margin-bottom: 8px; }
+  .twin-t { font-weight: 700; font-size: 1rem; margin-bottom: 6px; }
+  .twin-d { font-size: .84rem; color: var(--text-dim); line-height: 1.55; }
+
   .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; max-width: 820px; margin: 0 auto; }
   .step { text-align: center; padding: 26px 18px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow); }
   .step-n { width: 36px; height: 36px; border-radius: 50%; background: var(--accent); color: #fff; font-weight: 700; display: flex; align-items: center; justify-content: center; margin: 0 auto 14px; }
@@ -151,6 +200,10 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '';
   @media (max-width: 768px) {
     .hero-content h1 { font-size: 2.4rem; }
     .hero-full { min-height: 480px; height: 70vh; }
+    .preview-grid { grid-template-columns: 1fr; gap: 22px; }
+    .prev-h { text-align: center; }
+    .preview-text { text-align: center; }
+    .twin-grid { grid-template-columns: 1fr; }
     .curio-fact { font-size: 1.5rem; }
     .sec-heading { font-size: 1.6rem; }
     .steps { grid-template-columns: 1fr; }
