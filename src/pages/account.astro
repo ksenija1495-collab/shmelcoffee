@@ -148,6 +148,7 @@ import Nav from '../components/Nav.astro';
   .pro-title { font-family: 'Cormorant Garamond', serif; font-size: 1.25rem; font-weight: 600; margin-bottom: 6px; }
   .pro-desc { font-size: .84rem; color: var(--text-dim); line-height: 1.6; margin-bottom: 14px; }
   .my-guides-h { font-weight: 700; font-size: .95rem; margin: 22px 0 10px; }
+  .passport-btn { display: inline-block; margin-top: 14px; text-decoration: none; }
 
   @media (max-width: 768px) { .account-page { padding-top: 72px; } .account-header h1 { font-size: 1.4rem; } .coffee-item { flex-direction: column; align-items: flex-start; } .coffee-price { margin-top: 4px; } .tastemap-wheel { width: 200px; height: 200px; margin: 0 auto; } }
 </style>
@@ -284,9 +285,10 @@ import Nav from '../components/Nav.astro';
     const statusIcons: Record<string, string> = { selected: '📋', ordered: '📦', received: '✅', tasted: '🏆' };
     const formatLabels: Record<string, string> = { drip: 'Дрип-пакеты', beans: 'Зерно', mixed: 'Микс' };
 
-    const profilePanel = latestProfile
-      ? `<div class="profile-card"><div class="profile-row"><span class="profile-label">Регионы</span><span class="profile-value">${latestProfile.profile_type || '—'}</span></div><div class="profile-row"><span class="profile-label">Метод</span><span class="profile-value">${latestProfile.brew_method || '—'}</span></div><div class="profile-row"><span class="profile-label">Вкусы</span><div class="profile-tags">${(latestProfile.preferred_tastes || []).map((t: string) => `<span class="profile-tag">${t}</span>`).join('')}</div></div></div>`
-      : `<div class="empty-state">Вы ещё не проходили диагностику вкуса. <a href="/quiz">Пройти →</a></div>`;
+    const passportBtn = `<a class="btn btn-primary passport-btn" href="/passport?u=${user.id}">🪪 Мой вкусовой паспорт →</a>`;
+    const profilePanel = (latestProfile
+      ? `<div class="profile-card"><div class="profile-row"><span class="profile-label">Регионы</span><span class="profile-value">${latestProfile.profile_type || '—'}</span></div><div class="profile-row"><span class="profile-label">Метод</span><span class="profile-value">${latestProfile.brew_method || '—'}</span></div><div class="profile-row"><span class="profile-label">Вкусы</span><div class="profile-tags">${(latestProfile.preferred_tastes || []).map((t: string) => `<span class="profile-tag">${t}</span>`).join('')}</div></div></div>${passportBtn}`
+      : `<div class="empty-state">Вы ещё не проходили диагностику вкуса. <a href="/quiz">Пройти →</a></div>`);
 
     const tastePanel = answers
       ? `<div class="profile-card tastemap-card"><svg id="tasteWheel" class="tastemap-wheel" viewBox="0 0 360 360"></svg><div class="tastemap-side"><div class="tm-row"><span class="profile-label">Кислотность</span><span class="profile-value">${ACID[answers.acidity] || '—'}</span></div><div class="tm-row"><span class="profile-label">Тело</span><span class="profile-value">${BODY[answers.body] || '—'}</span></div><div class="tm-row"><span class="profile-label">Сладость</span><span class="profile-value">${SWEET[answers.sweetness] || '—'}</span></div><div class="tm-fams">${[...prefFams].map(f => `<span class="tm-fam" style="background:${famColor[f] || 'var(--accent)'}">${f}</span>`).join('') || '<span class="profile-tag">—</span>'}</div><div class="tm-hint">Нажмите на сегмент колеса — увидите ноты и в кофе каких стран они встречаются.</div></div></div><div id="tmInfo" class="info-panel"></div>`
