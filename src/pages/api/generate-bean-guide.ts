@@ -44,10 +44,10 @@ export const POST: APIRoute = async ({ request }) => {
   const beansList = cleanBeans
     .map((b, i) => `${i + 1}. ${b.name}${b.roaster ? `, обжарщик ${b.roaster}` : ''}${b.country ? `, страна ${b.country}` : ''}${b.process ? `, обработка ${b.process}` : ''}`)
     .join('\n');
-  const methodsText = cleanMethods.length ? cleanMethods.join(', ') : 'V60';
+  const methodsText = cleanMethods.length ? cleanMethods.join(', ') : 'Воронка V60';
   const planDays = Math.min(10, Math.max(7, cleanBeans.length * Math.max(cleanMethods.length, 1)));
 
-  const sys = 'Ты — эксперт SCA из Shmelco Coffee Guide. Отвечай ТОЛЬКО валидным JSON по заданной схеме, без markdown и пояснений. Пиши по-русски, тепло и по делу, как друг, который шарит в кофе.';
+  const sys = 'Ты — эксперт SCA из Shmelco Coffee Guide. Отвечай ТОЛЬКО валидным JSON по заданной схеме, без markdown. Пиши по-русски, тепло и по делу. НЕ описывай общие рецепты способов (помол/пропорции/шаги) — они известны; давай только персональное под конкретные зёрна и профиль.';
 
   const prompt = `${profileContext}
 
@@ -56,7 +56,7 @@ ${beansList}
 
 Способы заваривания (${cleanMethods.length || 1}): ${methodsText}
 
-Составь персональный гид по дегустации и план на ${planDays} дней (комбинируй зёрна и способы по дням, от лёгкого к плотному).
+Составь персональный гид по дегустации и план на ${planDays} дней (комбинируй зёрна и способы, от лёгкого к плотному).
 
 Верни JSON строго по схеме:
 {
@@ -66,31 +66,27 @@ ${beansList}
       "name": "название зерна (как дано)",
       "roaster": "обжарщик или пусто",
       "country": "страна (как дано у зерна, на русском)",
-      "family": "одна вкусовая семья из: fruity, floral, chocolate, caramel, spicy, tropical",
-      "tags": ["2-4 короткие вкусовые ноты, напр. цитрус, ягоды, мёд"],
-      "expect": "2-3 предложения: вкус, аромат, тело с учётом страны и обработки"
+      "family": "одна из: fruity, floral, chocolate, caramel, spicy, tropical",
+      "tags": ["2-4 короткие вкусовые ноты"],
+      "expect": "2-3 предложения: вкус, аромат, тело с учётом страны и обработки",
+      "brewTip": "1 короткий совет, как заваривать это зерно под профиль (без полного рецепта)"
     }
   ],
   "methods": [
     {
       "name": "точное название способа из списка выше",
-      "grind": "помол",
-      "ratio": "пропорция, напр. 15 г / 250 мл",
-      "temp": "температура воды, напр. 92-94°C",
-      "time": "общее время",
-      "steps": ["шаг 1", "шаг 2", "..."],
-      "perBean": [{ "bean": "название зерна", "tip": "как подстроить этот способ под это зерно" }]
+      "perBean": [{ "bean": "название зерна", "tip": "короткая подстройка ИМЕННО этого способа под это зерно (1 фраза)" }]
     }
   ],
   "weekPlan": [
-    { "day": "День 1", "bean": "название зерна", "method": "способ", "focus": "на что обратить внимание в этот день" }
+    { "day": "День 1", "bean": "название зерна", "method": "способ", "focus": "на что обратить внимание" }
   ],
-  "nextTips": ["совет что попробовать дальше 1", "совет 2", "совет 3"]
+  "nextTips": ["что попробовать дальше 1", "2", "3"]
 }
 
-Требования: family выбери ближайшую; methods.name — ровно из списка способов; в weekPlan ${planDays} дней; nextTips — ровно 2-3 пункта простым списком.`;
+Требования: methods.name — ровно из списка способов; в weekPlan ${planDays} дней; nextTips ровно 2-3 пункта; НЕ повторяй общие рецепты — только персональные подстройки.`;
 
-  const maxTok = Math.min(4000, 1500 + cleanBeans.length * 320 + Math.max(cleanMethods.length, 1) * 320 + planDays * 60);
+  const maxTok = Math.min(2800, 900 + cleanBeans.length * 280 + Math.max(cleanMethods.length, 1) * 160 + planDays * 55);
 
   try {
     const openai = new OpenAI({ apiKey: import.meta.env.OPENAI_API_KEY });
