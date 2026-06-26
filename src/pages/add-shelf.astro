@@ -20,6 +20,8 @@ import { DB, countryOrder } from '../data/countries';
         <label class="fl">Название *</label>
         <input type="text" id="f_name" placeholder="напр. Эфиопия Гедео / Воронка V60"/>
         <div id="beanFields">
+          <label class="fl">Вид зерна *</label>
+          <select id="f_bean_type"></select>
           <label class="fl">Обжарщик</label>
           <input type="text" id="f_roaster" placeholder="напр. Tasty Coffee"/>
           <div class="row2">
@@ -73,6 +75,7 @@ import { DB, countryOrder } from '../data/countries';
     { auth: { flowType: 'implicit' } }
   );
 
+  const BEAN_TYPES = ['Арабика', 'Робуста', 'Бленд (арабика + робуста)'];
   const PROCESSES = ['Мытая (Washed)','Натуральная (Natural)','Хани (Honey)','Анаэробная','Carbonic maceration','Wet-hulled','Другая'];
   const CATEGORIES = ['Воронка','Кофемолка','Весы','Чайник с тонким носиком','Эспрессо-машина','Гейзерная','Френч-пресс','Аэропресс','Кемекс','Турка','Капсульная','Другое'];
   let kind = 'bean';
@@ -98,6 +101,7 @@ import { DB, countryOrder } from '../data/countries';
   }
 
   function build() {
+    fill('f_bean_type', BEAN_TYPES, 'выберите вид');
     fill('f_country', countryOrder.map((k: string) => (DB as any)[k].name), 'выберите страну');
     fill('f_process', PROCESSES, 'выберите обработку');
     fill('f_category', CATEGORIES, 'выберите категорию');
@@ -117,8 +121,10 @@ import { DB, countryOrder } from '../data/countries';
     const user = await guard();
     if (!user) return;
     const name = (document.getElementById('f_name') as HTMLInputElement).value.trim();
+    const beanType = (document.getElementById('f_bean_type') as HTMLSelectElement).value;
     const msg = document.getElementById('msg')!;
     if (!name) { msg.className = 'sf-msg error'; msg.textContent = 'Добавьте название'; return; }
+    if (kind === 'bean' && !beanType) { msg.className = 'sf-msg error'; msg.textContent = 'Выберите вид зерна'; return; }
     const btn = document.getElementById('saveBtn') as HTMLButtonElement;
     btn.disabled = true; btn.textContent = 'Сохраняем...';
     let photo_url: string | null = null;
@@ -133,6 +139,7 @@ import { DB, countryOrder } from '../data/countries';
       }
       const payload: any = {
         user_id: user.id, kind, name,
+        bean_type: kind === 'bean' ? (beanType || null) : null,
         roaster: kind === 'bean' ? ((document.getElementById('f_roaster') as HTMLInputElement).value.trim() || null) : null,
         country: kind === 'bean' ? ((document.getElementById('f_country') as HTMLSelectElement).value || null) : null,
         process: kind === 'bean' ? ((document.getElementById('f_process') as HTMLSelectElement).value || null) : null,
