@@ -2,8 +2,6 @@
 export const prerender = true;
 import Layout from '../layouts/Layout.astro';
 import Nav from '../components/Nav.astro';
-import { DB, countryOrder } from '../data/countries';
-const countries = countryOrder.map((k) => DB[k].name);
 ---
 
 <Layout title="Создать гид — Shmelco" description="Персональный гид под твоё зерно и способ заваривания">
@@ -38,7 +36,7 @@ const countries = countryOrder.map((k) => DB[k].name);
   .gen-field { margin-bottom: 12px; }
   .gen-field label { display: block; font-size: .74rem; color: var(--text-muted); margin-bottom: 5px; }
   .gen-field input, .gen-field select { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: .88rem; font-family: 'Inter', sans-serif; background: var(--surface); color: var(--text); }
-  .gen-bar { position: fixed; left: 0; right: 0; bottom: 0; background: var(--surface); border-top: 1px solid var(--border); padding: 14px 20px; box-shadow: 0 -4px 20px rgba(0,0,0,.06); }
+  .gen-bar { position: fixed; left: 0; right: 0; bottom: 0; background: var(--surface); border-top: 1px solid var(--border); padding: 14px 20px; box-shadow: 0 -4px 20px rgba(0,0,0,.06); z-index: 40; }
   .gen-bar-inner { max-width: 720px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
   .gen-bar-note { font-size: .78rem; color: var(--text-muted); }
   .gen-gen-btn { font-size: .9rem; padding: 12px 24px; border-radius: 8px; background: var(--accent); color: #fff; border: 0; cursor: pointer; font-weight: 700; font-family: 'Inter', sans-serif; transition: opacity .2s; }
@@ -48,11 +46,18 @@ const countries = countryOrder.map((k) => DB[k].name);
   @keyframes spin { to { transform: rotate(360deg); } }
 </style>
 
-<script define:vars={{ countries }}>
+<script>
   import { createClient } from '@supabase/supabase-js';
-  const supabase = createClient(import.meta.env.PUBLIC_SUPABASE_URL, import.meta.env.PUBLIC_SUPABASE_ANON_KEY, { auth: { flowType: 'implicit' } });
-  const PRODAMUS_URL = import.meta.env.PUBLIC_PRODAMUS_URL || '';
-  const page = document.getElementById('genPage');
+  import { DB, countryOrder } from '../data/countries';
+
+  const supabase = createClient(
+    import.meta.env.PUBLIC_SUPABASE_URL,
+    import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+    { auth: { flowType: 'implicit' } }
+  );
+  const PRODAMUS_URL = (import.meta.env.PUBLIC_PRODAMUS_URL as string) || '';
+  const countries = countryOrder.map((k: string) => (DB as any)[k].name);
+  const page = document.getElementById('genPage')!;
 
   const METHODS = [
     { id: 'v60', label: 'Воронка V60', ico: '☕' },
@@ -67,9 +72,10 @@ const countries = countryOrder.map((k) => DB[k].name);
   ];
   const PROCESSES = ['Мытая', 'Натуральная', 'Хани', 'Анаэробная', 'Карбоник масерейшн', 'Другая'];
 
-  const state = { beanMode: '', beanId: '', method: '' };
-
-  function getParam(n) { return new URLSearchParams(window.location.search).get(n) || ''; }
+  const state: any = { beanMode: '', beanId: '', method: '' };
+  const getParam = (n: string) => new URLSearchParams(window.location.search).get(n) || '';
+  const inp = (id: string) => document.getElementById(id) as HTMLInputElement;
+  const sel = (id: string) => document.getElementById(id) as HTMLSelectElement;
 
   async function init() {
     const { data: { user } } = await supabase.auth.getUser();
@@ -79,8 +85,8 @@ const countries = countryOrder.map((k) => DB[k].name);
       supabase.from('shelf_items').select('*').eq('user_id', user.id).eq('kind', 'bean').order('created_at', { ascending: false }),
       supabase.from('guide_credits').select('balance').eq('user_id', user.id).maybeSingle(),
     ]);
-    const beans = shelfRes.data || [];
-    const credits = (creditsRes.data && creditsRes.data.balance) || 0;
+    const beans: any[] = shelfRes.data || [];
+    const credits = (creditsRes.data && (creditsRes.data as any).balance) || 0;
     const buyUrl = PRODAMUS_URL ? PRODAMUS_URL + (PRODAMUS_URL.includes('?') ? '&' : '?') + 'order_id=' + encodeURIComponent(user.id) + '&customer_email=' + encodeURIComponent(user.email || '') : '';
     const preShelf = getParam('shelf');
 
@@ -101,7 +107,7 @@ const countries = countryOrder.map((k) => DB[k].name);
       <div class="gen-manual" id="manualBox">
         <div class="gen-field"><label>Название зерна *</label><input id="mName" placeholder="напр. Эфиопия Гедео" /></div>
         <div class="gen-field"><label>Обжарщик</label><input id="mRoaster" placeholder="напр. Tasty Coffee" /></div>
-        <div class="gen-field"><label>Страна</label><select id="mCountry"><option value="">—</option>${countries.map(c => `<option>${c}</option>`).join('')}</select></div>
+        <div class="gen-field"><label>Страна</label><select id="mCountry"><option value="">—</option>${countries.map((c: string) => `<option>${c}</option>`).join('')}</select></div>
         <div class="gen-field"><label>Обработка</label><select id="mProcess"><option value="">—</option>${PROCESSES.map(p => `<option>${p}</option>`).join('')}</select></div>
       </div>
 
@@ -112,16 +118,17 @@ const countries = countryOrder.map((k) => DB[k].name);
         <span class="gen-bar-note" id="genNote">Выбери зерно и способ</span>
         ${credits > 0
           ? '<button class="gen-gen-btn" id="genBtn" disabled>🤖 Сгенерировать гид</button>'
-          : `<button class="gen-gen-btn" id="buyBtn">Купить гид · 99 ₽</button>`}
+          : '<button class="gen-gen-btn" id="buyBtn">Купить гид · 99 ₽</button>'}
       </div></div>
     `;
 
-    const manualBox = document.getElementById('manualBox');
-    const genBtn = document.getElementById('genBtn');
+    const manualBox = document.getElementById('manualBox')!;
+    const genBtn = document.getElementById('genBtn') as HTMLButtonElement | null;
     const note = document.getElementById('genNote');
 
     function refresh() {
-      const beanOk = state.beanMode === 'shelf' ? !!state.beanId : (state.beanMode === 'manual' && !!(document.getElementById('mName')).value.trim());
+      const nameVal = inp('mName') ? inp('mName').value.trim() : '';
+      const beanOk = state.beanMode === 'shelf' ? !!state.beanId : (state.beanMode === 'manual' && !!nameVal);
       const ok = beanOk && !!state.method;
       if (genBtn) genBtn.disabled = !ok;
       if (note) note.textContent = ok ? 'Готово — нажми «Сгенерировать»' : 'Выбери зерно и способ';
@@ -141,16 +148,16 @@ const countries = countryOrder.map((k) => DB[k].name);
       state.method = c.getAttribute('data-method');
       refresh();
     }));
-    ['mName'].forEach(id => document.getElementById(id)?.addEventListener('input', refresh));
+    inp('mName')?.addEventListener('input', refresh);
 
-    if (preShelf) { const card = page.querySelector('.bean-card[data-bean="' + preShelf + '"]'); if (card) card.click(); }
+    if (preShelf) { const card = page.querySelector('.bean-card[data-bean="' + preShelf + '"]') as HTMLElement | null; if (card) card.click(); }
 
     document.getElementById('buyBtn')?.addEventListener('click', () => { if (buyUrl) window.open(buyUrl, '_blank'); else alert('Оплата скоро будет доступна. Напишите в Telegram @ksenijashmel.'); });
 
     genBtn?.addEventListener('click', async () => {
-      let bean;
+      let bean: any;
       if (state.beanMode === 'manual') {
-        bean = { name: (document.getElementById('mName')).value.trim(), roaster: (document.getElementById('mRoaster')).value.trim(), country: (document.getElementById('mCountry')).value, process: (document.getElementById('mProcess')).value };
+        bean = { name: inp('mName').value.trim(), roaster: inp('mRoaster').value.trim(), country: sel('mCountry').value, process: sel('mProcess').value };
       } else {
         const b = beans.find(x => x.id === state.beanId); if (!b) return;
         bean = { name: b.name, roaster: b.roaster, country: b.country, process: b.process };
@@ -163,7 +170,7 @@ const countries = countryOrder.map((k) => DB[k].name);
         if (!res.ok) throw new Error(await res.text());
         try { localStorage.setItem('acc_tab', 'guides'); } catch (e) {}
         window.location.href = '/account';
-      } catch (e) { alert('Ошибка: ' + e.message); genBtn.disabled = false; genBtn.textContent = '🤖 Сгенерировать гид'; }
+      } catch (e: any) { alert('Ошибка: ' + e.message); genBtn.disabled = false; genBtn.textContent = '🤖 Сгенерировать гид'; }
     });
   }
 
