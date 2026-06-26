@@ -1,0 +1,84 @@
+---
+export const prerender = true;
+import Layout from '../layouts/Layout.astro';
+import Nav from '../components/Nav.astro';
+const OWNER = 'ksenija14.95@gmail.com';
+---
+
+<Layout title="Метрики — Shmelco" description="Продуктовые метрики" noindex={true}>
+  <Nav />
+  <div class="container">
+    <div class="mx-page" id="mxPage">
+      <div class="mx-loading" id="mxLoading"><div class="loader-spinner"></div><p>Загрузка…</p></div>
+    </div>
+  </div>
+</Layout>
+
+<style is:global>
+  .mx-page { padding-top: 96px; max-width: 760px; margin: 0 auto; min-height: 60vh; padding-bottom: 80px; }
+  .mx-loading { text-align: center; padding: 80px 0; color: var(--text-muted); }
+  .mx-h { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.8rem; font-weight: 600; margin: 0 0 4px; }
+  .mx-sub { font-size: .82rem; color: var(--text-muted); margin-bottom: 24px; }
+  .mx-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+  .mx-card { padding: 18px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); box-shadow: var(--shadow); }
+  .mx-num { font-family: 'Cormorant Garamond', serif; font-size: 2.1rem; font-weight: 700; color: var(--accent); line-height: 1; }
+  .mx-lbl { font-size: .76rem; color: var(--text-dim); margin-top: 6px; }
+  .mx-sec { font-weight: 700; font-size: .9rem; margin: 26px 0 12px; }
+  .mx-deny { text-align: center; padding: 40px 20px; color: var(--text-muted); }
+  .loader-spinner { width: 28px; height: 28px; border: 2px solid var(--border); border-top-color: var(--text); border-radius: 50%; animation: spin .6s linear infinite; margin: 0 auto 16px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+
+<script define:vars={{ OWNER }}>
+  import { createClient } from '@supabase/supabase-js';
+  const supabase = createClient(import.meta.env.PUBLIC_SUPABASE_URL, import.meta.env.PUBLIC_SUPABASE_ANON_KEY, { auth: { flowType: 'implicit' } });
+  const page = document.getElementById('mxPage');
+
+  function card(num, lbl) { return `<div class="mx-card"><div class="mx-num">${num}</div><div class="mx-lbl">${lbl}</div></div>`; }
+  function pct(a, b) { return b > 0 ? Math.round((a / b) * 100) + '%' : '—'; }
+
+  async function init() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { window.location.href = '/login'; return; }
+    if ((user.email || '').toLowerCase() !== OWNER) {
+      page.innerHTML = '<div class="mx-deny">Эта страница доступна только владельцу проекта.</div>';
+      return;
+    }
+    const { data, error } = await supabase.rpc('get_metrics');
+    if (error || !data) { page.innerHTML = '<div class="mx-deny">Не удалось загрузить метрики.</div>'; return; }
+    const m = data;
+    page.innerHTML = `
+      <div class="mx-h">Метрики Shmelco</div>
+      <div class="mx-sub">Обновляется в реальном времени · только для тебя</div>
+
+      <div class="mx-sec">Воронка</div>
+      <div class="mx-grid">
+        ${card(m.registrations || 0, 'Регистраций')}
+        ${card(m.quiz_done || 0, 'Прошли тест')}
+        ${card(m.active || 0, 'Активные (полка/чашка)')}
+        ${card(m.paying_users || 0, 'Платящих')}
+      </div>
+
+      <div class="mx-sec">Конверсии</div>
+      <div class="mx-grid">
+        ${card(pct(m.quiz_done || 0, m.registrations || 0), 'Регистрация → тест')}
+        ${card(pct(m.active || 0, m.registrations || 0), 'Регистрация → актив')}
+        ${card(pct(m.paying_users || 0, m.active || 0), 'Актив → оплата')}
+      </div>
+
+      <div class="mx-sec">Гиды и покупки</div>
+      <div class="mx-grid">
+        ${card(m.purchases || 0, 'Покупок (кредитов)')}
+        ${card(m.guides_total || 0, 'Сгенерировано гидов')}
+        ${card(m.generated || 0, 'Юзеров с гидом')}
+      </div>
+
+      <div class="mx-sec">Паспорт / шеринг</div>
+      <div class="mx-grid">
+        ${card(m.passport_views || 0, 'Просмотров паспорта')}
+        ${card(m.passport_shares || 0, 'Поделились паспортом')}
+      </div>
+    `;
+  }
+  init();
+</script>
