@@ -154,8 +154,16 @@ import Nav from '../components/Nav.astro';
   .soon-badge { font-size: .64rem; font-weight: 800; letter-spacing: .06em; background: var(--surface-2); color: var(--text-muted); border: 1px solid var(--border); padding: 4px 10px; border-radius: 20px; }
 
   .guide-rich { padding: 22px; }
-  .gr-title { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.4rem; font-weight: 600; margin: 2px 0 14px; }
-  .gr-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
+  .gr-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+  .gr-actions { display: flex; gap: 6px; flex-shrink: 0; }
+  .gr-icon-btn { width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text-muted); cursor: pointer; font-size: .9rem; line-height: 1; transition: all .15s; font-family: 'Inter', sans-serif; }
+  .gr-icon-btn:hover { border-color: var(--border-hover); color: var(--text); }
+  .gr-del:hover { border-color: var(--accent-warm); color: var(--accent-warm); }
+  .gr-body { margin-top: 8px; }
+  .guide-card.collapsed .gr-body { display: none; }
+  .guide-card.collapsed [data-guide-toggle] { transform: rotate(-90deg); }
+  .gr-title { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.4rem; font-weight: 600; margin: 2px 0 0; }
+  .gr-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin: 14px 0 16px; }
   .gr-tab { font-size: .78rem; font-weight: 600; padding: 7px 13px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text-dim); cursor: pointer; font-family: 'Inter', sans-serif; }
   .gr-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
   .gr-pane { display: none; }
@@ -222,9 +230,10 @@ import Nav from '../components/Nav.astro';
   const esc = (s: any) => String(s == null ? '' : s);
 
   function renderGuide(content: string, gid: string, dateStr: string): string {
+    const actions = `<div class="gr-actions"><button class="gr-icon-btn" data-guide-toggle="${gid}" title="Свернуть">▾</button><button class="gr-icon-btn gr-del" data-guide-del="${gid}" title="Удалить">✕</button></div>`;
     let data: any = null;
     try { const p = JSON.parse(content); if (p && (Array.isArray(p.beans) || Array.isArray(p.methods))) data = p; } catch (e) {}
-    if (!data) return `<div class="guide-card"><div class="guide-date">${dateStr}</div><div class="guide-content">${content}</div></div>`;
+    if (!data) return `<div class="guide-card" data-gid="${gid}"><div class="gr-top"><div class="guide-date" style="margin:0">${dateStr}</div>${actions}</div><div class="gr-body"><div class="guide-content">${content}</div></div></div>`;
 
     const beansHtml = (data.beans || []).map((b: any) => {
       const flag = FLAG_BY_NAME[esc(b.country)] || '';
@@ -254,18 +263,19 @@ import Nav from '../components/Nav.astro';
     const tips = (data.nextTips || []).map((t: string) => `<li>${esc(t)}</li>`).join('');
     const hasPlan = plan.length > 0;
 
-    return `<div class="guide-card guide-rich">
-      <div class="guide-date">${dateStr}</div>
-      <h3 class="gr-title">${esc(data.title || 'Персональный гид по кофе')}</h3>
-      <div class="gr-tabs">
-        <button class="gr-tab active" data-gt="${gid}|beans">☕ Зёрна</button>
-        <button class="gr-tab" data-gt="${gid}|methods">⚗️ Способы</button>
-        ${hasPlan ? `<button class="gr-tab" data-gt="${gid}|plan">📅 План недели</button>` : ''}
+    return `<div class="guide-card guide-rich" data-gid="${gid}">
+      <div class="gr-top"><div><div class="guide-date" style="margin:0">${dateStr}</div><h3 class="gr-title">${esc(data.title || 'Персональный гид по кофе')}</h3></div>${actions}</div>
+      <div class="gr-body">
+        <div class="gr-tabs">
+          <button class="gr-tab active" data-gt="${gid}|beans">☕ Зёрна</button>
+          <button class="gr-tab" data-gt="${gid}|methods">⚗️ Способы</button>
+          ${hasPlan ? `<button class="gr-tab" data-gt="${gid}|plan">📅 План недели</button>` : ''}
+        </div>
+        <div class="gr-pane active" data-gp="${gid}|beans"><div class="gb-grid">${beansHtml}</div></div>
+        <div class="gr-pane" data-gp="${gid}|methods"><div class="gm-grid">${methodsHtml}</div></div>
+        ${hasPlan ? `<div class="gr-pane" data-gp="${gid}|plan"><div class="gp-grid">${planHtml}</div></div>` : ''}
+        ${tips ? `<div class="gr-next"><div class="gr-next-h">Что попробовать дальше</div><ul>${tips}</ul></div>` : ''}
       </div>
-      <div class="gr-pane active" data-gp="${gid}|beans"><div class="gb-grid">${beansHtml}</div></div>
-      <div class="gr-pane" data-gp="${gid}|methods"><div class="gm-grid">${methodsHtml}</div></div>
-      ${hasPlan ? `<div class="gr-pane" data-gp="${gid}|plan"><div class="gp-grid">${planHtml}</div></div>` : ''}
-      ${tips ? `<div class="gr-next"><div class="gr-next-h">Что попробовать дальше</div><ul>${tips}</ul></div>` : ''}
     </div>`;
   }
 
@@ -450,6 +460,8 @@ import Nav from '../components/Nav.astro';
       card.querySelectorAll('.gr-tab').forEach(x => x.classList.toggle('active', x.getAttribute('data-gt') === key));
       card.querySelectorAll('.gr-pane').forEach(p => p.classList.toggle('active', p.getAttribute('data-gp') === key));
     }));
+    page.querySelectorAll('[data-guide-toggle]').forEach(b => b.addEventListener('click', () => { const card = (b as HTMLElement).closest('.guide-card'); if (card) card.classList.toggle('collapsed'); }));
+    page.querySelectorAll('[data-guide-del]').forEach(b => b.addEventListener('click', async () => { if (!confirm('Удалить этот гид?')) return; await supabase.from('guides').delete().eq('id', (b as HTMLElement).getAttribute('data-guide-del')); init(); }));
 
     page.querySelectorAll('[data-buy]').forEach(b => b.addEventListener('click', () => {
       if (buyUrl) { window.open(buyUrl, '_blank'); }

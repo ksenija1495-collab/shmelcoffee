@@ -42,12 +42,17 @@ export const POST: APIRoute = async ({ request }) => {
     : 'Вкусовой профиль не заполнен — дай универсальные ориентиры.';
 
   const beansList = cleanBeans
-    .map((b, i) => `${i + 1}. ${b.name}${b.roaster ? `, обжарщик ${b.roaster}` : ''}${b.country ? `, страна ${b.country}` : ''}${b.process ? `, обработка ${b.process}` : ''}`)
+    .map((b, i) => `${i + 1}. ${b.name}${b.kind ? ` (${b.kind})` : ''}${b.roaster ? `, обжарщик ${b.roaster}` : ''}${b.country ? `, страна ${b.country}` : ''}${b.process ? `, обработка ${b.process}` : ''}`)
     .join('\n');
   const methodsText = cleanMethods.length ? cleanMethods.join(', ') : 'Воронка V60';
   const planDays = Math.min(10, Math.max(7, cleanBeans.length * Math.max(cleanMethods.length, 1)));
+  const canCompare = cleanBeans.length >= 2;
 
   const sys = 'Ты — эксперт SCA из Shmelco Coffee Guide. Отвечай ТОЛЬКО валидным JSON по заданной схеме, без markdown. Пиши по-русски, тепло и по делу. НЕ описывай общие рецепты способов (помол/пропорции/шаги) — они известны; давай только персональное под конкретные зёрна и профиль.';
+
+  const compareLine = canCompare
+    ? `\n- Обязательно добавь минимум один день СРАВНЕНИЯ двух кофе бок о бок: в поле "bean" укажи два зерна через « vs » (например «Кения vs Бразилия»), в "method" — один способ для честного сравнения, в "focus" — что именно сравнивать (кислотность, тело, сладость, послевкусие).`
+    : '';
 
   const prompt = `${profileContext}
 
@@ -79,12 +84,12 @@ ${beansList}
     }
   ],
   "weekPlan": [
-    { "day": "День 1", "bean": "название зерна", "method": "способ", "focus": "на что обратить внимание" }
+    { "day": "День 1", "bean": "название зерна (или «A vs B» для дня сравнения)", "method": "способ", "focus": "на что обратить внимание" }
   ],
   "nextTips": ["что попробовать дальше 1", "2", "3"]
 }
 
-Требования: methods.name — ровно из списка способов; в weekPlan ${planDays} дней; nextTips ровно 2-3 пункта; НЕ повторяй общие рецепты — только персональные подстройки.`;
+Требования: methods.name — ровно из списка способов; в weekPlan ${planDays} дней; nextTips ровно 2-3 пункта; НЕ повторяй общие рецепты — только персональные подстройки.${compareLine}`;
 
   const maxTok = Math.min(2800, 900 + cleanBeans.length * 280 + Math.max(cleanMethods.length, 1) * 160 + planDays * 55);
 
