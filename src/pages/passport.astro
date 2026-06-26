@@ -5,15 +5,15 @@ import { wheelData } from '../data/wheel';
 import { DB, countryOrder } from '../data/countries';
 
 const u = Astro.url.searchParams.get('u') || '';
+const supaUrl = import.meta.env.PUBLIC_SUPABASE_URL;
+const supaKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
 
 let data: any = null;
 if (u) {
   try {
-    const SUPA_URL = import.meta.env.PUBLIC_SUPABASE_URL;
-    const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
-    const res = await fetch(`${SUPA_URL}/rest/v1/rpc/get_passport`, {
+    const res = await fetch(`${supaUrl}/rest/v1/rpc/get_passport`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+      headers: { 'Content-Type': 'application/json', apikey: supaKey, Authorization: `Bearer ${supaKey}` },
       body: JSON.stringify({ p_user: u }),
     });
     if (res.ok) data = await res.json();
@@ -130,15 +130,32 @@ const pageDesc = hasProfile
 </style>
 
 <script is:inline src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script is:inline>
+<script define:vars={{ supaUrl, supaKey, ownerId: u }}>
   (function () {
     var shareUrl = window.location.href;
     var dl = document.getElementById('ppDownload');
     var sh = document.getElementById('ppShare');
     var card = document.getElementById('ppCard');
+
+    function logEvent(type) {
+      try {
+        fetch(supaUrl + '/rest/v1/rpc/log_event', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', apikey: supaKey, Authorization: 'Bearer ' + supaKey },
+          body: JSON.stringify({ p_type: type, p_user: ownerId || null }),
+          keepalive: true,
+        });
+      } catch (e) {}
+    }
+    logEvent('passport_view');
+
+    function makeCanvas() {
+      return window.html2canvas(card, { backgroundColor: null, scale: 2, useCORS: true });
+    }
+
     if (dl && card && window.html2canvas) {
       dl.addEventListener('click', function () {
-        window.html2canvas(card, { backgroundColor: null, scale: 2, useCORS: true }).then(function (canvas) {
+        makeCanvas().then(function (canvas) {
           var a = document.createElement('a');
           a.href = canvas.toDataURL('image/png');
           a.download = 'vkusovoy-pasport-shmelco.png';
@@ -146,10 +163,27 @@ const pageDesc = hasProfile
         }).catch(function () { alert('Не удалось собрать картинку. Сделай скриншот карточки :)'); });
       });
     }
+
+    function fallbackShare() {
+      if (navigator.share) { navigator.share({ title: 'Мой вкусовой паспорт кофе', text: 'Мой вкус кофе на Shmelco', url: shareUrl }).catch(function () {}); }
+      else { navigator.clipboard.writeText(shareUrl).then(function () { if (sh) sh.textContent = '✓ Ссылка скопирована'; }).catch(function () { prompt('Скопируй ссылку:', shareUrl); }); }
+    }
+
     if (sh) {
       sh.addEventListener('click', function () {
-        if (navigator.share) { navigator.share({ title: 'Мой вкусовой паспорт кофе', url: shareUrl }).catch(function () {}); }
-        else { navigator.clipboard.writeText(shareUrl).then(function () { sh.textContent = '✓ Ссылка скопирована'; }).catch(function () { prompt('Скопируй ссылку:', shareUrl); }); }
+        logEvent('passport_share');
+        if (window.html2canvas && navigator.canShare) {
+          makeCanvas().then(function (canvas) {
+            canvas.toBlob(function (blob) {
+              try {
+                var file = new File([blob], 'vkusovoy-pasport-shmelco.png', { type: 'image/png' });
+                if (navigator.canShare({ files: [file] })) {
+                  navigator.share({ files: [file], title: 'Мой вкусовой паспорт кофе', text: 'shmelcoffee.com' }).catch(function () {});
+                } else { fallbackShare(); }
+              } catch (e) { fallbackShare(); }
+            }, 'image/png');
+          }).catch(fallbackShare);
+        } else { fallbackShare(); }
       });
     }
   })();
