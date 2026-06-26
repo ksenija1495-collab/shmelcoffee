@@ -1,0 +1,156 @@
+---
+export const prerender = false;
+import Layout from '../layouts/Layout.astro';
+import { wheelData } from '../data/wheel';
+import { DB, countryOrder } from '../data/countries';
+
+const u = Astro.url.searchParams.get('u') || '';
+
+let data: any = null;
+if (u) {
+  try {
+    const SUPA_URL = import.meta.env.PUBLIC_SUPABASE_URL;
+    const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+    const res = await fetch(`${SUPA_URL}/rest/v1/rpc/get_passport`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+      body: JSON.stringify({ p_user: u }),
+    });
+    if (res.ok) data = await res.json();
+  } catch (e) { data = null; }
+}
+
+const FLAVOR_TO_FAM: Record<string, string[]> = { fruity: ['Ягоды','Цитрус','Фрукты'], floral: ['Цветочный'], chocolate: ['Ореховый'], caramel: ['Сладкий'], spicy: ['Пряный','Обжарочный'], tropical: ['Фрукты'] };
+const ARCH: Record<string, { name: string; emoji: string; line: string }> = {
+  fruity: { name: 'Фруктовый исследователь', emoji: '🍓', line: 'ищет яркость и сочную кислотность' },
+  floral: { name: 'Цветочный эстет', emoji: '🌸', line: 'любит тонкие чайные и цветочные ноты' },
+  chocolate: { name: 'Шоколадный гедонист', emoji: '🍫', line: 'выбирает плотность, орех и какао' },
+  caramel: { name: 'Карамельный уютник', emoji: '🍯', line: 'ценит сладость, мёд и карамель' },
+  spicy: { name: 'Пряный авантюрист', emoji: '🌶️', line: 'тянется к специям и характеру' },
+  tropical: { name: 'Тропический мечтатель', emoji: '🥭', line: 'обожает спелые тропические фрукты' },
+};
+
+const answers: any = data?.answers || null;
+const flavors: string[] = (answers?.flavors) || [];
+const prefFams = new Set<string>();
+flavors.forEach((f) => (FLAVOR_TO_FAM[f] || []).forEach((x) => prefFams.add(x)));
+const archKey = flavors[0] || '';
+const arch = ARCH[archKey] || { name: 'Кофейный путешественник', emoji: '🧭', line: 'только начинает свой путь во вкусе' };
+const opened: string[] = (data?.opened) || [];
+const total = countryOrder.length;
+const flagByName: Record<string, string> = {};
+for (const k of countryOrder) flagByName[DB[k].name] = DB[k].flag;
+const openedFlags = opened.map((n) => flagByName[n] || '').filter(Boolean);
+const topFlavors: string[] = (data?.preferred_tastes) || [];
+const cups = (data?.cups_count) || 0;
+const hasProfile = !!(answers || data?.profile_type);
+
+function buildWheelSvg(pref: Set<string>): string {
+  const cx = 130, cy = 130, ir1 = 32, ir2 = 70, or1 = 73, or2 = 112, gap = 1.2;
+  const n = wheelData.length, catAng = 360 / n;
+  const p2 = (r: number, deg: number) => { const rad = (deg - 90) * Math.PI / 180; return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) }; };
+  const sector = (ri: number, ro: number, a1: number, a2: number) => { const A = p2(ro, a1), B = p2(ro, a2), C = p2(ri, a2), D = p2(ri, a1); const lg = (a2 - a1) > 180 ? 1 : 0; return `M${A.x},${A.y} A${ro},${ro},0,${lg},1,${B.x},${B.y} L${C.x},${C.y} A${ri},${ri},0,${lg},0,${D.x},${D.y}Z`; };
+  let html = `<circle cx="${cx}" cy="${cy}" r="${ir1 - 4}" fill="#F8F7ED"/><text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="middle" font-family="'Cormorant Garamond',serif" font-size="11" font-weight="600" fill="#462918">ВКУС</text>`;
+  wheelData.forEach((cat: any, i: number) => {
+    const a1 = i * catAng + gap, a2 = (i + 1) * catAng - gap; const on = pref.has(cat.name);
+    html += `<path d="${sector(ir1, ir2, a1, a2)}" fill="${cat.color}" opacity="${on ? 1 : 0.18}" stroke="#fff" stroke-width="1"></path>`;
+    const subAng = (a2 - a1) / cat.subs.length;
+    cat.subs.forEach((_s: any, j: number) => { const sa1 = a1 + j * subAng + gap * .4, sa2 = a1 + (j + 1) * subAng - gap * .4; html += `<path d="${sector(or1, or2, sa1, sa2)}" fill="${cat.color}" opacity="${on ? 0.65 : 0.1}" stroke="#fff" stroke-width=".5"></path>`; });
+  });
+  return `<svg viewBox="0 0 260 260" width="220" height="220" xmlns="http://www.w3.org/2000/svg">${html}</svg>`;
+}
+const wheelSvg = buildWheelSvg(prefFams);
+
+const pageTitle = hasProfile ? `${arch.name} — мой вкус кофе · Shmelco` : 'Вкусовой паспорт — Shmelco';
+const pageDesc = hasProfile
+  ? `${arch.emoji} ${arch.name}: ${arch.line}. Открыто стран кофе: ${opened.length}/${total}. Узнай свой вкус на shmelcoffee.com`
+  : 'Узнай свой вкусовой паспорт кофе — пройди короткий тест на shmelcoffee.com';
+---
+
+<Layout title={pageTitle} description={pageDesc}>
+  <div class="pp-wrap">
+    {hasProfile ? (
+      <div class="pp-card" id="ppCard">
+        <div class="pp-eyebrow">Вкусовой паспорт · Shmelco</div>
+        <div class="pp-emoji">{arch.emoji}</div>
+        <h1 class="pp-arch">{arch.name}</h1>
+        <div class="pp-line">{arch.line}</div>
+        <div class="pp-wheel" set:html={wheelSvg} />
+        <div class="pp-stats">
+          <div class="pp-stat"><div class="pp-num">{opened.length}<span>/{total}</span></div><div class="pp-lbl">стран открыто</div></div>
+          <div class="pp-stat"><div class="pp-num">{cups}</div><div class="pp-lbl">чашек записано</div></div>
+        </div>
+        {openedFlags.length > 0 && <div class="pp-flags">{openedFlags.join(' ')}</div>}
+        {topFlavors.length > 0 && (
+          <div class="pp-fams">{topFlavors.slice(0, 5).map((t) => <span class="pp-fam">{t}</span>)}</div>
+        )}
+        <div class="pp-foot">shmelcoffee.com</div>
+      </div>
+    ) : (
+      <div class="pp-card pp-empty-card" id="ppCard">
+        <div class="pp-eyebrow">Вкусовой паспорт · Shmelco</div>
+        <div class="pp-emoji">☕</div>
+        <h1 class="pp-arch">Паспорт ещё не собран</h1>
+        <div class="pp-line">Пройди короткий тест — и узнаешь свой вкусовой типаж.</div>
+        <div class="pp-foot">shmelcoffee.com</div>
+      </div>
+    )}
+
+    <div class="pp-actions">
+      {hasProfile && <button class="btn btn-primary" id="ppDownload">📸 Скачать картинку</button>}
+      {hasProfile && <button class="pp-ghost" id="ppShare">🔗 Поделиться</button>}
+      <a class="btn btn-primary" href="/quiz">Узнать свой вкус →</a>
+    </div>
+    <a href="/account" class="pp-back">← В кабинет</a>
+  </div>
+</Layout>
+
+<style is:global>
+  .pp-wrap { max-width: 480px; margin: 0 auto; padding: 96px 16px 120px; display: flex; flex-direction: column; align-items: center; }
+  .pp-card { width: 100%; background: linear-gradient(160deg, #fffaf2 0%, #f6ecdc 100%); border: 1px solid var(--border); border-radius: 22px; box-shadow: 0 18px 50px rgba(70,41,24,.14); padding: 34px 28px 26px; text-align: center; }
+  .pp-eyebrow { text-transform: uppercase; letter-spacing: .2em; font-size: .64rem; color: var(--accent); font-weight: 700; }
+  .pp-emoji { font-size: 2.6rem; margin: 12px 0 4px; }
+  .pp-arch { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 2rem; font-weight: 700; line-height: 1.1; margin: 0 0 6px; color: var(--text); }
+  .pp-line { font-size: .9rem; color: var(--text-dim); margin-bottom: 8px; }
+  .pp-wheel { display: flex; justify-content: center; margin: 6px 0 4px; }
+  .pp-stats { display: flex; justify-content: center; gap: 34px; margin: 8px 0 14px; }
+  .pp-num { font-family: 'Cormorant Garamond', serif; font-size: 2rem; font-weight: 700; color: var(--accent); line-height: 1; }
+  .pp-num span { font-size: 1rem; color: var(--text-muted); }
+  .pp-lbl { font-size: .68rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: .05em; margin-top: 3px; }
+  .pp-flags { font-size: 1.25rem; letter-spacing: 3px; margin-bottom: 12px; word-spacing: 2px; }
+  .pp-fams { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-bottom: 16px; }
+  .pp-fam { font-size: .74rem; padding: 4px 11px; border-radius: 20px; background: rgba(168,124,79,.12); border: 1px solid rgba(168,124,79,.25); color: var(--accent); font-weight: 600; }
+  .pp-foot { font-size: .72rem; color: var(--text-muted); letter-spacing: .05em; border-top: 1px solid var(--border); padding-top: 14px; margin-top: 6px; }
+  .pp-empty-card { padding-bottom: 34px; }
+  .pp-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 22px; }
+  .pp-ghost { font-size: .9rem; padding: 11px 20px; border-radius: 8px; background: var(--surface); border: 1px solid var(--border); color: var(--text-dim); cursor: pointer; font-family: 'Inter', sans-serif; font-weight: 600; }
+  .pp-ghost:hover { border-color: var(--accent); color: var(--accent); }
+  .pp-back { margin-top: 18px; font-size: .8rem; color: var(--text-muted); text-decoration: none; }
+  .pp-back:hover { color: var(--accent); }
+</style>
+
+<script is:inline src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script is:inline>
+  (function () {
+    var shareUrl = window.location.href;
+    var dl = document.getElementById('ppDownload');
+    var sh = document.getElementById('ppShare');
+    var card = document.getElementById('ppCard');
+    if (dl && card && window.html2canvas) {
+      dl.addEventListener('click', function () {
+        window.html2canvas(card, { backgroundColor: null, scale: 2, useCORS: true }).then(function (canvas) {
+          var a = document.createElement('a');
+          a.href = canvas.toDataURL('image/png');
+          a.download = 'vkusovoy-pasport-shmelco.png';
+          a.click();
+        }).catch(function () { alert('Не удалось собрать картинку. Сделай скриншот карточки :)'); });
+      });
+    }
+    if (sh) {
+      sh.addEventListener('click', function () {
+        if (navigator.share) { navigator.share({ title: 'Мой вкусовой паспорт кофе', url: shareUrl }).catch(function () {}); }
+        else { navigator.clipboard.writeText(shareUrl).then(function () { sh.textContent = '✓ Ссылка скопирована'; }).catch(function () { prompt('Скопируй ссылку:', shareUrl); }); }
+      });
+    }
+  })();
+</script>
