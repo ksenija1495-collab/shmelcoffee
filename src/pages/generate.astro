@@ -4,7 +4,7 @@ import Layout from '../layouts/Layout.astro';
 import Nav from '../components/Nav.astro';
 ---
 
-<Layout title="Создать гид — Shmelco" description="Персональный гид под твоё зерно и способ заваривания">
+<Layout title="Создать гид — Shmelco" description="Персональный гид под твои зёрна и способы заваривания">
   <Nav />
   <div class="container">
     <div class="gen-page" id="genPage">
@@ -22,11 +22,14 @@ import Nav from '../components/Nav.astro';
   .gen-sub { font-size: .88rem; color: var(--text-dim); margin-bottom: 8px; }
   .gen-credit { font-size: .8rem; color: var(--text-muted); margin-bottom: 24px; }
   .gen-credit b { color: var(--accent); }
-  .gen-step-t { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.25rem; font-weight: 600; margin: 26px 0 12px; }
+  .gen-step-t { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.25rem; font-weight: 600; margin: 26px 0 12px; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .gen-cnt { font-family: 'Inter', sans-serif; font-size: .72rem; font-weight: 600; color: var(--text-muted); background: var(--surface-2); border: 1px solid var(--border); border-radius: 20px; padding: 2px 10px; }
+  .gen-cnt.full { color: var(--accent); border-color: var(--accent); }
   .gen-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
-  .gen-card { text-align: left; padding: 13px 14px; border-radius: 12px; border: 1.5px solid var(--border); background: var(--surface); cursor: pointer; transition: all .15s; font-family: 'Inter', sans-serif; }
+  .gen-card { position: relative; text-align: left; padding: 13px 14px; border-radius: 12px; border: 1.5px solid var(--border); background: var(--surface); cursor: pointer; transition: all .15s; font-family: 'Inter', sans-serif; }
   .gen-card:hover { border-color: var(--border-hover); }
   .gen-card.sel { border-color: var(--accent); background: rgba(168,124,79,.08); box-shadow: 0 0 0 1px var(--accent); }
+  .gen-card.sel::after { content: '✓'; position: absolute; top: 8px; right: 10px; color: var(--accent); font-weight: 800; font-size: .9rem; }
   .gen-card .t { font-weight: 700; font-size: .86rem; color: var(--text); }
   .gen-card .m { font-size: .72rem; color: var(--text-muted); margin-top: 2px; }
   .gen-card .ico { font-size: 1.3rem; }
@@ -59,6 +62,7 @@ import Nav from '../components/Nav.astro';
   const countries = countryOrder.map((k: string) => (DB as any)[k].name);
   const page = document.getElementById('genPage')!;
 
+  const MAX_BEANS = 6, MAX_METHODS = 3;
   const METHODS = [
     { id: 'v60', label: 'Воронка V60', ico: '☕' },
     { id: 'kalita', label: 'Kalita Wave', ico: '🌊' },
@@ -72,10 +76,12 @@ import Nav from '../components/Nav.astro';
   ];
   const PROCESSES = ['Мытая', 'Натуральная', 'Хани', 'Анаэробная', 'Карбоник масерейшн', 'Другая'];
 
-  const state: any = { beanMode: '', beanId: '', method: '' };
+  const state = { beans: new Set<string>(), manualOn: false, methods: new Set<string>() };
   const getParam = (n: string) => new URLSearchParams(window.location.search).get(n) || '';
   const inp = (id: string) => document.getElementById(id) as HTMLInputElement;
   const sel = (id: string) => document.getElementById(id) as HTMLSelectElement;
+  const manualFilled = () => state.manualOn && !!(inp('mName') && inp('mName').value.trim());
+  const beanCount = () => state.beans.size + (manualFilled() ? 1 : 0);
 
   async function init() {
     const { data: { user } } = await supabase.auth.getUser();
@@ -96,10 +102,10 @@ import Nav from '../components/Nav.astro';
     page.innerHTML = `
       <a href="/account" class="gen-back">← В кабинет</a>
       <div class="gen-h1">Создать персональный гид</div>
-      <div class="gen-sub">Выбери зерно и способ заваривания — AI соберёт рецепт и дегустацию под твой вкус.</div>
-      <div class="gen-credit">${credits > 0 ? `Доступно гидов: <b>${credits}</b>` : 'Нет оплаченных гидов — сначала купи (99&nbsp;₽).'}</div>
+      <div class="gen-sub">Выбери одно или несколько зёрен и способов заваривания — AI соберёт рецепты и план дегустации, чтобы заваривать и сравнивать.</div>
+      <div class="gen-credit">${credits > 0 ? `Доступно гидов: <b>${credits}</b> · списывается 1 за генерацию` : 'Нет оплаченных гидов — сначала купи (99&nbsp;₽).'}</div>
 
-      <div class="gen-step-t">1. Зерно</div>
+      <div class="gen-step-t">1. Зёрна <span class="gen-cnt" id="beanCnt">0 / ${MAX_BEANS}</span></div>
       <div class="gen-grid" id="beanGrid">
         ${beans.length ? beanCards : '<div class="gen-empty">На полке пока нет зерна — впиши своё ниже.</div>'}
         <button class="gen-card bean-card" data-bean="__manual__"><div class="t">+ Другое зерно</div><div class="m">вписать вручную</div></button>
@@ -111,11 +117,11 @@ import Nav from '../components/Nav.astro';
         <div class="gen-field"><label>Обработка</label><select id="mProcess"><option value="">—</option>${PROCESSES.map(p => `<option>${p}</option>`).join('')}</select></div>
       </div>
 
-      <div class="gen-step-t">2. Способ заваривания</div>
+      <div class="gen-step-t">2. Способы заваривания <span class="gen-cnt" id="methodCnt">0 / ${MAX_METHODS}</span></div>
       <div class="gen-grid" id="methodGrid">${methodCards}</div>
 
       <div class="gen-bar"><div class="gen-bar-inner">
-        <span class="gen-bar-note" id="genNote">Выбери зерно и способ</span>
+        <span class="gen-bar-note" id="genNote">Выбери хотя бы одно зерно и способ</span>
         ${credits > 0
           ? '<button class="gen-gen-btn" id="genBtn" disabled>🤖 Сгенерировать гид</button>'
           : '<button class="gen-gen-btn" id="buyBtn">Купить гид · 99 ₽</button>'}
@@ -125,29 +131,48 @@ import Nav from '../components/Nav.astro';
     const manualBox = document.getElementById('manualBox')!;
     const genBtn = document.getElementById('genBtn') as HTMLButtonElement | null;
     const note = document.getElementById('genNote');
+    const beanCnt = document.getElementById('beanCnt')!;
+    const methodCnt = document.getElementById('methodCnt')!;
 
     function refresh() {
-      const nameVal = inp('mName') ? inp('mName').value.trim() : '';
-      const beanOk = state.beanMode === 'shelf' ? !!state.beanId : (state.beanMode === 'manual' && !!nameVal);
-      const ok = beanOk && !!state.method;
+      const bc = beanCount();
+      beanCnt.textContent = bc + ' / ' + MAX_BEANS;
+      beanCnt.classList.toggle('full', bc >= MAX_BEANS);
+      methodCnt.textContent = state.methods.size + ' / ' + MAX_METHODS;
+      methodCnt.classList.toggle('full', state.methods.size >= MAX_METHODS);
+      const ok = bc >= 1 && state.methods.size >= 1;
       if (genBtn) genBtn.disabled = !ok;
-      if (note) note.textContent = ok ? 'Готово — нажми «Сгенерировать»' : 'Выбери зерно и способ';
+      if (note) note.textContent = ok ? `Готово — ${bc} ${bc === 1 ? 'зерно' : 'зёрен'} × ${state.methods.size} ${state.methods.size === 1 ? 'способ' : 'способа'}` : 'Выбери хотя бы одно зерно и способ';
     }
 
     page.querySelectorAll('.bean-card').forEach(c => c.addEventListener('click', () => {
-      page.querySelectorAll('.bean-card').forEach(x => x.classList.remove('sel'));
-      c.classList.add('sel');
-      const v = c.getAttribute('data-bean');
-      if (v === '__manual__') { state.beanMode = 'manual'; state.beanId = ''; manualBox.classList.add('show'); }
-      else { state.beanMode = 'shelf'; state.beanId = v; manualBox.classList.remove('show'); }
+      const id = (c as HTMLElement).getAttribute('data-bean')!;
+      if (id === '__manual__') {
+        if (!state.manualOn && state.beans.size >= MAX_BEANS) { note && (note.textContent = `Максимум ${MAX_BEANS} зёрен`); return; }
+        state.manualOn = !state.manualOn;
+        c.classList.toggle('sel', state.manualOn);
+        manualBox.classList.toggle('show', state.manualOn);
+        refresh();
+        return;
+      }
+      if (state.beans.has(id)) { state.beans.delete(id); c.classList.remove('sel'); }
+      else {
+        if (beanCount() >= MAX_BEANS) { note && (note.textContent = `Максимум ${MAX_BEANS} зёрен`); return; }
+        state.beans.add(id); c.classList.add('sel');
+      }
       refresh();
     }));
+
     page.querySelectorAll('.method-card').forEach(c => c.addEventListener('click', () => {
-      page.querySelectorAll('.method-card').forEach(x => x.classList.remove('sel'));
-      c.classList.add('sel');
-      state.method = c.getAttribute('data-method');
+      const m = (c as HTMLElement).getAttribute('data-method')!;
+      if (state.methods.has(m)) { state.methods.delete(m); c.classList.remove('sel'); }
+      else {
+        if (state.methods.size >= MAX_METHODS) { note && (note.textContent = `Максимум ${MAX_METHODS} способа`); return; }
+        state.methods.add(m); c.classList.add('sel');
+      }
       refresh();
     }));
+
     inp('mName')?.addEventListener('input', refresh);
 
     if (preShelf) { const card = page.querySelector('.bean-card[data-bean="' + preShelf + '"]') as HTMLElement | null; if (card) card.click(); }
@@ -155,23 +180,23 @@ import Nav from '../components/Nav.astro';
     document.getElementById('buyBtn')?.addEventListener('click', () => { if (buyUrl) window.open(buyUrl, '_blank'); else alert('Оплата скоро будет доступна. Напишите в Telegram @ksenijashmel.'); });
 
     genBtn?.addEventListener('click', async () => {
-      let bean: any;
-      if (state.beanMode === 'manual') {
-        bean = { name: inp('mName').value.trim(), roaster: inp('mRoaster').value.trim(), country: sel('mCountry').value, process: sel('mProcess').value };
-      } else {
-        const b = beans.find(x => x.id === state.beanId); if (!b) return;
-        bean = { name: b.name, roaster: b.roaster, country: b.country, process: b.process };
-      }
+      const beansArr: any[] = [];
+      state.beans.forEach(id => { const b = beans.find(x => x.id === id); if (b) beansArr.push({ name: b.name, roaster: b.roaster, country: b.country, process: b.process }); });
+      if (manualFilled()) beansArr.push({ name: inp('mName').value.trim(), roaster: inp('mRoaster').value.trim(), country: sel('mCountry').value, process: sel('mProcess').value });
+      const methodsArr = Array.from(state.methods);
+      if (!beansArr.length || !methodsArr.length) return;
       genBtn.disabled = true; genBtn.textContent = 'Генерация…';
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        const res = await fetch('/api/generate-bean-guide', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (session?.access_token || '') }, body: JSON.stringify({ bean, method: state.method }) });
+        const res = await fetch('/api/generate-bean-guide', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (session?.access_token || '') }, body: JSON.stringify({ beans: beansArr, methods: methodsArr }) });
         if (res.status === 402) { alert('Нужен оплаченный гид. Нажми «Купить гид».'); window.location.reload(); return; }
         if (!res.ok) throw new Error(await res.text());
         try { localStorage.setItem('acc_tab', 'guides'); } catch (e) {}
         window.location.href = '/account';
       } catch (e: any) { alert('Ошибка: ' + e.message); genBtn.disabled = false; genBtn.textContent = '🤖 Сгенерировать гид'; }
     });
+
+    refresh();
   }
 
   init();
