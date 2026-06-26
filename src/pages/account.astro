@@ -35,6 +35,7 @@ import Nav from '../components/Nav.astro';
   .acc-panel { display: none; }
   .acc-panel.active { display: block; animation: fadein .25s ease; }
   .panel-h { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.5rem; font-weight: 600; margin: 0 0 18px; display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+  .sub-h { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.25rem; font-weight: 600; margin: 26px 0 12px; }
 
   .profile-card { padding: 20px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); }
   .profile-row { display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px; }
@@ -145,10 +146,12 @@ import Nav from '../components/Nav.astro';
   .gg-body ul { margin: 6px 0 6px 18px; }
   .gg-body li { margin: 3px 0; }
   .pro-card { margin: 0 0 18px; padding: 20px; border-radius: var(--radius); border: 1px solid var(--accent); background: rgba(168,124,79,.07); }
+  .pro-card.soon { border-color: var(--border); background: var(--surface); }
   .pro-title { font-family: 'Cormorant Garamond', serif; font-size: 1.25rem; font-weight: 600; margin-bottom: 6px; }
   .pro-desc { font-size: .84rem; color: var(--text-dim); line-height: 1.6; margin-bottom: 14px; }
   .my-guides-h { font-weight: 700; font-size: .95rem; margin: 22px 0 10px; }
   .passport-btn { display: inline-block; margin-top: 14px; text-decoration: none; }
+  .soon-badge { font-size: .64rem; font-weight: 800; letter-spacing: .06em; background: var(--surface-2); color: var(--text-muted); border: 1px solid var(--border); padding: 4px 10px; border-radius: 20px; }
 
   .guide-rich { padding: 22px; }
   .gr-title { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.4rem; font-weight: 600; margin: 2px 0 14px; }
@@ -337,6 +340,8 @@ import Nav from '../components/Nav.astro';
   async function init() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { window.location.href = '/login'; return; }
+    const { data: { session } } = await supabase.auth.getSession();
+    const accessToken = session?.access_token || '';
 
     const [profilesRes, selectionsRes, guidesRes, cupsRes, shelfRes, creditsRes] = await Promise.all([
       supabase.from('taste_profiles').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
@@ -378,13 +383,14 @@ import Nav from '../components/Nav.astro';
     const formatLabels: Record<string, string> = { drip: 'Дрип-пакеты', beans: 'Зерно', mixed: 'Микс' };
 
     const passportBtn = `<a class="btn btn-primary passport-btn" href="/passport?u=${user.id}">🪪 Мой вкусовой паспорт →</a>`;
-    const profilePanel = (latestProfile
+    const profileCard = latestProfile
       ? `<div class="profile-card"><div class="profile-row"><span class="profile-label">Регионы</span><span class="profile-value">${latestProfile.profile_type || '—'}</span></div><div class="profile-row"><span class="profile-label">Метод</span><span class="profile-value">${latestProfile.brew_method || '—'}</span></div><div class="profile-row"><span class="profile-label">Вкусы</span><div class="profile-tags">${(latestProfile.preferred_tastes || []).map((t: string) => `<span class="profile-tag">${t}</span>`).join('')}</div></div></div>${passportBtn}`
-      : `<div class="empty-state">Вы ещё не проходили диагностику вкуса. <a href="/quiz">Пройти →</a></div>`);
+      : `<div class="empty-state">Вы ещё не проходили диагностику вкуса. <a href="/quiz">Пройти →</a></div>`;
 
-    const tastePanel = answers
+    const tasteCard = answers
       ? `<div class="profile-card tastemap-card"><svg id="tasteWheel" class="tastemap-wheel" viewBox="0 0 360 360"></svg><div class="tastemap-side"><div class="tm-row"><span class="profile-label">Кислотность</span><span class="profile-value">${ACID[answers.acidity] || '—'}</span></div><div class="tm-row"><span class="profile-label">Тело</span><span class="profile-value">${BODY[answers.body] || '—'}</span></div><div class="tm-row"><span class="profile-label">Сладость</span><span class="profile-value">${SWEET[answers.sweetness] || '—'}</span></div><div class="tm-fams">${[...prefFams].map(f => `<span class="tm-fam" style="background:${famColor[f] || 'var(--accent)'}">${f}</span>`).join('') || '<span class="profile-tag">—</span>'}</div><div class="tm-hint">Нажмите на сегмент колеса — увидите ноты и в кофе каких стран они встречаются.</div></div></div><div id="tmInfo" class="info-panel"></div>`
-      : `<div class="empty-state">Карта вкуса появится после короткой диагностики. <a href="/quiz">Пройти тест →</a></div>`;
+      : '';
+    const profilePanel = `${profileCard}${tasteCard ? `<div class="sub-h">🗺️ Карта вкуса</div>${tasteCard}` : ''}`;
 
     const discoPanel = answers
       ? `<div class="profile-card"><div class="disco-top"><div class="disco-ring">${ringSVG(openedKeys.size, countryOrder.length)}</div><div><div class="disco-count">${openedKeys.size} / ${countryOrder.length}</div><div class="profile-label" style="min-width:0">стран открыто</div></div></div>${recommendedFirst.length ? `<div class="disco-subtitle">Откройте первыми — под ваш вкус</div><div class="disco-rec">${recommendedFirst.map(k => { const c: any = DB[k]; return `<a class="disco-rec-card" href="/countries?c=${k}"><span class="drc-flag">${c.flag}</span><span class="drc-name">${c.name}</span><span class="drc-why">${c.flavors.slice(0, 3).join(' · ')}</span></a>`; }).join('')}</div>` : ''}<div class="disco-subtitle">Весь мир кофе · нажмите на страну</div><div class="disco-grid">${countryOrder.map((k: string) => { const c: any = DB[k]; const open = openedKeys.has(k); return `<span class="disco-chip ${open ? 'open' : 'closed'}" data-k="${k}">${c.flag} ${c.name}${open ? ' ✓' : ''}</span>`; }).join('')}</div><div id="discoInfo" class="info-panel"></div><div class="disco-hint">Пробуйте новые страны и записывайте чашки — карта открывается, а профиль становится точнее.</div></div>`
@@ -409,12 +415,13 @@ import Nav from '../components/Nav.astro';
       : `<div class="empty-state">Пока нет персональных гидов. ${credits > 0 ? '<a href="/generate">Создать первый гид →</a>' : 'Купи гид и собери первый рецепт под своё зерно и способ.'}</div>`;
     const guidesPanel = `${createCardHtml}${generalGuideHtml}<div class="my-guides-h">Мои персональные гиды</div>${myGuidesHtml}`;
 
+    const twinSoon = `<div class="pro-card soon" style="margin-top:14px"><div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:6px"><div class="pro-title" style="margin:0">🤝 Вкусовой близнец</div><span class="soon-badge">Скоро</span></div><div class="pro-desc" style="margin:0">Найдём людей с похожим на твой вкусом — и полные противоположности. Можно будет обмениваться находками и зёрнами.</div></div>`;
+
     page.innerHTML = `
       <div class="account-header"><div><h1>Личный кабинет</h1><div class="account-email">${user.email || ''}</div></div><div style="display:flex;align-items:center;gap:10px">${credits > 0 ? `<span class="pro-badge">${credits} ${guideWord(credits)}</span>` : ''}<button class="logout-btn" id="logoutBtn">Выйти</button></div></div>
 
       <div class="acc-tabs" id="accTabs">
         <button class="acc-tab" data-tab="profile">🎯 Профиль</button>
-        <button class="acc-tab" data-tab="taste">🗺️ Карта вкуса</button>
         <button class="acc-tab" data-tab="disco">🧭 Открытия</button>
         <button class="acc-tab" data-tab="diary">📔 Дневник</button>
         <button class="acc-tab" data-tab="shelf">🪵 Полка</button>
@@ -423,14 +430,13 @@ import Nav from '../components/Nav.astro';
         <button class="acc-tab" data-tab="community">🌐 Сообщество</button>
       </div>
 
-      <section class="acc-panel" data-panel="profile"><div class="panel-h">🎯 Вкусовой профиль</div>${profilePanel}</section>
-      <section class="acc-panel" data-panel="taste"><div class="panel-h">🗺️ Карта вкуса</div>${tastePanel}</section>
+      <section class="acc-panel" data-panel="profile"><div class="panel-h">🎯 Профиль и вкус</div>${profilePanel}</section>
       <section class="acc-panel" data-panel="disco"><div class="panel-h">🧭 Карта открытий</div>${discoPanel}</section>
       <section class="acc-panel" data-panel="diary"><div class="panel-h"><span>📔 Моё кофе</span><a href="/add-cup" class="add-cup-btn">+ Добавить чашку</a></div>${diaryPanel}</section>
       <section class="acc-panel" data-panel="shelf"><div class="panel-h"><span>🪵 Моя полка</span><span style="display:flex;gap:6px"><a href="/add-shelf?kind=bean" class="add-cup-btn">+ Зерно</a><a href="/add-shelf?kind=equipment" class="add-cup-btn">+ Оборудование</a></span></div>${shelfPanel}</section>
       <section class="acc-panel" data-panel="selections"><div class="panel-h">☕ Мои подборки</div>${selectionsPanel}</section>
       <section class="acc-panel" data-panel="guides"><div class="panel-h">📖 Гиды</div>${guidesPanel}</section>
-      <section class="acc-panel" data-panel="community"><div class="panel-h">🌐 Сообщество</div><div class="profile-card" id="communityCard"><div class="profile-label" style="min-width:0">Загружаем статистику…</div></div></section>
+      <section class="acc-panel" data-panel="community"><div class="panel-h">🌐 Сообщество</div><div class="profile-card" id="communityCard"><div class="profile-label" style="min-width:0">Загружаем статистику…</div></div>${twinSoon}</section>
     `;
 
     renderTasteWheel(prefFams);
@@ -461,7 +467,7 @@ import Nav from '../components/Nav.astro';
         const id = (btn as HTMLElement).dataset.id!;
         if (action === 'generate') {
           (btn as HTMLButtonElement).disabled = true; (btn as HTMLButtonElement).textContent = 'Генерация...';
-          try { const res = await fetch('/api/generate-guide', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ selectionId: id }) }); if (res.status === 402) { alert('Нужен оплаченный гид. Нажми «Купить гид · 99 ₽».'); init(); return; } if (!res.ok) throw new Error(await res.text()); init(); }
+          try { const res = await fetch('/api/generate-guide', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + accessToken }, body: JSON.stringify({ selectionId: id }) }); if (res.status === 402) { alert('Нужен оплаченный гид. Нажми «Купить гид · 99 ₽».'); init(); return; } if (!res.ok) throw new Error(await res.text()); init(); }
           catch (e: any) { alert('Ошибка генерации: ' + e.message); (btn as HTMLButtonElement).disabled = false; (btn as HTMLButtonElement).textContent = '🤖 Сгенерировать гид'; }
         } else {
           (btn as HTMLButtonElement).disabled = true;
