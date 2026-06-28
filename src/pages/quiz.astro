@@ -6,6 +6,7 @@ import { COFFEE_DB } from '../data/coffees';
 
 const SUPA_URL = import.meta.env.PUBLIC_SUPABASE_URL || '';
 const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '';
+const PRODAMUS_URL = import.meta.env.PUBLIC_PRODAMUS_URL || '';
 ---
 
 <Layout title="Диагностика вкуса — Shmelco">
@@ -137,7 +138,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '';
   }
 </style>
 
-<script define:vars={{ DB, COFFEE_DB, SUPA_URL, SUPA_KEY }}>
+<script define:vars={{ DB, COFFEE_DB, SUPA_URL, SUPA_KEY, PRODAMUS_URL }}>
 
 async function supaAuth(method, body) {
   const res = await fetch(`${SUPA_URL}/auth/v1/${method}`, {
@@ -236,7 +237,26 @@ let state = {
   equipment: null,
   setFormat: null,
   setSize: null,
+  profileSaved: false,
+  profileSaving: false,
+  selectionSaved: false,
 };
+
+function beanOutLink(c, source) {
+  const q = new URLSearchParams({ url: c.url, name: c.name, roaster: c.roaster, source });
+  return `/api/bean-out?${q.toString()}`;
+}
+
+function buildBuyUrl(user) {
+  if (!PRODAMUS_URL || !user) return '';
+  const sep = PRODAMUS_URL.includes('?') ? '&' : '?';
+  const q = new URLSearchParams();
+  q.set('order_id', user.id);
+  q.set('customer_extra', user.id);
+  q.set('customer_email', user.email || '');
+  q.set('urlSuccess', `${window.location.origin}/account?paid=1`);
+  return PRODAMUS_URL + sep + q.toString();
+}
 
 renderStep();
 
@@ -270,6 +290,7 @@ function renderStep() {
   else if (state.phase === 'results') renderResults(card);
   else if (state.phase === 'practice-choice') renderPracticeChoice(card);
   else if (state.phase === 'offramp') renderOfframp(card);
+  else if (state.phase === 'guide-upsell') renderGuideUpsell(card);
   else if (state.phase === 'equipment') renderEquipment(card);
   else if (state.phase === 'equip-feedback') renderEquipFeedback(card);
   else if (state.phase === 'set-offer') renderSetOffer(card);
@@ -332,8 +353,61 @@ function renderQuiz(card) {
     if (state.step===2 && !state.answers.body) return;
     if (state.step===3 && !state.answers.sweetness) return;
     if (state.step < 3) { state.step++; renderStep(); }
-    else { calcResults(); state.phase = 'results'; renderStep(); }
+    else { calcResults(); state.phase = 'results'; renderStep(); autoSaveProfileSilent(); }
   });
+}
+
+async function autoSaveProfileSilent() {
+  if (state.profileSaved || state.profileSaving) return;
+  state.profileSaving = true;
+  updateProfileBadge();
+
+  const user = await getUser();
+  if (!user) { state.profileSaving = false; updateProfileBadge(); return; }
+
+  try {
+    await fetch('/api/save-profile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId: user.id,
+        answers: state.answers,
+        profileType: state.topCountries.map(k => DB[k].name).join(', '),
+        brewMethod: state.equipment || null,
+        tastes: state.answers.flavors,
+        notes: [],
+      }),
+    });
+    state.profileSaved = true;
+  } catch (e) { console.error('Profile auto-save:', e); }
+
+  state.profileSaving = false;
+  updateProfileBadge();
+}
+
+function updateProfileBadge() {
+  const el = document.getElementById('profileSaveBadge');
+  if (!el) return;
+  if (state.profileSaved) el.textContent = '✓ Профиль сохранён в кабинете';
+  else if (state.profileSaving) el.textContent = 'Сохраняем профиль…';
+  else el.textContent = 'Войдите, чтобы сохранить профиль';
+}
+
+async function ensureProfileSaved() {
+  if (state.profileSaved) return true;
+  const user = await getUser();
+  if (!user) {
+    sessionStorage.setItem('pendingProfile', JSON.stringify({
+      answers: state.answers,
+      profileType: state.topCountries.map(k => DB[k].name).join(', '),
+      brewMethod: state.equipment || null,
+      tastes: state.answers.flavors,
+    }));
+    window.location.href = '/login';
+    return false;
+  }
+  await autoSaveProfileSilent();
+  return state.profileSaved;
 }
 
 function calcResults() {
@@ -348,45 +422,6 @@ function calcResults() {
   }
   const sorted = Object.entries(scores).sort((a,b) => b[1]-a[1]);
   state.topCountries = sorted.slice(0,3).map(([k]) => k);
-}
-
-/* ═══ Сохранить профиль и перейти в кабинет (короткий флоу) ═══ */
-async function saveProfileAndAccount() {
-  const btn = document.getElementById('goToAccount');
-  if (btn) { btn.textContent = 'Сохраняем...'; btn.disabled = true; }
-
-  const profileData = {
-    answers: state.answers,
-    profileType: state.topCountries.map(k => DB[k].name).join(', '),
-    brewMethod: state.equipment || null,
-    tastes: state.answers.flavors,
-  };
-
-  let user = await getUser();
-  if (!user) {
-    sessionStorage.setItem('pendingProfile', JSON.stringify(profileData));
-    window.location.href = '/login';
-    return;
-  }
-
-  try {
-    await fetch('/api/save-profile', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        userId: user.id,
-        answers: profileData.answers,
-        profileType: profileData.profileType,
-        brewMethod: profileData.brewMethod,
-        tastes: profileData.tastes,
-        notes: [],
-      }),
-    });
-    window.location.href = '/account';
-  } catch (e) {
-    alert('Ошибка сохранения: ' + e.message);
-    if (btn) { btn.textContent = 'Сохранить профиль и перейти в кабинет →'; btn.disabled = false; }
-  }
 }
 
 /* ═══ PHASE: RESULTS ═══ */
@@ -432,8 +467,9 @@ function renderResults(card) {
         </a>`;}).join('')}
     </div>
     <div class="result-cta">
-      <button class="btn btn-primary" id="goToAccount" style="font-size:.92rem;padding:12px 26px">Сохранить профиль и перейти в кабинет →</button>
-      <button class="btn-ghost" id="goToPractice" style="font-size:.82rem">Или собрать дегустационный сет под профиль →</button>
+      <p id="profileSaveBadge" style="font-size:.82rem;color:var(--text-dim);margin:0 0 4px">Сохраняем профиль…</p>
+      <button class="btn btn-primary" id="goToPractice" style="font-size:.92rem;padding:12px 26px">Подобрать зёрна под профиль →</button>
+      <button class="btn-ghost" id="goToAccount" style="font-size:.82rem">В личный кабинет →</button>
       <button class="btn-ghost" id="backToQuiz" style="font-size:.78rem;color:var(--text-muted)">← Пройти заново</button>
     </div>
   `;
@@ -442,9 +478,13 @@ function renderResults(card) {
     document.querySelectorAll('.meter-fill').forEach(el => { el.style.width = el.dataset.w; });
   }, 100);
 
-  document.getElementById('goToAccount').addEventListener('click', saveProfileAndAccount);
+  updateProfileBadge();
+  document.getElementById('goToAccount').addEventListener('click', async () => {
+    const ok = await ensureProfileSaved();
+    if (ok) window.location.href = '/account';
+  });
   document.getElementById('backToQuiz').addEventListener('click', () => {
-    state = { phase:'quiz', step:0, answers:{flavors:[],acidity:null,body:null,sweetness:null}, topCountries:[], wantPractice:null, equipment:null, setFormat:null, setSize:null };
+    state = { phase:'quiz', step:0, answers:{flavors:[],acidity:null,body:null,sweetness:null}, topCountries:[], wantPractice:null, equipment:null, setFormat:null, setSize:null, profileSaved:false, profileSaving:false, selectionSaved:false };
     renderStep();
   });
   document.getElementById('goToPractice').addEventListener('click', () => {
@@ -481,9 +521,11 @@ function renderPracticeChoice(card) {
     state.phase = 'equipment';
     renderStep();
   });
-  document.getElementById('practiceNo').addEventListener('click', () => {
+  document.getElementById('practiceNo').addEventListener('click', async () => {
     state.wantPractice = false;
-    state.phase = 'offramp';
+    const ok = await ensureProfileSaved();
+    if (!ok) return;
+    state.phase = 'guide-upsell';
     renderStep();
   });
   document.getElementById('backToResults').addEventListener('click', () => {
@@ -492,22 +534,19 @@ function renderPracticeChoice(card) {
   });
 }
 
-/* ═══ PHASE: OFFRAMP ═══ */
+/* ═══ PHASE: OFFRAMP (legacy fallback) ═══ */
 function renderOfframp(card) {
   const m = DB[state.topCountries[0]];
   card.innerHTML = `
     <div class="offramp">
-      <h3>${m.flag} Ваш профиль сохранён</h3>
-      <p>Вы знаете свой вкус — ${m.name} и похожие регионы вам подходят. Когда будете готовы попробовать на практике — возвращайтесь, мы подберём зерно и соберём дегустационный сет.</p>
-      <p style="font-size:.82rem;color:var(--text-muted)">А пока — погрузитесь в мир кофе:</p>
+      <h3>${m.flag} Профиль готов</h3>
+      <p>Вы знаете свой вкус — ${m.name} и похожие регионы вам подходят.</p>
       <div class="offramp-links">
         <a href="/account" class="offramp-link">👤 Личный кабинет</a>
         <a href="/blog" class="offramp-link">📖 Блог о кофе</a>
-        <a href="https://www.threads.net/@shmelcoffee" target="_blank" class="offramp-link">🧵 Threads @shmelcoffee</a>
-        <a href="https://t.me/shmel_coffee" target="_blank" class="offramp-link">✈️ Telegram @shmel_coffee</a>
       </div>
       <div class="offramp-back">
-        Передумали? <a id="goBackToPractice">Перейти к практике →</a>
+        Передумали? <a id="goBackToPractice">Подобрать зёрна →</a>
       </div>
     </div>
   `;
@@ -515,6 +554,35 @@ function renderOfframp(card) {
   document.getElementById('goBackToPractice').addEventListener('click', () => {
     state.phase = 'equipment';
     renderStep();
+  });
+}
+
+/* ═══ PHASE: GUIDE UPSELL ═══ */
+function renderGuideUpsell(card) {
+  const m = DB[state.topCountries[0]];
+  card.innerHTML = `
+    <div class="guide-block" style="margin-top:0;text-align:left">
+      <h3 style="text-align:center">${m.flag} ${state.selectionSaved ? 'Подборка сохранена' : 'Профиль сохранён'}</h3>
+      <p style="text-align:center">Хотите персональный гид по дегустации? Рецепты, вопросы к каждому лоту и карта предпочтений — за 99&nbsp;₽.</p>
+      <div class="guide-features">
+        <span class="guide-feat">☕ Рецепт под ваш способ</span>
+        <span class="guide-feat">📊 Карта предпочтений</span>
+        <span class="guide-feat">🔄 Что с чем сравнивать</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px;align-items:center;margin-top:16px">
+        <button class="btn btn-primary" id="buyGuideBtn" style="font-size:.88rem;padding:10px 24px">Купить гид · 99 ₽ →</button>
+        <a href="/account" class="btn-ghost" style="font-size:.82rem;text-decoration:none">Пока без гида — в кабинет</a>
+      </div>
+      <p style="font-size:.75rem;color:var(--text-muted);margin-top:12px;text-align:center">После оплаты: Гиды → Создать гид. Оплата не генерирует гид автоматически.</p>
+    </div>
+  `;
+
+  document.getElementById('buyGuideBtn').addEventListener('click', async () => {
+    const user = await getUser();
+    if (!user) { window.location.href = '/login'; return; }
+    const url = buildBuyUrl(user);
+    if (url) window.open(url, '_blank');
+    else alert('Оплата скоро будет доступна. Напишите @ksenijashmel в Telegram.');
   });
 }
 
@@ -804,7 +872,7 @@ function renderSetResults(card) {
             </div>
             <div style="text-align:right">
               <div class="set-result-price">${c.price} ₽</div>
-              <a href="${c.url}" target="_blank" class="set-result-buy">Купить →</a>
+              <a href="${beanOutLink(c, 'quiz-set')}" target="_blank" rel="noopener" class="set-result-buy">Купить →</a>
             </div>
           </div>
           <div class="set-result-meta">
@@ -832,13 +900,10 @@ function renderSetResults(card) {
       </div>
       <div style="display:flex;flex-direction:column;gap:10px;align-items:center">
         <button class="btn btn-primary" id="saveAndOrder" style="font-size:.88rem;padding:10px 24px">
-          Сохранить подборку и заказать →
+          Сохранить подборку →
         </button>
-        <a href="https://t.me/m/F5-cKlk_M2My" target="_blank" style="font-size:.78rem;color:var(--accent);text-decoration:underline">
-          или написать в Telegram напрямую
-        </a>
       </div>
-      <p style="font-size:.75rem;color:var(--text-muted);margin-top:10px">Закажите сами у обжарщиков — ссылки в подборке. Мы сгенерируем персональный гид после получения.</p>
+      <p style="font-size:.75rem;color:var(--text-muted);margin-top:10px">Закажите сами у обжарщиков — ссылки выше. Гид по дегустации — на следующем шаге.</p>
     </div>
 
     <div class="quiz-nav" style="margin-top:20px">
@@ -897,10 +962,13 @@ function renderSetResults(card) {
         }),
       });
 
-      btn.innerHTML = '✓ Сохранено! <a href="/account" style="color:#fff;text-decoration:underline">Перейти в кабинет →</a>';
+      btn.textContent = '✓ Сохранено';
+      state.selectionSaved = true;
+      state.phase = 'guide-upsell';
+      renderStep();
     } catch (e) {
       alert('Ошибка сохранения: ' + e.message);
-      btn.textContent = 'Сохранить подборку и заказать →'; btn.disabled = false;
+      btn.textContent = 'Сохранить подборку →'; btn.disabled = false;
     }
   });
 
@@ -909,7 +977,7 @@ function renderSetResults(card) {
     renderStep();
   });
   document.getElementById('restartAll').addEventListener('click', () => {
-    state = { phase:'quiz', step:0, answers:{flavors:[],acidity:null,body:null,sweetness:null}, topCountries:[], wantPractice:null, equipment:null, setFormat:null, setSize:null };
+    state = { phase:'quiz', step:0, answers:{flavors:[],acidity:null,body:null,sweetness:null}, topCountries:[], wantPractice:null, equipment:null, setFormat:null, setSize:null, profileSaved:false, profileSaving:false, selectionSaved:false };
     renderStep();
   });
 }

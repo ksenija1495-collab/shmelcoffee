@@ -25,13 +25,21 @@ import Layout from '../../layouts/Layout.astro';
 
   let handled = false;
 
+  async function postLoginPath(user: { id: string }) {
+    if (sessionStorage.getItem('pendingProfile') || sessionStorage.getItem('pendingSelection')) {
+      return '/account';
+    }
+    const { data } = await supabase.from('taste_profiles').select('id').eq('user_id', user.id).limit(1);
+    return data?.length ? '/account' : '/quiz';
+  }
+
   supabase.auth.onAuthStateChange(async (event, session) => {
     if (handled) return;
     if (event === 'SIGNED_IN' && session?.user) {
       handled = true;
       document.getElementById('statusMsg')!.textContent = 'Добро пожаловать!';
       await savePendingData(session.user);
-      window.location.href = '/account';
+      window.location.href = await postLoginPath(session.user);
     }
   });
 
@@ -101,7 +109,7 @@ import Layout from '../../layouts/Layout.astro';
         const { error } = await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
         if (!error) {
           const { data: { user } } = await supabase.auth.getUser();
-          if (user) { handled = true; await savePendingData(user); window.location.href = '/account'; return; }
+          if (user) { handled = true; await savePendingData(user); window.location.href = await postLoginPath(user); return; }
         }
       }
     }
@@ -110,7 +118,7 @@ import Layout from '../../layouts/Layout.astro';
       const { error } = await supabase.auth.exchangeCodeForSession(code);
       if (!error) {
         const { data: { user } } = await supabase.auth.getUser();
-        if (user) { handled = true; await savePendingData(user); window.location.href = '/account'; return; }
+        if (user) { handled = true; await savePendingData(user); window.location.href = await postLoginPath(user); return; }
       }
     }
     if (!handled) {

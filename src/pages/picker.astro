@@ -17,6 +17,11 @@ import { COFFEE_DB, PICKER_TASTE_MAP, PICKER_NOTES_MAP, PICKER_BREW_OPTIONS } fr
 <script define:vars={{ COFFEE_DB, PICKER_TASTE_MAP, PICKER_NOTES_MAP, PICKER_BREW_OPTIONS }}>
 let pickerState = { step:0, brew:null, tastes:[], notes:[] };
 
+function beanOutLink(c, source) {
+  const q = new URLSearchParams({ url: c.url, name: c.name, roaster: c.roaster, source });
+  return `/api/bean-out?${q.toString()}`;
+}
+
 function getDripPool() { return COFFEE_DB.filter(c => c.format === 'дрип'); }
 function getBeanPool() { return COFFEE_DB.filter(c => c.format === 'зерно'); }
 
@@ -294,7 +299,7 @@ function renderPickerResults() {
             <div class="picker-result-right">
               <div class="picker-result-price">${c.price} ₽ <span>/ 250 г</span></div>
               <span class="picker-format-tag ${c.format==='дрип'?'drip':'bean'}">${c.format==='дрип'?'дрип-пакеты':'зерно'}</span>
-              <a href="${c.url}" target="_blank" class="picker-result-buy">Купить →</a>
+              <a href="${beanOutLink(c, 'picker')}" target="_blank" rel="noopener" class="picker-result-buy">Купить →</a>
             </div>
           </div>
           ${isDripMismatch ? `

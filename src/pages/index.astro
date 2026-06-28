@@ -297,6 +297,8 @@ async function loadCommunity(){
     const leg=flavors.map(x=>`<span class="cs-leg"><i style="background:${FLC[x.flavor]||'#BA7517'}"></i>${FL[x.flavor]||x.flavor}</span>`).join('');
     let html=`<div class="comm-compact"><div class="comm-num"><b>${total}</b><span>профилей сообщества</span></div><div class="comm-mid"><div class="cs-bar">${stack}</div><div class="cs-legwrap">${leg}</div></div></div>`;
     if(countries.length){ html+='<div class="comm-cc"><span class="cc-h">Чаще открывают:</span>'+countries.map(x=>`<span class="cc-chip">${flagByName[x.origin]||''} ${x.origin}<span class="cc-n">${x.users}</span></span>`).join('')+'</div>'; }
+    const roasters=((data&&data.roasters)||[]).slice(0,4);
+    if(roasters.length){ html+='<div class="comm-cc"><span class="cc-h">Топ обжarщиков:</span>'+roasters.map(x=>`<span class="cc-chip">☕ ${x.roaster}<span class="cc-n">${x.clicks}</span></span>`).join('')+'</div>'; }
     el.innerHTML=html;
   }catch(e){ el.innerHTML='<div class="comm-empty">Не удалось загрузить статистику.</div>'; }
 }
