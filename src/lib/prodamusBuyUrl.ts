@@ -9,5 +9,6 @@ export function buildProdamusBuyUrl(
   q.set('order_id', user.id);
   q.set('customer_extra', user.id);
   q.set('customer_email', user.email || '');
+  q.set('urlSuccess', 'https://shmelcoffee.com/account?paid=1');
   return baseUrl + sep + q.toString();
 }

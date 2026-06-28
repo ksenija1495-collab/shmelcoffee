@@ -93,6 +93,15 @@ export const POST: APIRoute = async ({ request, url }) => {
     return new Response('user_not_found', { status: 200 });
   }
 
+  if (prodamusOrderId) {
+    const { data: existing } = await supabase
+      .from('prodamus_orders')
+      .select('order_id')
+      .eq('order_id', prodamusOrderId)
+      .maybeSingle();
+    if (existing) return new Response('already_processed', { status: 200 });
+  }
+
   const { error } = await supabase.rpc('add_guide_credits', { p_user: uid, p_amount: credits });
   if (error) {
     console.error('[prodamus-webhook] add_guide_credits failed', error.message, {
@@ -100,6 +109,13 @@ export const POST: APIRoute = async ({ request, url }) => {
       uid,
     });
     return new Response(error.message, { status: 500 });
+  }
+
+  if (prodamusOrderId) {
+    await supabase
+      .from('prodamus_orders')
+      .insert({ order_id: prodamusOrderId, user_id: uid, credits })
+      .then(() => undefined, () => undefined);
   }
 
   try {
