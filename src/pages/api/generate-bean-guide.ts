@@ -42,7 +42,7 @@ export const POST: APIRoute = async ({ request }) => {
     : 'Вкусовой профиль не заполнен — дай универсальные ориентиры.';
 
   const beansList = cleanBeans
-    .map((b, i) => `${i + 1}. ${b.name}${b.kind ? ` (${b.kind})` : ''}${b.roaster ? `, обжарщик ${b.roaster}` : ''}${b.country ? `, страна ${b.country}` : ''}${b.process ? `, обработка ${b.process}` : ''}`)
+    .map((b, i) => `${i + 1}. ${b.name}${b.variety ? `, сорт ${b.variety}` : ''}${b.kind ? ` (${b.kind})` : ''}${b.roaster ? `, обжарщик ${b.roaster}` : ''}${b.country ? `, страна ${b.country}` : ''}${b.process ? `, обработка ${b.process}` : ''}`)
     .join('\n');
   const methodsText = cleanMethods.length ? cleanMethods.join(', ') : 'Воронка V60';
   const planDays = Math.min(10, Math.max(7, cleanBeans.length * Math.max(cleanMethods.length, 1)));
@@ -69,6 +69,7 @@ ${beansList}
   "beans": [
     {
       "name": "название зерна (как дано)",
+      "variety": "сорт арабики (гейша, бурбон, хейрлум и т.д.) или пусто",
       "roaster": "обжарщик или пусто",
       "country": "страна (как дано у зерна, на русском)",
       "family": "одна из: fruity, floral, chocolate, caramel, spicy, tropical",

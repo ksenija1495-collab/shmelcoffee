@@ -241,7 +241,7 @@ import Nav from '../components/Nav.astro';
       const flag = FLAG_BY_NAME[esc(b.country)] || '';
       const fam = (FAMILY_ICON as any)[esc(b.family)] || '';
       const ico = flag || fam || '☕';
-      const sub = [b.roaster, b.country].filter(Boolean).map(esc).join(' · ');
+      const sub = [b.variety, b.roaster, b.country].filter(Boolean).map(esc).join(' · ');
       const tags = (b.tags || []).map((t: string) => `<span class="gb-tag">${esc(t)}</span>`).join('');
       return `<div class="gb-card"><div class="gb-head"><span class="gb-ico">${ico}${(fam && flag) ? ' ' + fam : ''}</span><div><div class="gb-name">${esc(b.name)}</div>${sub ? `<div class="gb-roaster">${sub}</div>` : ''}</div></div>${b.expect ? `<div class="gb-expect">${esc(b.expect)}</div>` : ''}${tags ? `<div class="gb-tags">${tags}</div>` : ''}${b.brewTip ? `<div class="gb-tip">💡 ${esc(b.brewTip)}</div>` : ''}</div>`;
     }).join('');
