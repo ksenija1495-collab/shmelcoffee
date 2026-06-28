@@ -88,15 +88,38 @@ import Nav from '../components/Nav.astro';
   ];
   const PROCESSES = ['Мытая', 'Натуральная', 'Хани', 'Анаэробная', 'Карбоник масерейшн', 'Другая'];
 
-  const state = { beans: new Set<string>(), manualIds: [] as string[], methods: new Set<string>() };
+  type ManualBean = { name: string; variety: string; roaster: string; country: string; process: string };
+  const emptyManual = (): ManualBean => ({ name: '', variety: '', roaster: '', country: '', process: '' });
+  const state = {
+    beans: new Set<string>(),
+    manualIds: [] as string[],
+    manualData: {} as Record<string, ManualBean>,
+    methods: new Set<string>(),
+  };
   let manualCounter = 0;
   const getParam = (n: string) => new URLSearchParams(window.location.search).get(n) || '';
+  const escAttr = (s: string) => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
   const manualName = (id: string) => document.getElementById(id + '_name') as HTMLInputElement | null;
   const manualRoaster = (id: string) => document.getElementById(id + '_roaster') as HTMLInputElement | null;
   const manualCountry = (id: string) => document.getElementById(id + '_country') as HTMLSelectElement | null;
   const manualProcess = (id: string) => document.getElementById(id + '_process') as HTMLSelectElement | null;
   const manualVariety = (id: string) => document.getElementById(id + '_variety') as HTMLSelectElement | null;
-  const manualFilledCount = () => state.manualIds.filter((id) => !!(manualName(id)?.value.trim())).length;
+
+  function snapshotManual(id: string) {
+    state.manualData[id] = {
+      name: manualName(id)?.value.trim() || '',
+      variety: manualVariety(id)?.value || '',
+      roaster: manualRoaster(id)?.value.trim() || '',
+      country: manualCountry(id)?.value || '',
+      process: manualProcess(id)?.value || '',
+    };
+  }
+
+  function snapshotAllManuals() {
+    state.manualIds.forEach(snapshotManual);
+  }
+
+  const manualFilledCount = () => state.manualIds.filter((id) => !!(state.manualData[id]?.name.trim())).length;
   const beanSlotCount = () => state.beans.size + state.manualIds.length;
   const beanCount = () => state.beans.size + manualFilledCount();
   const vid = (n: number) => { const a = n % 100, b = n % 10; if (a > 10 && a < 20) return 'видов'; if (b > 1 && b < 5) return 'вида'; if (b === 1) return 'вид'; return 'видов'; };
@@ -160,33 +183,46 @@ import Nav from '../components/Nav.astro';
     const beanCnt = document.getElementById('beanCnt')!;
     const methodCnt = document.getElementById('methodCnt')!;
 
-    const countryOpts = countries.map((c: string) => `<option>${c}</option>`).join('');
-    const processOpts = PROCESSES.map((p) => `<option>${p}</option>`).join('');
-    const varietyOpts = BEAN_VARIETIES.map((v) => `<option>${v}</option>`).join('');
+    const countryOpts = (sel: string) => countries.map((c: string) => `<option${c === sel ? ' selected' : ''}>${c}</option>`).join('');
+    const processOpts = (sel: string) => PROCESSES.map((p) => `<option${p === sel ? ' selected' : ''}>${p}</option>`).join('');
+    const varietyOpts = (sel: string) => BEAN_VARIETIES.map((v) => `<option${v === sel ? ' selected' : ''}>${v}</option>`).join('');
 
     function manualItemHtml(id: string, n: number) {
+      const d = state.manualData[id] || emptyManual();
       return `<div class="gen-manual-item" data-manual-id="${id}">
         <div class="gen-manual-head"><span>Зерно ${n}</span><button type="button" class="gen-manual-del" data-manual-del="${id}" title="Удалить">×</button></div>
         <div class="gen-manual-grid">
-          <div class="gen-field" style="grid-column:1/-1"><label>Название *</label><input id="${id}_name" placeholder="напр. Эфиопия Гедео" /></div>
-          <div class="gen-field"><label>Сорт</label><select id="${id}_variety"><option value="">— не знаю / смесь</option>${varietyOpts}</select></div>
-          <div class="gen-field"><label>Обжарщик</label><input id="${id}_roaster" placeholder="напр. Tasty Coffee" /></div>
-          <div class="gen-field"><label>Страна</label><select id="${id}_country"><option value="">—</option>${countryOpts}</select></div>
-          <div class="gen-field"><label>Обработка</label><select id="${id}_process"><option value="">—</option>${processOpts}</select></div>
+          <div class="gen-field" style="grid-column:1/-1"><label>Название *</label><input id="${id}_name" value="${escAttr(d.name)}" placeholder="напр. Эфиопия Гедео" /></div>
+          <div class="gen-field"><label>Сорт</label><select id="${id}_variety"><option value=""${d.variety ? '' : ' selected'}>— не знаю / смесь</option>${varietyOpts(d.variety)}</select></div>
+          <div class="gen-field"><label>Обжарщик</label><input id="${id}_roaster" value="${escAttr(d.roaster)}" placeholder="напр. Tasty Coffee" /></div>
+          <div class="gen-field"><label>Страна</label><select id="${id}_country"><option value=""${d.country ? '' : ' selected'}>—</option>${countryOpts(d.country)}</select></div>
+          <div class="gen-field"><label>Обработка</label><select id="${id}_process"><option value=""${d.process ? '' : ' selected'}>—</option>${processOpts(d.process)}</select></div>
         </div>
       </div>`;
     }
 
     function bindManualItem(id: string) {
-      manualName(id)?.addEventListener('input', refresh);
+      const sync = () => { snapshotManual(id); refresh(); };
+      manualName(id)?.addEventListener('input', sync);
+      manualRoaster(id)?.addEventListener('input', sync);
+      manualVariety(id)?.addEventListener('change', sync);
+      manualCountry(id)?.addEventListener('change', sync);
+      manualProcess(id)?.addEventListener('change', sync);
       document.querySelector('[data-manual-del="' + id + '"]')?.addEventListener('click', () => {
+        snapshotAllManuals();
         state.manualIds = state.manualIds.filter((x) => x !== id);
-        renderManualEntries();
+        delete state.manualData[id];
+        document.querySelector('[data-manual-id="' + id + '"]')?.remove();
+        state.manualIds.forEach((mid, i) => {
+          const head = document.querySelector('[data-manual-id="' + mid + '"] .gen-manual-head span');
+          if (head) head.textContent = 'Зерно ' + (i + 1);
+        });
         refresh();
       });
     }
 
     function renderManualEntries() {
+      snapshotAllManuals();
       manualList.innerHTML = state.manualIds.map((id, i) => manualItemHtml(id, i + 1)).join('');
       state.manualIds.forEach(bindManualItem);
     }
@@ -196,22 +232,20 @@ import Nav from '../components/Nav.astro';
         if (note) note.textContent = `Максимум ${MAX_BEANS} зёрен`;
         return;
       }
+      snapshotAllManuals();
       const id = 'manual_' + (++manualCounter);
       state.manualIds.push(id);
-      renderManualEntries();
+      state.manualData[id] = emptyManual();
+      manualList.insertAdjacentHTML('beforeend', manualItemHtml(id, state.manualIds.length));
+      bindManualItem(id);
       manualName(id)?.focus();
       refresh();
     }
 
     function collectManualBeans() {
+      snapshotAllManuals();
       return state.manualIds
-        .map((id) => ({
-          name: manualName(id)?.value.trim() || '',
-          variety: manualVariety(id)?.value || '',
-          roaster: manualRoaster(id)?.value.trim() || '',
-          country: manualCountry(id)?.value || '',
-          process: manualProcess(id)?.value || '',
-        }))
+        .map((id) => state.manualData[id] || emptyManual())
         .filter((b) => b.name);
     }
 
