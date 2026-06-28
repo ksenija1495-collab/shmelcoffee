@@ -1,16 +1,20 @@
 import type { APIRoute } from 'astro';
 import { createClient } from '@supabase/supabase-js';
 import OpenAI from 'openai';
+import { getAuthUser } from '../../lib/requireAuth';
 
 export const prerender = false;
 
 export const POST: APIRoute = async ({ request }) => {
+  const auth = await getAuthUser(request);
+  if ('error' in auth) return auth.error;
+
   const { shelfId } = await request.json();
   if (!shelfId) return new Response('Missing shelfId', { status: 400 });
 
   const supabase = createClient(
     import.meta.env.PUBLIC_SUPABASE_URL,
-    import.meta.env.SUPABASE_SERVICE_ROLE_KEY
+    import.meta.env.SUPABASE_SERVICE_ROLE_KEY,
   );
 
   const { data: bean, error: beanErr } = await supabase
@@ -20,17 +24,19 @@ export const POST: APIRoute = async ({ request }) => {
     .single();
 
   if (beanErr || !bean) return new Response('Shelf item not found', { status: 404 });
+  if (bean.user_id !== auth.user.id) return new Response('forbidden', { status: 403 });
 
-  // Оплата: списываем 1 кредит-гид атомарно; нет кредитов → 402
-  const { data: consumed } = await supabase.rpc('consume_guide_credit', { p_user: bean.user_id });
+  const { data: consumed } = await supabase.rpc('consume_guide_credit', { p_user: auth.user.id });
   if (!consumed) return new Response('payment_required', { status: 402 });
 
-  const refund = async () => { await supabase.rpc('add_guide_credits', { p_user: bean.user_id, p_amount: 1 }); };
+  const refund = async () => {
+    await supabase.rpc('add_guide_credits', { p_user: auth.user.id, p_amount: 1 });
+  };
 
   const { data: profile } = await supabase
     .from('taste_profiles')
     .select('*')
-    .eq('user_id', bean.user_id)
+    .eq('user_id', auth.user.id)
     .order('created_at', { ascending: false })
     .limit(1)
     .single();
@@ -54,7 +60,7 @@ export const POST: APIRoute = async ({ request }) => {
     const content = completion.choices[0]?.message?.content || 'Не удалось сгенерировать гид.';
 
     const { error: insertErr } = await supabase.from('guides').insert({
-      user_id: bean.user_id,
+      user_id: auth.user.id,
       selection_id: null,
       content,
     });

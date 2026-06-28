@@ -149,6 +149,13 @@ async function supaAuth(method, body) {
   return res.json();
 }
 
+async function getAccessToken() {
+  const ref = SUPA_URL.replace('https://','').split('.')[0];
+  const stored = localStorage.getItem(`sb-${ref}-auth-token`);
+  if (!stored) return null;
+  try { return JSON.parse(stored).access_token || null; } catch { return null; }
+}
+
 async function getUser() {
   const ref = SUPA_URL.replace('https://','').split('.')[0];
   const stored = localStorage.getItem(`sb-${ref}-auth-token`);
@@ -366,11 +373,12 @@ async function autoSaveProfileSilent() {
   if (!user) { state.profileSaving = false; updateProfileBadge(); return; }
 
   try {
-    await fetch('/api/save-profile', {
+    const token = await getAccessToken();
+    if (!token) return;
+    const res = await fetch('/api/save-profile', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
       body: JSON.stringify({
-        userId: user.id,
         answers: state.answers,
         profileType: state.topCountries.map(k => DB[k].name).join(', '),
         brewMethod: state.equipment || null,
@@ -378,7 +386,7 @@ async function autoSaveProfileSilent() {
         notes: [],
       }),
     });
-    state.profileSaved = true;
+    if (res.ok) state.profileSaved = true;
   } catch (e) { console.error('Profile auto-save:', e); }
 
   state.profileSaving = false;
@@ -937,11 +945,12 @@ function renderSetResults(card) {
     }
 
     try {
+      const token = await getAccessToken();
+      if (!token) throw new Error('no token');
       const profileRes = await fetch('/api/save-profile', {
         method: 'POST',
-        headers: {'Content-Type':'application/json'},
+        headers: {'Content-Type':'application/json', 'Authorization': 'Bearer ' + token},
         body: JSON.stringify({
-          userId: user.id,
           answers: state.answers,
           profileType: state.topCountries.map(k => DB[k].name).join(', '),
           brewMethod: state.equipment,
@@ -949,18 +958,19 @@ function renderSetResults(card) {
           notes: [],
         }),
       });
+      if (!profileRes.ok) throw new Error(await profileRes.text());
       const profile = await profileRes.json();
 
-      await fetch('/api/save-selection', {
+      const selRes = await fetch('/api/save-selection', {
         method: 'POST',
-        headers: {'Content-Type':'application/json'},
+        headers: {'Content-Type':'application/json', 'Authorization': 'Bearer ' + token},
         body: JSON.stringify({
-          userId: user.id,
           profileId: profile.id,
           coffees: selectionData.coffees,
           format: state.setFormat,
         }),
       });
+      if (!selRes.ok) throw new Error(await selRes.text());
 
       btn.textContent = '✓ Сохранено';
       state.selectionSaved = true;

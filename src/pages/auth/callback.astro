@@ -38,23 +38,25 @@ import Layout from '../../layouts/Layout.astro';
     if (event === 'SIGNED_IN' && session?.user) {
       handled = true;
       document.getElementById('statusMsg')!.textContent = 'Добро пожаловать!';
-      await savePendingData(session.user);
+      await savePendingData(session.user, session.access_token);
       window.location.href = await postLoginPath(session.user);
     }
   });
 
-  async function savePendingData(user: any) {
-    // Короткий флоу: сохранить только профиль вкуса (без подборки)
+  async function savePendingData(user: any, accessToken?: string) {
+    const token = accessToken || (await supabase.auth.getSession()).data.session?.access_token;
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (token) headers.Authorization = 'Bearer ' + token;
+
     const pendingProfile = sessionStorage.getItem('pendingProfile');
     if (pendingProfile) {
       sessionStorage.removeItem('pendingProfile');
       const pp = JSON.parse(pendingProfile);
       try {
-        await fetch('/api/save-profile', {
+        const res = await fetch('/api/save-profile', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           body: JSON.stringify({
-            userId: user.id,
             answers: pp.answers || {},
             profileType: pp.profileType || '',
             brewMethod: pp.brewMethod || null,
@@ -62,11 +64,11 @@ import Layout from '../../layouts/Layout.astro';
             notes: [],
           }),
         });
+        if (!res.ok) console.error('Pending profile save failed:', await res.text());
       } catch (e) { console.error('Pending profile save error:', e); }
       return;
     }
 
-    // Полный флоу: профиль + подборка
     const pending = sessionStorage.getItem('pendingSelection');
     if (!pending) return;
     sessionStorage.removeItem('pendingSelection');
@@ -74,9 +76,8 @@ import Layout from '../../layouts/Layout.astro';
     try {
       const profRes = await fetch('/api/save-profile', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
-          userId: user.id,
           answers: sel.answers || {},
           profileType: sel.profileType || '',
           brewMethod: sel.brewMethod || null,
@@ -84,17 +85,18 @@ import Layout from '../../layouts/Layout.astro';
           notes: [],
         }),
       });
+      if (!profRes.ok) { console.error('Pending profile save failed:', await profRes.text()); return; }
       const profile = await profRes.json();
-      await fetch('/api/save-selection', {
+      const selRes = await fetch('/api/save-selection', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
-          userId: user.id,
           profileId: profile.id,
           coffees: sel.coffees || [],
           format: sel.format || 'mixed',
         }),
       });
+      if (!selRes.ok) console.error('Pending selection save failed:', await selRes.text());
     } catch (e) { console.error('Pending save error:', e); }
   }
 
@@ -109,7 +111,7 @@ import Layout from '../../layouts/Layout.astro';
         const { error } = await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
         if (!error) {
           const { data: { user } } = await supabase.auth.getUser();
-          if (user) { handled = true; await savePendingData(user); window.location.href = await postLoginPath(user); return; }
+          if (user) { handled = true; const { data: { session } } = await supabase.auth.getSession(); await savePendingData(user, session?.access_token); window.location.href = await postLoginPath(user); return; }
         }
       }
     }
@@ -118,7 +120,7 @@ import Layout from '../../layouts/Layout.astro';
       const { error } = await supabase.auth.exchangeCodeForSession(code);
       if (!error) {
         const { data: { user } } = await supabase.auth.getUser();
-        if (user) { handled = true; await savePendingData(user); window.location.href = await postLoginPath(user); return; }
+        if (user) { handled = true; const { data: { session } } = await supabase.auth.getSession(); await savePendingData(user, session?.access_token); window.location.href = await postLoginPath(user); return; }
       }
     }
     if (!handled) {
