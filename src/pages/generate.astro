@@ -34,8 +34,17 @@ import Nav from '../components/Nav.astro';
   .gen-card .m { font-size: .72rem; color: var(--text-muted); margin-top: 2px; }
   .gen-card .ico { font-size: 1.3rem; }
   .gen-method { display: flex; align-items: center; gap: 10px; }
-  .gen-manual { margin-top: 12px; padding: 16px; border: 1px dashed var(--border-hover); border-radius: 12px; display: none; }
-  .gen-manual.show { display: block; }
+  .gen-manual { margin-top: 12px; display: flex; flex-direction: column; gap: 10px; }
+  .gen-manual-item { padding: 16px; border: 1px dashed var(--border-hover); border-radius: 12px; position: relative; }
+  .gen-manual-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .gen-manual-head span { font-size: .78rem; font-weight: 700; color: var(--text-dim); }
+  .gen-manual-del { border: 0; background: transparent; color: var(--text-muted); cursor: pointer; font-size: 1.1rem; line-height: 1; padding: 2px 6px; border-radius: 6px; }
+  .gen-manual-del:hover { color: #c44; background: rgba(200,68,68,.08); }
+  .gen-manual-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  @media (max-width: 560px) { .gen-manual-grid { grid-template-columns: 1fr; } }
+  .gen-add-manual { margin-top: 10px; width: 100%; padding: 12px 14px; border-radius: 12px; border: 1.5px dashed var(--border-hover); background: var(--surface-2); color: var(--text-dim); font-family: 'Inter', sans-serif; font-size: .84rem; font-weight: 600; cursor: pointer; transition: all .15s; }
+  .gen-add-manual:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); background: rgba(168,124,79,.06); }
+  .gen-add-manual:disabled { opacity: .45; cursor: default; }
   .gen-field { margin-bottom: 12px; }
   .gen-field label { display: block; font-size: .74rem; color: var(--text-muted); margin-bottom: 5px; }
   .gen-field input, .gen-field select { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: .88rem; font-family: 'Inter', sans-serif; background: var(--surface); color: var(--text); }
@@ -78,12 +87,16 @@ import Nav from '../components/Nav.astro';
   ];
   const PROCESSES = ['Мытая', 'Натуральная', 'Хани', 'Анаэробная', 'Карбоник масерейшн', 'Другая'];
 
-  const state = { beans: new Set<string>(), manualOn: false, methods: new Set<string>() };
+  const state = { beans: new Set<string>(), manualIds: [] as string[], methods: new Set<string>() };
+  let manualCounter = 0;
   const getParam = (n: string) => new URLSearchParams(window.location.search).get(n) || '';
-  const inp = (id: string) => document.getElementById(id) as HTMLInputElement;
-  const sel = (id: string) => document.getElementById(id) as HTMLSelectElement;
-  const manualFilled = () => state.manualOn && !!(inp('mName') && inp('mName').value.trim());
-  const beanCount = () => state.beans.size + (manualFilled() ? 1 : 0);
+  const manualName = (id: string) => document.getElementById(id + '_name') as HTMLInputElement | null;
+  const manualRoaster = (id: string) => document.getElementById(id + '_roaster') as HTMLInputElement | null;
+  const manualCountry = (id: string) => document.getElementById(id + '_country') as HTMLSelectElement | null;
+  const manualProcess = (id: string) => document.getElementById(id + '_process') as HTMLSelectElement | null;
+  const manualFilledCount = () => state.manualIds.filter((id) => !!(manualName(id)?.value.trim())).length;
+  const beanSlotCount = () => state.beans.size + state.manualIds.length;
+  const beanCount = () => state.beans.size + manualFilledCount();
   const vid = (n: number) => { const a = n % 100, b = n % 10; if (a > 10 && a < 20) return 'видов'; if (b > 1 && b < 5) return 'вида'; if (b === 1) return 'вид'; return 'видов'; };
 
   async function fetchCredits(token: string): Promise<number> {
@@ -122,15 +135,10 @@ import Nav from '../components/Nav.astro';
 
       <div class="gen-step-t">1. Зёрна <span class="gen-cnt" id="beanCnt">0 / ${MAX_BEANS}</span></div>
       <div class="gen-grid" id="beanGrid">
-        ${beans.length ? beanCards : '<div class="gen-empty">На полке пока нет зерна — впиши своё ниже.</div>'}
-        <button class="gen-card bean-card" data-bean="__manual__"><div class="t">+ Другое зерно</div><div class="m">вписать вручную</div></button>
+        ${beans.length ? beanCards : '<div class="gen-empty">На полке пока нет зерна — добавь своё вручную ниже.</div>'}
       </div>
-      <div class="gen-manual" id="manualBox">
-        <div class="gen-field"><label>Название зерна *</label><input id="mName" placeholder="напр. Эфиопия Гедео" /></div>
-        <div class="gen-field"><label>Обжарщик</label><input id="mRoaster" placeholder="напр. Tasty Coffee" /></div>
-        <div class="gen-field"><label>Страна</label><select id="mCountry"><option value="">—</option>${countries.map((c: string) => `<option>${c}</option>`).join('')}</select></div>
-        <div class="gen-field"><label>Обработка</label><select id="mProcess"><option value="">—</option>${PROCESSES.map(p => `<option>${p}</option>`).join('')}</select></div>
-      </div>
+      <div class="gen-manual" id="manualList"></div>
+      <button type="button" class="gen-add-manual" id="addManualBtn">+ Добавить зерно вручную</button>
 
       <div class="gen-step-t">2. Способы заваривания <span class="gen-cnt" id="methodCnt">0 / ${MAX_METHODS}</span></div>
       <div class="gen-grid" id="methodGrid">${methodCards}</div>
@@ -143,18 +151,72 @@ import Nav from '../components/Nav.astro';
       </div></div>
     `;
 
-    const manualBox = document.getElementById('manualBox')!;
+    const manualList = document.getElementById('manualList')!;
+    const addManualBtn = document.getElementById('addManualBtn') as HTMLButtonElement;
     const genBtn = document.getElementById('genBtn') as HTMLButtonElement | null;
     const note = document.getElementById('genNote');
     const beanCnt = document.getElementById('beanCnt')!;
     const methodCnt = document.getElementById('methodCnt')!;
 
+    const countryOpts = countries.map((c: string) => `<option>${c}</option>`).join('');
+    const processOpts = PROCESSES.map((p) => `<option>${p}</option>`).join('');
+
+    function manualItemHtml(id: string, n: number) {
+      return `<div class="gen-manual-item" data-manual-id="${id}">
+        <div class="gen-manual-head"><span>Зерно ${n}</span><button type="button" class="gen-manual-del" data-manual-del="${id}" title="Удалить">×</button></div>
+        <div class="gen-manual-grid">
+          <div class="gen-field" style="grid-column:1/-1"><label>Название *</label><input id="${id}_name" placeholder="напр. Эфиопия Гедео" /></div>
+          <div class="gen-field"><label>Обжарщик</label><input id="${id}_roaster" placeholder="напр. Tasty Coffee" /></div>
+          <div class="gen-field"><label>Страна</label><select id="${id}_country"><option value="">—</option>${countryOpts}</select></div>
+          <div class="gen-field"><label>Обработка</label><select id="${id}_process"><option value="">—</option>${processOpts}</select></div>
+        </div>
+      </div>`;
+    }
+
+    function bindManualItem(id: string) {
+      manualName(id)?.addEventListener('input', refresh);
+      document.querySelector('[data-manual-del="' + id + '"]')?.addEventListener('click', () => {
+        state.manualIds = state.manualIds.filter((x) => x !== id);
+        renderManualEntries();
+        refresh();
+      });
+    }
+
+    function renderManualEntries() {
+      manualList.innerHTML = state.manualIds.map((id, i) => manualItemHtml(id, i + 1)).join('');
+      state.manualIds.forEach(bindManualItem);
+    }
+
+    function addManualEntry() {
+      if (beanSlotCount() >= MAX_BEANS) {
+        if (note) note.textContent = `Максимум ${MAX_BEANS} зёрен`;
+        return;
+      }
+      const id = 'manual_' + (++manualCounter);
+      state.manualIds.push(id);
+      renderManualEntries();
+      manualName(id)?.focus();
+      refresh();
+    }
+
+    function collectManualBeans() {
+      return state.manualIds
+        .map((id) => ({
+          name: manualName(id)?.value.trim() || '',
+          roaster: manualRoaster(id)?.value.trim() || '',
+          country: manualCountry(id)?.value || '',
+          process: manualProcess(id)?.value || '',
+        }))
+        .filter((b) => b.name);
+    }
+
     function refresh() {
       const bc = beanCount();
       beanCnt.textContent = bc + ' / ' + MAX_BEANS;
-      beanCnt.classList.toggle('full', bc >= MAX_BEANS);
+      beanCnt.classList.toggle('full', beanSlotCount() >= MAX_BEANS);
       methodCnt.textContent = state.methods.size + ' / ' + MAX_METHODS;
       methodCnt.classList.toggle('full', state.methods.size >= MAX_METHODS);
+      if (addManualBtn) addManualBtn.disabled = beanSlotCount() >= MAX_BEANS;
       const ok = bc >= 1 && state.methods.size >= 1;
       if (genBtn) genBtn.disabled = !ok;
       if (note) note.textContent = ok ? `готово: ${bc} ${vid(bc)} зерна и ${state.methods.size} ${vid(state.methods.size)} заварки` : 'Выбери хотя бы одно зерно и способ';
@@ -162,21 +224,15 @@ import Nav from '../components/Nav.astro';
 
     page.querySelectorAll('.bean-card').forEach(c => c.addEventListener('click', () => {
       const id = (c as HTMLElement).getAttribute('data-bean')!;
-      if (id === '__manual__') {
-        if (!state.manualOn && state.beans.size >= MAX_BEANS) { note && (note.textContent = `Максимум ${MAX_BEANS} зёрен`); return; }
-        state.manualOn = !state.manualOn;
-        c.classList.toggle('sel', state.manualOn);
-        manualBox.classList.toggle('show', state.manualOn);
-        refresh();
-        return;
-      }
       if (state.beans.has(id)) { state.beans.delete(id); c.classList.remove('sel'); }
       else {
-        if (beanCount() >= MAX_BEANS) { note && (note.textContent = `Максимум ${MAX_BEANS} зёрен`); return; }
+        if (beanSlotCount() >= MAX_BEANS) { note && (note.textContent = `Максимум ${MAX_BEANS} зёрен`); return; }
         state.beans.add(id); c.classList.add('sel');
       }
       refresh();
     }));
+
+    addManualBtn?.addEventListener('click', addManualEntry);
 
     page.querySelectorAll('.method-card').forEach(c => c.addEventListener('click', () => {
       const m = (c as HTMLElement).getAttribute('data-method')!;
@@ -188,16 +244,15 @@ import Nav from '../components/Nav.astro';
       refresh();
     }));
 
-    inp('mName')?.addEventListener('input', refresh);
-
     if (preShelf) { const card = page.querySelector('.bean-card[data-bean="' + preShelf + '"]') as HTMLElement | null; if (card) card.click(); }
+    else if (!beans.length) addManualEntry();
 
     document.getElementById('buyBtn')?.addEventListener('click', () => { if (buyUrl) window.open(buyUrl, '_blank'); else alert('Оплата скоро будет доступна. Напишите в Telegram @ksenijashmel.'); });
 
     genBtn?.addEventListener('click', async () => {
       const beansArr: any[] = [];
       state.beans.forEach(id => { const b = beans.find(x => x.id === id); if (b) beansArr.push({ name: b.name, roaster: b.roaster, country: b.country, process: b.process }); });
-      if (manualFilled()) beansArr.push({ name: inp('mName').value.trim(), roaster: inp('mRoaster').value.trim(), country: sel('mCountry').value, process: sel('mProcess').value });
+      beansArr.push(...collectManualBeans());
       const methodsArr = Array.from(state.methods);
       if (!beansArr.length || !methodsArr.length) return;
       genBtn.disabled = true; genBtn.textContent = 'Генерация…';
