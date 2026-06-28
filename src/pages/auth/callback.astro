@@ -5,13 +5,15 @@ import Layout from '../../layouts/Layout.astro';
 
 <Layout title="Вход... — Shmelco">
   <div class="container" style="padding-top:120px;text-align:center;min-height:60vh">
-    <div style="width:28px;height:28px;border:2px solid var(--border);border-top-color:var(--text);border-radius:50%;animation:spin .6s linear infinite;margin:0 auto 16px"></div>
+    <div style="width:28px;height:28px;border:2px solid var(--border);border-top-color:var(--text);border-radius:50%;animation:spin .6s linear infinite;margin:0 auto 16px" id="spinner"></div>
     <p style="color:var(--text-dim);font-size:.9rem" id="statusMsg">Авторизация...</p>
+    <p style="margin-top:12px" id="statusActions"></p>
   </div>
 </Layout>
 
 <style>
   @keyframes spin { to { transform: rotate(360deg); } }
+  .cb-retry { display:inline-block;margin-top:8px;padding:10px 18px;border-radius:8px;background:var(--text);color:var(--bg);text-decoration:none;font-size:.84rem;font-weight:600; }
 </style>
 
 <script>
@@ -26,11 +28,27 @@ import Layout from '../../layouts/Layout.astro';
   let handled = false;
 
   async function postLoginPath(user: { id: string }) {
-    if (sessionStorage.getItem('pendingProfile') || sessionStorage.getItem('pendingSelection')) {
-      return '/account';
-    }
     const { data } = await supabase.from('taste_profiles').select('id').eq('user_id', user.id).limit(1);
-    return data?.length ? '/account' : '/quiz';
+    if (data?.length) return '/account';
+    const { count } = await supabase.from('coffee_selections').select('id', { count: 'exact', head: true }).eq('user_id', user.id);
+    return count ? '/account' : '/quiz';
+  }
+
+  function showSaveError() {
+    document.getElementById('spinner')!.style.display = 'none';
+    document.getElementById('statusMsg')!.textContent = 'Вошли, но не удалось сохранить профиль или подборку.';
+    document.getElementById('statusActions')!.innerHTML =
+      '<a class="cb-retry" href="/quiz">Вернуться к тесту →</a> <a class="cb-retry" href="/account" style="margin-left:8px;background:var(--surface-2);color:var(--text);border:1px solid var(--border)">В кабинет</a>';
+  }
+
+  async function finishLogin(user: { id: string }, accessToken?: string) {
+    const hadPending = !!(sessionStorage.getItem('pendingProfile') || sessionStorage.getItem('pendingSelection'));
+    const saved = await savePendingData(accessToken);
+    if (hadPending && !saved) {
+      showSaveError();
+      return;
+    }
+    window.location.href = await postLoginPath(user);
   }
 
   supabase.auth.onAuthStateChange(async (event, session) => {
@@ -38,19 +56,21 @@ import Layout from '../../layouts/Layout.astro';
     if (event === 'SIGNED_IN' && session?.user) {
       handled = true;
       document.getElementById('statusMsg')!.textContent = 'Добро пожаловать!';
-      await savePendingData(session.user, session.access_token);
-      window.location.href = await postLoginPath(session.user);
+      await finishLogin(session.user, session.access_token);
     }
   });
 
-  async function savePendingData(user: any, accessToken?: string) {
+  async function savePendingData(accessToken?: string): Promise<boolean> {
     const token = accessToken || (await supabase.auth.getSession()).data.session?.access_token;
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-    if (token) headers.Authorization = 'Bearer ' + token;
+    if (!token) return false;
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer ' + token,
+    };
 
     const pendingProfile = sessionStorage.getItem('pendingProfile');
     if (pendingProfile) {
-      sessionStorage.removeItem('pendingProfile');
       const pp = JSON.parse(pendingProfile);
       try {
         const res = await fetch('/api/save-profile', {
@@ -64,14 +84,17 @@ import Layout from '../../layouts/Layout.astro';
             notes: [],
           }),
         });
-        if (!res.ok) console.error('Pending profile save failed:', await res.text());
-      } catch (e) { console.error('Pending profile save error:', e); }
-      return;
+        if (!res.ok) return false;
+        sessionStorage.removeItem('pendingProfile');
+        return true;
+      } catch {
+        return false;
+      }
     }
 
     const pending = sessionStorage.getItem('pendingSelection');
-    if (!pending) return;
-    sessionStorage.removeItem('pendingSelection');
+    if (!pending) return true;
+
     const sel = JSON.parse(pending);
     try {
       const profRes = await fetch('/api/save-profile', {
@@ -85,8 +108,9 @@ import Layout from '../../layouts/Layout.astro';
           notes: [],
         }),
       });
-      if (!profRes.ok) { console.error('Pending profile save failed:', await profRes.text()); return; }
+      if (!profRes.ok) return false;
       const profile = await profRes.json();
+
       const selRes = await fetch('/api/save-selection', {
         method: 'POST',
         headers,
@@ -96,8 +120,13 @@ import Layout from '../../layouts/Layout.astro';
           format: sel.format || 'mixed',
         }),
       });
-      if (!selRes.ok) console.error('Pending selection save failed:', await selRes.text());
-    } catch (e) { console.error('Pending save error:', e); }
+      if (!selRes.ok) return false;
+
+      sessionStorage.removeItem('pendingSelection');
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   setTimeout(async () => {
@@ -111,7 +140,12 @@ import Layout from '../../layouts/Layout.astro';
         const { error } = await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
         if (!error) {
           const { data: { user } } = await supabase.auth.getUser();
-          if (user) { handled = true; const { data: { session } } = await supabase.auth.getSession(); await savePendingData(user, session?.access_token); window.location.href = await postLoginPath(user); return; }
+          if (user) {
+            handled = true;
+            const { data: { session } } = await supabase.auth.getSession();
+            await finishLogin(user, session?.access_token);
+            return;
+          }
         }
       }
     }
@@ -120,7 +154,12 @@ import Layout from '../../layouts/Layout.astro';
       const { error } = await supabase.auth.exchangeCodeForSession(code);
       if (!error) {
         const { data: { user } } = await supabase.auth.getUser();
-        if (user) { handled = true; const { data: { session } } = await supabase.auth.getSession(); await savePendingData(user, session?.access_token); window.location.href = await postLoginPath(user); return; }
+        if (user) {
+          handled = true;
+          const { data: { session } } = await supabase.auth.getSession();
+          await finishLogin(user, session?.access_token);
+          return;
+        }
       }
     }
     if (!handled) {

@@ -146,7 +146,7 @@ import Nav from '../components/Nav.astro';
       fetchCredits(accessToken),
     ]);
     const beans: any[] = shelfRes.data || [];
-    const buyUrl = buildProdamusBuyUrl(PRODAMUS_URL, user);
+    const buyUrl = buildProdamusBuyUrl(PRODAMUS_URL, user, window.location.origin);
     const preShelf = getParam('shelf');
 
     const beanCards = beans.map(b => `<button class="gen-card bean-card" data-bean="${b.id}"><div class="t">${b.name}</div><div class="m">${[b.roaster, b.country, b.process].filter(Boolean).join(' · ') || 'зерно'}</div></button>`).join('');

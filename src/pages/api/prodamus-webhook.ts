@@ -94,12 +94,16 @@ export const POST: APIRoute = async ({ request, url }) => {
   }
 
   if (prodamusOrderId) {
-    const { data: existing } = await supabase
+    const { data: existing, error: existErr } = await supabase
       .from('prodamus_orders')
       .select('order_id')
       .eq('order_id', prodamusOrderId)
       .maybeSingle();
-    if (existing) return new Response('already_processed', { status: 200 });
+    if (existErr?.code === 'PGRST205') {
+      console.warn('[prodamus-webhook] prodamus_orders table missing — run supabase/RUN-IN-SQL-EDITOR.sql');
+    } else if (existing) {
+      return new Response('already_processed', { status: 200 });
+    }
   }
 
   const { error } = await supabase.rpc('add_guide_credits', { p_user: uid, p_amount: credits });
@@ -112,10 +116,18 @@ export const POST: APIRoute = async ({ request, url }) => {
   }
 
   if (prodamusOrderId) {
-    await supabase
+    const { error: orderErr } = await supabase
       .from('prodamus_orders')
-      .insert({ order_id: prodamusOrderId, user_id: uid, credits })
-      .then(() => undefined, () => undefined);
+      .insert({ order_id: prodamusOrderId, user_id: uid, credits });
+    if (orderErr) {
+      if (orderErr.code === 'PGRST205') {
+        console.warn('[prodamus-webhook] credits granted but order not logged (no table)');
+      } else {
+        console.error('[prodamus-webhook] prodamus_orders insert failed', orderErr.message);
+        await supabase.rpc('add_guide_credits', { p_user: uid, p_amount: -credits });
+        return new Response('order_log_failed', { status: 500 });
+      }
+    }
   }
 
   try {

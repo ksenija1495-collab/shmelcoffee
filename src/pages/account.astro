@@ -230,7 +230,7 @@ import Nav from '../components/Nav.astro';
   (BREW_METHODS as any[]).forEach((m) => { METHOD_BY_LABEL[m.label] = m; });
   const FLAG_BY_NAME: Record<string, string> = {};
   for (const [, c] of Object.entries(DB) as [string, any][]) FLAG_BY_NAME[c.name] = c.flag;
-  const esc = (s: any) => String(s == null ? '' : s);
+  const esc = (s: any) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
 
   function renderGuide(content: string, gid: string, dateStr: string): string {
     const actions = `<div class="gr-actions"><button class="gr-icon-btn" data-guide-toggle="${gid}" title="Свернуть">▾</button><button class="gr-icon-btn gr-del" data-guide-del="${gid}" title="Удалить">✕</button></div>`;
@@ -357,15 +357,26 @@ import Nav from '../components/Nav.astro';
 
   function guideWord(n: number): string { const a = Math.abs(n) % 100, b = a % 10; if (a > 10 && a < 20) return 'гидов'; if (b > 1 && b < 5) return 'гида'; if (b === 1) return 'гид'; return 'гидов'; }
 
-  async function fetchCredits(token: string): Promise<number> {
+  async function fetchCredits(token: string): Promise<{ balance: number; ok: boolean }> {
+    if (!token) return { balance: 0, ok: false };
     try {
       const res = await fetch('/api/guide-credits', { headers: { Authorization: 'Bearer ' + token } });
-      if (!res.ok) return 0;
+      if (!res.ok) return { balance: 0, ok: false };
       const data = await res.json();
-      return data.balance || 0;
+      return { balance: data.balance ?? 0, ok: true };
     } catch {
-      return 0;
+      return { balance: 0, ok: false };
     }
+  }
+
+  async function pollCredits(token: string, attempts = 8): Promise<number> {
+    for (let i = 0; i < attempts; i++) {
+      const { balance, ok } = await fetchCredits(token);
+      if (ok && balance > 0) return balance;
+      await new Promise((r) => setTimeout(r, 1500));
+    }
+    const last = await fetchCredits(token);
+    return last.ok ? last.balance : 0;
   }
 
   async function init() {
@@ -373,18 +384,28 @@ import Nav from '../components/Nav.astro';
     if (!user) { window.location.href = '/login'; return; }
 
     const { data: profileCheck } = await supabase.from('taste_profiles').select('id').eq('user_id', user.id).limit(1);
-    if (!profileCheck?.length) { window.location.href = '/quiz'; return; }
+    if (!profileCheck?.length) {
+      const { count } = await supabase.from('coffee_selections').select('id', { count: 'exact', head: true }).eq('user_id', user.id);
+      if (!count) { window.location.href = '/quiz'; return; }
+    }
 
     const { data: { session } } = await supabase.auth.getSession();
     const accessToken = session?.access_token || '';
 
-    const [profilesRes, selectionsRes, guidesRes, cupsRes, shelfRes, credits] = await Promise.all([
+    const isPaidReturn = new URLSearchParams(window.location.search).get('paid') === '1';
+    let creditsResult = await fetchCredits(accessToken);
+    if (isPaidReturn && creditsResult.ok && creditsResult.balance === 0) {
+      creditsResult = { balance: await pollCredits(accessToken), ok: true };
+    }
+    const credits = creditsResult.balance;
+    const creditsKnown = creditsResult.ok;
+
+    const [profilesRes, selectionsRes, guidesRes, cupsRes, shelfRes] = await Promise.all([
       supabase.from('taste_profiles').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
       supabase.from('coffee_selections').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
       supabase.from('guides').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
       supabase.from('cups').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
       supabase.from('shelf_items').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
-      fetchCredits(accessToken),
     ]);
 
     const profiles = profilesRes.data || [];
@@ -392,10 +413,14 @@ import Nav from '../components/Nav.astro';
     const guides = guidesRes.data || [];
     const cups = cupsRes.data || [];
     const shelf = shelfRes.data || [];
-    const buyUrl = buildProdamusBuyUrl(PRODAMUS_URL, user);
-    const paidBanner = new URLSearchParams(window.location.search).get('paid') === '1' && credits > 0
-      ? `<div class="paid-banner">✅ Оплата прошла. У тебя <b>${credits}</b> ${guideWord(credits)} — нажми «Создать гид», чтобы получить персональный рецепт.</div>`
-      : '';
+    const buyUrl = buildProdamusBuyUrl(PRODAMUS_URL, user, window.location.origin);
+    const paidBanner = isPaidReturn
+      ? credits > 0
+        ? `<div class="paid-banner">✅ Оплата прошла. У тебя <b>${credits}</b> ${guideWord(credits)} — нажми «Создать гид», чтобы получить персональный рецепт.</div>`
+        : `<div class="paid-banner" style="background:rgba(168,124,79,.1);border-color:rgba(168,124,79,.25)">⏳ Оплата обрабатывается… Обнови страницу через минуту или напиши @ksenijashmel, если кредит не появился.</div>`
+      : !creditsKnown
+        ? `<div class="paid-banner" style="background:rgba(168,124,79,.1);border-color:rgba(168,124,79,.25)">⚠️ Не удалось проверить баланс гидов. <button type="button" id="reloadCredits" style="background:none;border:0;color:var(--accent);font-weight:600;cursor:pointer;text-decoration:underline">Обновить</button></div>`
+        : '';
 
     const latestProfile = profiles[0];
     const topNamesSet = new Set((latestProfile?.profile_type || '').split(',').map((s: string) => s.trim()).filter(Boolean));
@@ -437,15 +462,15 @@ import Nav from '../components/Nav.astro';
       : `<div class="empty-state">Карта открытий появится после диагностики. <a href="/quiz">Пройти тест →</a></div>`;
 
     const diaryPanel = cups.length
-      ? `<div class="profile-card">${cups.map((c: any) => `<div class="cup-item"><div class="cup-head">${c.name}${c.rating ? ` <span class="cup-star">${'★'.repeat(c.rating)}</span>` : ''}</div><div class="coffee-detail">${[c.roaster, c.country, c.process, c.brew_method].filter(Boolean).join(' · ') || '—'}</div><div class="coffee-detail">кислотность ${c.acidity ?? '–'} · сладость ${c.sweetness ?? '–'} · горечь ${c.bitterness ?? '–'} · тело ${c.body ?? '–'}</div>${c.notes && c.notes.length ? `<div class="profile-tags" style="margin-top:6px">${c.notes.map((n: string) => `<span class="profile-tag">${n}</span>`).join('')}</div>` : ''}${c.comment ? `<div class="coffee-detail" style="margin-top:4px;font-style:italic">${c.comment}</div>` : ''}</div>`).join('')}</div>`
+      ? `<div class="profile-card">${cups.map((c: any) => `<div class="cup-item"><div class="cup-head">${esc(c.name)}${c.rating ? ` <span class="cup-star">${'★'.repeat(c.rating)}</span>` : ''}</div><div class="coffee-detail">${[c.roaster, c.country, c.process, c.brew_method].filter(Boolean).map(esc).join(' · ') || '—'}</div><div class="coffee-detail">кислотность ${c.acidity ?? '–'} · сладость ${c.sweetness ?? '–'} · горечь ${c.bitterness ?? '–'} · тело ${c.body ?? '–'}</div>${c.notes && c.notes.length ? `<div class="profile-tags" style="margin-top:6px">${c.notes.map((n: string) => `<span class="profile-tag">${esc(n)}</span>`).join('')}</div>` : ''}${c.comment ? `<div class="coffee-detail" style="margin-top:4px;font-style:italic">${esc(c.comment)}</div>` : ''}</div>`).join('')}</div>`
       : `<div class="empty-state">Записывайте кофе, который пьёте дома или заказали сами — он наполнит вашу Карту вкуса.<br><a href="/add-cup">Добавить первую чашку →</a></div>`;
 
     const shelfPanel = shelf.length
-      ? `<div class="shelf-grid">${shelf.map((s: any) => `<div class="shelf-card">${s.photo_url ? `<img src="${s.photo_url}" class="shelf-photo" alt=""/>` : `<div class="shelf-noimg">${s.kind === 'bean' ? '🫘' : '⚙️'}</div>`}<div class="shelf-body"><div class="shelf-name">${s.name}</div><div class="shelf-meta">${s.kind === 'bean' ? ([s.roaster, s.country, s.process].filter(Boolean).join(' · ') || 'зерно') : (s.category || 'оборудование')}</div>${s.kind === 'bean' ? `<a class="shelf-guide-btn" href="/generate?shelf=${s.id}" style="display:block;text-align:center;text-decoration:none">🤖 Сгенерировать гид</a>` : ''}</div><button class="shelf-del" data-shelf-del="${s.id}" title="удалить">×</button></div>`).join('')}</div>`
-      : `<div class="empty-state">Полка пуста. Добавьте зерно или оборудование, что у вас есть — можно с фото.</div>`;
+      ? `<div class="shelf-grid">${shelf.map((s: any) => `<div class="shelf-card">${s.photo_url ? `<img src="${esc(s.photo_url)}" class="shelf-photo" alt=""/>` : `<div class="shelf-noimg">${s.kind === 'bean' ? '🫘' : '⚙️'}</div>`}<div class="shelf-body"><div class="shelf-name">${esc(s.name)}</div><div class="shelf-meta">${s.kind === 'bean' ? ([s.roaster, s.country, s.process].filter(Boolean).map(esc).join(' · ') || 'зерно') : esc(s.category || 'оборудование')}</div>${s.kind === 'bean' ? `<a class="shelf-guide-btn" href="/generate?shelf=${s.id}" style="display:block;text-align:center;text-decoration:none">🤖 Сгенерировать гид</a>` : ''}</div><button class="shelf-del" data-shelf-del="${s.id}" title="удалить">×</button></div>`).join('')}</div>`
+      : `<div class="empty-state">Полка пуста. <a href="/add-shelf?kind=bean">+ Зерно</a> · <a href="/add-shelf?kind=equipment">+ Оборудование</a></div>`;
 
     const selectionsPanel = selections.length
-      ? selections.map((sel: any) => { const coffees = sel.coffees || []; const total = coffees.reduce((s: number, c: any) => s + (c.price || 0), 0); return `<div class="selection-card" data-sel-id="${sel.id}"><div class="selection-header"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="selection-date">${new Date(sel.created_at).toLocaleDateString('ru-RU')}</span><span class="selection-format">${formatLabels[sel.format] || sel.format || 'Микс'}</span><span class="status-badge status-${sel.status}">${statusIcons[sel.status] || ''} ${statusLabels[sel.status] || sel.status}</span></div></div><div class="coffee-list">${coffees.map((c: any, ci: number) => { const why = c.why || (c.origin && topNamesSet.has(c.origin) ? ('Под ваш профиль — ' + c.origin) : 'Для сравнения и расширения вкуса'); return `<div class="coffee-item"><div><div class="coffee-name">${c.name || 'Кофе'}</div><div class="coffee-detail">${[c.roaster, c.origin, c.process, c.notes].filter(Boolean).join(' · ')}</div><div class="coffee-why">${why}</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">${c.price ? `<span class="coffee-price">${c.price} ₽</span>` : ''}<div style="display:flex;gap:6px">${c.url ? `<a href="${beanOutUrl({ url: c.url, name: c.name || 'Кофе', roaster: c.roaster || '', source: 'account-selection' })}" target="_blank" rel="noopener" class="coffee-buy">Купить →</a>` : ''}<button class="coffee-shelf-one" data-sid="${sel.id}" data-ci="${ci}">+ Полка</button></div></div></div>`; }).join('')}</div>${total > 0 ? `<div class="selection-total">Итого: <strong>${total.toLocaleString('ru-RU')} ₽</strong></div>` : ''}<div class="selection-actions">${sel.status === 'selected' ? `<button class="sel-action-btn primary" data-action="ordered" data-id="${sel.id}">📦 Отметить «Заказано»</button>` : ''}${sel.status === 'ordered' ? `<button class="sel-action-btn primary" data-action="received" data-id="${sel.id}">✅ Получил!</button>` : ''}${sel.status === 'received' ? `${credits > 0 ? `<button class="sel-action-btn primary" data-action="generate" data-id="${sel.id}">🤖 Сгенерировать гид</button>` : `<button class="sel-action-btn" data-buy="1">🔒 Купить гид · 99 ₽</button>`}<button class="sel-action-btn" data-action="tasted" data-id="${sel.id}">Продегустировал</button>` : ''}<button class="sel-action-btn" data-shelf-all="${sel.id}">📥 Всё на полку</button><button class="sel-action-btn sel-del" data-sel-del="${sel.id}">🗑 Удалить</button></div></div>`; }).join('')
+      ? selections.map((sel: any) => { const coffees = sel.coffees || []; const total = coffees.reduce((s: number, c: any) => s + (c.price || 0), 0); return `<div class="selection-card" data-sel-id="${sel.id}"><div class="selection-header"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="selection-date">${new Date(sel.created_at).toLocaleDateString('ru-RU')}</span><span class="selection-format">${formatLabels[sel.format] || sel.format || 'Микс'}</span><span class="status-badge status-${sel.status}">${statusIcons[sel.status] || ''} ${statusLabels[sel.status] || sel.status}</span></div></div><div class="coffee-list">${coffees.map((c: any, ci: number) => { const why = c.why || (c.origin && topNamesSet.has(c.origin) ? ('Под ваш профиль — ' + c.origin) : 'Для сравнения и расширения вкуса'); return `<div class="coffee-item"><div><div class="coffee-name">${esc(c.name || 'Кофе')}</div><div class="coffee-detail">${[c.roaster, c.origin, c.process, c.notes].filter(Boolean).map(esc).join(' · ')}</div><div class="coffee-why">${esc(why)}</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">${c.price ? `<span class="coffee-price">${c.price} ₽</span>` : ''}<div style="display:flex;gap:6px">${c.url ? `<a href="${beanOutUrl({ url: c.url, name: c.name || 'Кофе', roaster: c.roaster || '', source: 'account-selection' })}" target="_blank" rel="noopener" class="coffee-buy">Купить →</a>` : ''}<button class="coffee-shelf-one" data-sid="${sel.id}" data-ci="${ci}">+ Полка</button></div></div></div>`; }).join('')}</div>${total > 0 ? `<div class="selection-total">Итого: <strong>${total.toLocaleString('ru-RU')} ₽</strong></div>` : ''}<div class="selection-actions">${sel.status === 'selected' ? `<button class="sel-action-btn primary" data-action="ordered" data-id="${sel.id}">📦 Отметить «Заказано»</button>` : ''}${sel.status === 'ordered' ? `<button class="sel-action-btn primary" data-action="received" data-id="${sel.id}">✅ Получил!</button>` : ''}${sel.status === 'received' ? `${credits > 0 ? `<button class="sel-action-btn primary" data-action="generate" data-id="${sel.id}">🤖 Сгенерировать гид</button>` : `<button class="sel-action-btn" data-buy="1">🔒 Купить гид · 99 ₽</button>`}<button class="sel-action-btn" data-action="tasted" data-id="${sel.id}">Продегустировал</button>` : ''}<button class="sel-action-btn" data-shelf-all="${sel.id}">📥 Всё на полку</button><button class="sel-action-btn sel-del" data-sel-del="${sel.id}">🗑 Удалить</button></div></div>`; }).join('')
       : `<div class="empty-state">Пока нет подборок. <a href="/quiz">Пройдите тест</a> — мы подберём кофе под ваш вкус.</div>`;
 
     const createCardHtml = `<div class="pro-card"><div class="pro-title">Персональный гид по зерну</div><div class="pro-desc">99&nbsp;₽ = 1 генерация. Оплата не создаёт гид автоматически — после оплаты нажми «Создать гид», выбери зерно и способ заваривания.${credits > 0 ? ` Сейчас доступно: <b>${credits}</b> ${guideWord(credits)}.` : ''}</div>${credits > 0 ? `<a class="btn btn-primary" href="/generate" style="text-decoration:none">✨ Создать гид →</a>` : `<button class="btn btn-primary" data-buy="1">Купить гид · 99 ₽</button>`}</div>`;
@@ -503,17 +528,20 @@ import Nav from '../components/Nav.astro';
     page.querySelectorAll('[data-shelf-all]').forEach(b => b.addEventListener('click', async () => { const sel = selections.find((s: any) => s.id === (b as HTMLElement).dataset.shelfAll); if (!sel) return; const rows = (sel.coffees || []).map((c: any) => ({ user_id: user.id, kind: 'bean', name: c.name || 'Кофе', roaster: c.roaster || null, country: c.origin || null, process: c.process || null, source: 'selection' })); if (rows.length) await supabase.from('shelf_items').insert(rows); init(); }));
     page.querySelectorAll('.coffee-shelf-one').forEach(b => b.addEventListener('click', async () => { const el = b as HTMLElement; const sel = selections.find((s: any) => s.id === el.dataset.sid); if (!sel) return; const c = (sel.coffees || [])[parseInt(el.dataset.ci!)]; if (!c) return; await addCoffeeToShelf(user, c); el.textContent = '✓ на полке'; (el as HTMLButtonElement).disabled = true; }));
 
+    document.getElementById('reloadCredits')?.addEventListener('click', () => init());
+
     page.querySelectorAll('[data-action]').forEach(btn => {
       btn.addEventListener('click', async () => {
         const action = (btn as HTMLElement).dataset.action!;
         const id = (btn as HTMLElement).dataset.id!;
         if (action === 'generate') {
           (btn as HTMLButtonElement).disabled = true; (btn as HTMLButtonElement).textContent = 'Генерация...';
-          try { const res = await fetch('/api/generate-guide', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + accessToken }, body: JSON.stringify({ selectionId: id }) }); if (res.status === 402) { alert('Нужен оплаченный гид. Нажми «Купить гид · 99 ₽».'); init(); return; } if (!res.ok) throw new Error(await res.text()); init(); }
+          try { const res = await fetch('/api/generate-guide', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + accessToken }, body: JSON.stringify({ selectionId: id }) }); if (res.status === 402) { alert('Нужен оплаченный гид. Нажми «Купить гид · 99 ₽».'); init(); return; } if (res.status === 403) { alert('Нет доступа к этой подборке.'); init(); return; } if (!res.ok) throw new Error(await res.text()); init(); }
           catch (e: any) { alert('Ошибка генерации: ' + e.message); (btn as HTMLButtonElement).disabled = false; (btn as HTMLButtonElement).textContent = '🤖 Сгенерировать гид'; }
         } else {
           (btn as HTMLButtonElement).disabled = true;
-          await supabase.from('coffee_selections').update({ status: action, updated_at: new Date().toISOString() }).eq('id', id);
+          const { error } = await supabase.from('coffee_selections').update({ status: action, updated_at: new Date().toISOString() }).eq('id', id);
+          if (error) { alert('Ошибка: ' + error.message); (btn as HTMLButtonElement).disabled = false; return; }
           if (action === 'ordered') { const s = selections.find((x: any) => x.id === id); if (s) { const rows = (s.coffees || []).map((c: any) => ({ user_id: user.id, kind: 'bean', name: c.name || 'Кофе', roaster: c.roaster || null, country: c.origin || null, process: c.process || null, source: 'selection' })); if (rows.length) await supabase.from('shelf_items').insert(rows); } }
           init();
         }
