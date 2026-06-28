@@ -58,6 +58,8 @@ import Nav from '../components/Nav.astro';
     import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
     { auth: { flowType: 'implicit' } }
   );
+  import { buildProdamusBuyUrl } from '../lib/prodamusBuyUrl';
+
   const PRODAMUS_URL = (import.meta.env.PUBLIC_PRODAMUS_URL as string) || '';
   const countries = countryOrder.map((k: string) => (DB as any)[k].name);
   const page = document.getElementById('genPage')!;
@@ -94,7 +96,7 @@ import Nav from '../components/Nav.astro';
     ]);
     const beans: any[] = shelfRes.data || [];
     const credits = (creditsRes.data && (creditsRes.data as any).balance) || 0;
-    const buyUrl = PRODAMUS_URL ? PRODAMUS_URL + (PRODAMUS_URL.includes('?') ? '&' : '?') + 'order_id=' + encodeURIComponent(user.id) + '&customer_email=' + encodeURIComponent(user.email || '') : '';
+    const buyUrl = buildProdamusBuyUrl(PRODAMUS_URL, user);
     const preShelf = getParam('shelf');
 
     const beanCards = beans.map(b => `<button class="gen-card bean-card" data-bean="${b.id}"><div class="t">${b.name}</div><div class="m">${[b.roaster, b.country, b.process].filter(Boolean).join(' · ') || 'зерно'}</div></button>`).join('');

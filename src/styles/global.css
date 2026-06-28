@@ -297,7 +297,7 @@ nav {
 
 /* Wheel */
 .wheel-wrap { text-align: center; }
-.wheel-svg { max-width: 580px; width: 100%; height: auto; margin: 0 auto; display: block; }
+.wheel-svg { max-width: min(680px, 96vw); width: 100%; height: auto; margin: 0 auto; display: block; }
 .wheel-tooltip {
   position: fixed; z-index: 200; padding: 10px 14px;
   background: var(--surface); border: 1px solid var(--border);

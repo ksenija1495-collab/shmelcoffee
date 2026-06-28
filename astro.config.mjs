@@ -8,4 +8,8 @@ export default defineConfig({
   adapter: vercel(),
   site: 'https://shmelcoffee.com',
   integrations: [sitemap()],
+  // Prodamus шлёт POST без Origin — иначе Astro отвечает 403 CSRF
+  security: {
+    checkOrigin: false,
+  },
 });

@@ -207,6 +207,7 @@ import Nav from '../components/Nav.astro';
   import { DB, countryOrder } from '../data/countries';
   import { generalGuide } from '../data/generalGuide';
   import { BREW_METHODS, FAMILY_ICON } from '../data/methods';
+  import { buildProdamusBuyUrl } from '../lib/prodamusBuyUrl';
 
   const supabase = createClient(
     import.meta.env.PUBLIC_SUPABASE_URL,
@@ -369,7 +370,7 @@ import Nav from '../components/Nav.astro';
     const shelf = shelfRes.data || [];
     const creditsRow: any = creditsRes.data;
     const credits = creditsRow?.balance || 0;
-    const buyUrl = PRODAMUS_URL ? PRODAMUS_URL + (PRODAMUS_URL.includes('?') ? '&' : '?') + 'order_id=' + encodeURIComponent(user.id) + '&customer_email=' + encodeURIComponent(user.email || '') : '';
+    const buyUrl = buildProdamusBuyUrl(PRODAMUS_URL, user);
 
     const latestProfile = profiles[0];
     const topNamesSet = new Set((latestProfile?.profile_type || '').split(',').map((s: string) => s.trim()).filter(Boolean));
