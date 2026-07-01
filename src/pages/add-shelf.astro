@@ -20,6 +20,8 @@ import { DB, countryOrder } from '../data/countries';
         <label class="fl">Название *</label>
         <input type="text" id="f_name" placeholder="напр. Эфиопия Гедео / Воронка V60"/>
         <div id="beanFields">
+          <label class="fl">Сорт</label>
+          <select id="f_variety"></select>
           <label class="fl">Обжарщик</label>
           <input type="text" id="f_roaster" placeholder="напр. Tasty Coffee"/>
           <div class="row2">
@@ -66,6 +68,7 @@ import { DB, countryOrder } from '../data/countries';
 <script>
   import { createClient } from '@supabase/supabase-js';
   import { DB, countryOrder } from '../data/countries';
+  import { BEAN_VARIETIES } from '../data/varieties';
 
   const supabase = createClient(
     import.meta.env.PUBLIC_SUPABASE_URL,
@@ -78,7 +81,7 @@ import { DB, countryOrder } from '../data/countries';
   let kind = 'bean';
   let photoFile: File | null = null;
 
-  function fill(id: string, arr: string[], ph: string) {
+  function fill(id: string, arr: readonly string[], ph: string) {
     const s = document.getElementById(id) as HTMLSelectElement;
     s.innerHTML = `<option value="">${ph}</option>` + arr.map(x => `<option>${x}</option>`).join('');
   }
@@ -98,6 +101,7 @@ import { DB, countryOrder } from '../data/countries';
   }
 
   function build() {
+    fill('f_variety', BEAN_VARIETIES, '— не знаю / смесь');
     fill('f_country', countryOrder.map((k: string) => (DB as any)[k].name), 'выберите страну');
     fill('f_process', PROCESSES, 'выберите обработку');
     fill('f_category', CATEGORIES, 'выберите категорию');
@@ -133,6 +137,7 @@ import { DB, countryOrder } from '../data/countries';
       }
       const payload: any = {
         user_id: user.id, kind, name,
+        variety: kind === 'bean' ? ((document.getElementById('f_variety') as HTMLSelectElement).value || null) : null,
         roaster: kind === 'bean' ? ((document.getElementById('f_roaster') as HTMLInputElement).value.trim() || null) : null,
         country: kind === 'bean' ? ((document.getElementById('f_country') as HTMLSelectElement).value || null) : null,
         process: kind === 'bean' ? ((document.getElementById('f_process') as HTMLSelectElement).value || null) : null,
