@@ -4,8 +4,6 @@ import Nav from '../components/Nav.astro';
 import { wheelData } from '../data/wheel';
 import { DB, countryOrder } from '../data/countries';
 import { heroImg } from '../data/heroImg';
-const SUPA_URL = import.meta.env.PUBLIC_SUPABASE_URL || '';
-const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '';
 ---
 
 <Layout title="А ты знаешь свой вкус кофе? — Shmelco" description="Путешествие в мир кофе: узнай свой вкус, колесо вкусов и география вкусов.">
@@ -249,39 +247,47 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '';
 <script is:inline src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
 <script is:inline src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
 
-<script define:vars={{ wheelData, DB, countryOrder, SUPA_URL, SUPA_KEY }}>
+<script>
 import { initFlavorWheel } from '../lib/flavorWheel';
-const countryMap={ 'Эфиопия':'ethiopia','Кения':'kenya','Колумбия':'colombia','Бразилия':'brazil','Гватемала':'guatemala','Коста-Рика':'costarica','Панама':'panama','Руанда':'rwanda','Индонезия':'indonesia','Йемен':'yemen','Гондурас':'honduras','Перу':'peru' };
-function linkOrigins(text){ let out=text; for(const [name,key] of Object.entries(countryMap)){ out=out.replace(new RegExp(name,'g'),`<a href="/countries?c=${key}">${name}</a>`); } return out; }
-function buildWheel(){ initFlavorWheel(wheelData, { centerLabel: 'single', linkOrigins }); }
+import { wheelData } from '../data/wheel';
+import { DB } from '../data/countries';
 
-function showGeo(k){ const c=DB[k]; const el=document.getElementById('geoInfo'); if(!c||!el) return; el.innerHTML=`<h3>${c.flag} ${c.name}</h3><div class="geo-region">${c.region||''}</div><div class="geo-tags">${(c.flavors||[]).map(f=>`<span class="geo-tag">${f}</span>`).join('')}</div><a href="/countries?c=${k}" class="geo-link" style="color:var(--accent)">Подробнее о&nbsp;стране →</a>`; el.classList.add('active'); }
-const ENG={ ethiopia:'Ethiopia',kenya:'Kenya',rwanda:'Rwanda',yemen:'Yemen',colombia:'Colombia',brazil:'Brazil',guatemala:'Guatemala',honduras:'Honduras',costarica:'Costa Rica',panama:'Panama',peru:'Peru',indonesia:'Indonesia' };
+const SUPA_URL = import.meta.env.PUBLIC_SUPABASE_URL || '';
+const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '';
+
+const countryMap: Record<string, string> = { 'Эфиопия':'ethiopia','Кения':'kenya','Колумбия':'colombia','Бразилия':'brazil','Гватемала':'guatemala','Коста-Рика':'costarica','Панама':'panama','Руанда':'rwanda','Индонезия':'indonesia','Йемен':'yemen','Гондурас':'honduras','Перу':'peru' };
+function linkOrigins(text: string){ let out=text; for(const [name,key] of Object.entries(countryMap)){ out=out.replace(new RegExp(name,'g'),`<a href="/countries?c=${key}">${name}</a>`); } return out; }
+function buildWheel(){ initFlavorWheel(wheelData as any, { centerLabel: 'single', linkOrigins }); }
+
+function showGeo(k: string){ const c=(DB as any)[k]; const el=document.getElementById('geoInfo'); if(!c||!el) return; el.innerHTML=`<h3>${c.flag} ${c.name}</h3><div class="geo-region">${c.region||''}</div><div class="geo-tags">${(c.flavors||[]).map((f: string)=>`<span class="geo-tag">${f}</span>`).join('')}</div><a href="/countries?c=${k}" class="geo-link" style="color:var(--accent)">Подробнее о&nbsp;стране →</a>`; el.classList.add('active'); }
+const ENG: Record<string, string> = { ethiopia:'Ethiopia',kenya:'Kenya',rwanda:'Rwanda',yemen:'Yemen',colombia:'Colombia',brazil:'Brazil',guatemala:'Guatemala',honduras:'Honduras',costarica:'Costa Rica',panama:'Panama',peru:'Peru',indonesia:'Indonesia' };
 async function drawMap(){
   const svg=document.getElementById('geoMap'); if(!svg) return;
-  if(!window.d3||!window.topojson){ svg.innerHTML='<text x="320" y="155" text-anchor="middle" font-family="Inter,sans-serif" font-size="13" fill="var(--text-muted)">Карта недоступна</text>'; return; }
+  const d3=(window as any).d3, topojson=(window as any).topojson;
+  if(!d3||!topojson){ svg.innerHTML='<text x="320" y="155" text-anchor="middle" font-family="Inter,sans-serif" font-size="13" fill="var(--text-muted)">Карта недоступна</text>'; return; }
   try{
     const W=640,H=300;
     const world=await fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json').then(r=>r.json());
-    const feats=window.topojson.feature(world, world.objects.countries).features;
-    const proj=window.d3.geoNaturalEarth1().fitExtent([[8,8],[W-8,H-8]], {type:'Sphere'});
-    const path=window.d3.geoPath(proj);
-    const nameToKey={}; Object.entries(ENG).forEach(([k,v])=>nameToKey[v]=k);
+    const feats=topojson.feature(world, world.objects.countries).features;
+    const proj=d3.geoNaturalEarth1().fitExtent([[8,8],[W-8,H-8]], {type:'Sphere'});
+    const path=d3.geoPath(proj);
+    const nameToKey: Record<string,string>={}; Object.entries(ENG).forEach(([k,v])=>nameToKey[v]=k);
     let html='';
-    feats.forEach(f=>{ const d=path(f); if(!d) return; const k=nameToKey[f.properties.name]; if(k){ html+=`<path d="${d}" fill="#BA7517" stroke="var(--surface)" stroke-width="0.6" data-k="${k}"><title>${DB[k].flag} ${DB[k].name}</title></path>`; } else { html+=`<path d="${d}" fill="var(--surface-2)" stroke="var(--border)" stroke-width="0.4"></path>`; } });
+    feats.forEach((f: any)=>{ const d=path(f); if(!d) return; const k=nameToKey[f.properties.name]; if(k){ html+=`<path d="${d}" fill="#BA7517" stroke="var(--surface)" stroke-width="0.6" data-k="${k}"><title>${(DB as any)[k].flag} ${(DB as any)[k].name}</title></path>`; } else { html+=`<path d="${d}" fill="var(--surface-2)" stroke="var(--border)" stroke-width="0.4"></path>`; } });
     svg.innerHTML=html;
     const yTop=proj([0,32])[1], yBot=proj([0,-34])[1];
     svg.setAttribute('viewBox', `0 ${Math.round(yTop)} ${W} ${Math.round(yBot-yTop)}`);
     svg.querySelectorAll('path[data-k]').forEach(p=>{
-      p.addEventListener('mouseenter',()=>{ if(p.dataset.sel!=='1') p.setAttribute('fill','#9a6212'); });
-      p.addEventListener('mouseleave',()=>{ if(p.dataset.sel!=='1') p.setAttribute('fill','#BA7517'); });
-      p.addEventListener('click',()=>{ svg.querySelectorAll('path[data-k]').forEach(q=>{q.setAttribute('fill','#BA7517');q.dataset.sel='';}); p.setAttribute('fill','#854F0B'); p.dataset.sel='1'; showGeo(p.dataset.k); });
+      const el=p as SVGPathElement;
+      el.addEventListener('mouseenter',()=>{ if(el.dataset.sel!=='1') el.setAttribute('fill','#9a6212'); });
+      el.addEventListener('mouseleave',()=>{ if(el.dataset.sel!=='1') el.setAttribute('fill','#BA7517'); });
+      el.addEventListener('click',()=>{ svg.querySelectorAll('path[data-k]').forEach(q=>{(q as SVGPathElement).setAttribute('fill','#BA7517');(q as SVGPathElement).dataset.sel='';}); el.setAttribute('fill','#854F0B'); el.dataset.sel='1'; showGeo(el.dataset.k!); });
     });
   }catch(e){ svg.innerHTML='<text x="320" y="155" text-anchor="middle" font-family="Inter,sans-serif" font-size="13" fill="var(--text-muted)">Не удалось загрузить карту</text>'; }
 }
 
-const FLC={fruity:'#C47070',floral:'#D4A0B8',chocolate:'#8B6B4A',caramel:'#D4B870',spicy:'#C0A060',tropical:'#C49080'};
-const FL={fruity:'Фруктовые',floral:'Цветочные и чайные',chocolate:'Шоколад и орехи',caramel:'Карамель и мёд',spicy:'Пряные',tropical:'Тропические'};
+const FLC: Record<string,string>={fruity:'#C47070',floral:'#D4A0B8',chocolate:'#8B6B4A',caramel:'#D4B870',spicy:'#C0A060',tropical:'#C49080'};
+const FL: Record<string,string>={fruity:'Фруктовые',floral:'Цветочные и чайные',chocolate:'Шоколад и орехи',caramel:'Карамель и мёд',spicy:'Пряные',tropical:'Тропические'};
 async function loadCommunity(){
   const el=document.getElementById('commCard'); if(!el) return;
   if(!SUPA_URL||!SUPA_KEY){ el.innerHTML='<div class="comm-empty">Статистика появится позже.</div>'; return; }
@@ -289,16 +295,16 @@ async function loadCommunity(){
     const res=await fetch(`${SUPA_URL}/rest/v1/rpc/get_community_stats`,{ method:'POST', headers:{ 'Content-Type':'application/json','apikey':SUPA_KEY,'Authorization':`Bearer ${SUPA_KEY}` }, body:'{}' });
     if(!res.ok){ el.innerHTML='<div class="comm-empty">Пока нет данных.</div>'; return; }
     let data=await res.json(); if(Array.isArray(data)) data=data[0];
-    const flagByName={}; for(const k of Object.keys(DB)) flagByName[DB[k].name]=DB[k].flag;
+    const flagByName: Record<string,string>={}; for(const k of Object.keys(DB)) flagByName[(DB as any)[k].name]=(DB as any)[k].flag;
     const total=(data&&data.total_users)||0; const flavors=((data&&data.flavors)||[]).slice(0,6); const countries=((data&&data.countries)||[]).slice(0,6);
     if(!flavors.length&&!countries.length){ el.innerHTML='<div class="comm-empty">Станешь одним из первых. Пройди тест и появишься на карте.</div>'; return; }
-    const fsum=flavors.reduce((s,x)=>s+x.users,0)||1;
-    const stack=flavors.map(x=>`<span class="cs-seg" style="width:${(x.users/fsum*100).toFixed(1)}%;background:${FLC[x.flavor]||'#BA7517'}" title="${FL[x.flavor]||x.flavor}"></span>`).join('');
-    const leg=flavors.map(x=>`<span class="cs-leg"><i style="background:${FLC[x.flavor]||'#BA7517'}"></i>${FL[x.flavor]||x.flavor}</span>`).join('');
+    const fsum=flavors.reduce((s: number,x: any)=>s+x.users,0)||1;
+    const stack=flavors.map((x: any)=>`<span class="cs-seg" style="width:${(x.users/fsum*100).toFixed(1)}%;background:${FLC[x.flavor]||'#BA7517'}" title="${FL[x.flavor]||x.flavor}"></span>`).join('');
+    const leg=flavors.map((x: any)=>`<span class="cs-leg"><i style="background:${FLC[x.flavor]||'#BA7517'}"></i>${FL[x.flavor]||x.flavor}</span>`).join('');
     let html=`<div class="comm-compact"><div class="comm-num"><b>${total}</b><span>профилей сообщества</span></div><div class="comm-mid"><div class="cs-bar">${stack}</div><div class="cs-legwrap">${leg}</div></div></div>`;
-    if(countries.length){ html+='<div class="comm-cc"><span class="cc-h">Чаще открывают:</span>'+countries.map(x=>`<span class="cc-chip">${flagByName[x.origin]||''} ${x.origin}<span class="cc-n">${x.users}</span></span>`).join('')+'</div>'; }
+    if(countries.length){ html+='<div class="comm-cc"><span class="cc-h">Чаще открывают:</span>'+countries.map((x: any)=>`<span class="cc-chip">${flagByName[x.origin]||''} ${x.origin}<span class="cc-n">${x.users}</span></span>`).join('')+'</div>'; }
     const roasters=((data&&data.roasters)||[]).slice(0,4);
-    if(roasters.length){ html+='<div class="comm-cc"><span class="cc-h">Топ обжarщиков:</span>'+roasters.map(x=>`<span class="cc-chip">☕ ${x.roaster}<span class="cc-n">${x.clicks}</span></span>`).join('')+'</div>'; }
+    if(roasters.length){ html+='<div class="comm-cc"><span class="cc-h">Топ обжарщиков:</span>'+roasters.map((x: any)=>`<span class="cc-chip">☕ ${x.roaster}<span class="cc-n">${x.clicks}</span></span>`).join('')+'</div>'; }
     el.innerHTML=html;
   }catch(e){ el.innerHTML='<div class="comm-empty">Не удалось загрузить статистику.</div>'; }
 }
