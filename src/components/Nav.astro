@@ -18,11 +18,15 @@ const isActive = (path: string) => currentPath === path || currentPath.startsWit
 </nav>
 
 <script>
-  // Энхансер плана дегустации: на /account добавляет к каждому дню «Плана недели»
-  // ссылку «Записать чашку» с префиллом из данных гида. Живёт здесь, чтобы не трогать
-  // большой account.astro (который нельзя переписать целиком через API без риска).
+  // Энхансер плана дегустации на /account. Живёт здесь, чтобы не трогать большой
+  // account.astro (который нельзя переписать целиком через API). Добавляет:
+  //  • цель обучения у каждого гида;
+  //  • прогресс-бар (сколько дней плана оттестировано);
+  //  • отметку «✓ пройдено» на дне, если по нему записана чашка;
+  //  • ссылку «Записать чашку» с префиллом из данных гида (+ рецепт способа).
   import { createClient } from '@supabase/supabase-js';
   import { DB } from '../data/countries';
+  import { BREW_METHODS } from '../data/methods';
 
   if (location.pathname === '/account' || location.pathname === '/account/') {
     const supabase = createClient(
@@ -36,23 +40,33 @@ const isActive = (path: string) => currentPath === path || currentPath.startsWit
       'Френч-пресс': 'Френч-пресс', 'Турка': 'Турка', 'Гейзер (мока)': 'Гейзерная',
       'Эспрессо-машина': 'Эспрессо', 'Cold Brew': 'Cold Brew',
     };
+    const methodByLabel: Record<string, any> = {};
+    (BREW_METHODS as any[]).forEach((m) => { methodByLabel[m.label] = m; });
+    const norm = (s: any) => String(s == null ? '' : s).trim().toLowerCase();
 
-    let guideMap: Record<string, any> | null = null;
+    let guideMap: Record<string, any> = {};
+    let goalById: Record<string, string> = {};
+    let cups: any[] = [];
+    let loaded = false;
 
-    async function loadGuides() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return {};
-      const { data } = await supabase.from('guides').select('id,content').eq('user_id', user.id);
-      const map: Record<string, any> = {};
-      (data || []).forEach((g: any) => {
-        try { const c = JSON.parse(g.content); if (c && Array.isArray(c.weekPlan)) map[g.id] = c; } catch (e) {}
-      });
-      return map;
+    function goalText(i: number) {
+      if (i <= 1) return 'Цель гида: научиться фиксировать вкусовые ноты. Просто замечай и записывай, что чувствуешь в чашке.';
+      return 'Цель гида: сравнивай кофе, методы и пропорции — замечай, что именно меняет вкус.';
+    }
+
+    function beanLogged(name: string, mapped?: string) {
+      return cups.some((c) => norm(c.name) === norm(name) && (mapped ? norm(c.brew_method) === norm(mapped) : true));
+    }
+    function dayDone(day: any) {
+      const parts = String(day.bean || '').split(/\s+vs\s+/i).map((s) => s.trim()).filter(Boolean);
+      if (parts.length > 1) return parts.every((p) => beanLogged(p));
+      return beanLogged(day.bean, METHOD_MAP[day.method]);
     }
 
     function buildLink(day: any, beanByName: Record<string, any>) {
       const bn = beanByName[day.bean] || {};
       const brew = METHOD_MAP[day.method] || '';
+      const rec = methodByLabel[day.method] || {};
       const notes = (bn.tags || []).join(',');
       const q = new URLSearchParams();
       q.set('name', day.bean || '');
@@ -61,39 +75,86 @@ const isActive = (path: string) => currentPath === path || currentPath.startsWit
       if (bn.variety) q.set('variety', bn.variety);
       if (bn.process) q.set('process', bn.process);
       if (brew) q.set('brew', brew);
+      if (rec.grind) q.set('grind', rec.grind);
+      if (rec.ratio) q.set('ratio', rec.ratio);
+      if (rec.temp) q.set('temp', rec.temp);
+      if (rec.time) q.set('time', rec.time);
       if (notes) q.set('notes', notes);
       if (day.focus) q.set('focus', day.focus);
       q.set('from', 'guide');
       return '/add-cup?' + q.toString();
     }
 
+    async function loadData() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const [gRes, cRes] = await Promise.all([
+        supabase.from('guides').select('id,content,created_at').eq('user_id', user.id).order('created_at', { ascending: true }),
+        supabase.from('cups').select('name,brew_method').eq('user_id', user.id),
+      ]);
+      cups = cRes.data || [];
+      (gRes.data || []).forEach((g: any, i: number) => {
+        try { const c = JSON.parse(g.content); if (c && Array.isArray(c.weekPlan)) { guideMap[g.id] = c; goalById[g.id] = goalText(i); } } catch (e) {}
+      });
+      loaded = true;
+    }
+
     function enhance() {
-      if (!guideMap) return;
+      if (!loaded) return;
       document.querySelectorAll('.guide-rich[data-gid]').forEach((card) => {
         const gid = card.getAttribute('data-gid')!;
-        const data = guideMap![gid];
+        const data = guideMap[gid];
         if (!data) return;
         const beanByName: Record<string, any> = {};
         (data.beans || []).forEach((b: any) => { beanByName[b.name] = b; });
+        const plan = data.weekPlan || [];
+
+        // Цель обучения + прогресс-бар (один раз на гид)
+        const body = card.querySelector('.gr-body');
+        if (body && !card.getAttribute('data-goaladded')) {
+          card.setAttribute('data-goaladded', '1');
+          const done = plan.filter(dayDone).length;
+          const total = plan.length || 1;
+          const pct = Math.round((done / total) * 100);
+          const box = document.createElement('div');
+          box.style.cssText = 'margin:0 0 14px;padding:12px 14px;border:1px solid var(--border);border-radius:12px;background:var(--surface-2)';
+          box.innerHTML =
+            '<div style="font-size:.82rem;font-weight:600;color:var(--text);line-height:1.45">🎯 ' + (goalById[gid] || goalText(9)) + '</div>' +
+            '<div style="font-size:.72rem;color:var(--text-muted);margin:9px 0 5px">Пройдено дней: <b style="color:var(--accent)">' + done + ' / ' + total + '</b></div>' +
+            '<div style="height:8px;background:var(--border);border-radius:6px;overflow:hidden"><i style="display:block;height:100%;background:var(--accent);width:' + pct + '%"></i></div>';
+          body.insertBefore(box, body.firstChild);
+        }
+
+        // Дни плана: отметка «пройдено» + ссылка «Записать чашку»
         const pane = card.querySelector('[data-gp="' + gid + '|plan"]');
         if (!pane) return;
         const days = pane.querySelectorAll('.gp-day');
         days.forEach((el, i) => {
-          if ((el as HTMLElement).getAttribute('data-logadded')) return;
-          const day = data.weekPlan[i];
+          const day = plan[i];
           if (!day) return;
-          (el as HTMLElement).setAttribute('data-logadded', '1');
-          const a = document.createElement('a');
-          a.href = buildLink(day, beanByName);
-          a.textContent = '📔 Записать чашку';
-          a.style.cssText = 'display:inline-block;margin-top:8px;font-size:.72rem;font-weight:600;color:var(--accent);text-decoration:none;border:1px solid var(--accent);border-radius:8px;padding:5px 11px;';
-          el.appendChild(a);
+          const done = dayDone(day);
+          if (done && !(el as HTMLElement).getAttribute('data-donemark')) {
+            (el as HTMLElement).setAttribute('data-donemark', '1');
+            (el as HTMLElement).style.borderColor = 'var(--accent)';
+            const badge = document.createElement('div');
+            badge.textContent = '✓ пройдено';
+            badge.style.cssText = 'display:inline-block;margin-top:8px;margin-right:8px;font-size:.7rem;font-weight:700;color:#4a7a45;background:#e8f0e4;border:1px solid #cfe0c8;border-radius:8px;padding:4px 9px';
+            el.appendChild(badge);
+          }
+          if (!(el as HTMLElement).getAttribute('data-logadded')) {
+            (el as HTMLElement).setAttribute('data-logadded', '1');
+            const a = document.createElement('a');
+            a.href = buildLink(day, beanByName);
+            a.textContent = done ? '📔 Записать ещё' : '📔 Записать чашку';
+            a.style.cssText = 'display:inline-block;margin-top:8px;font-size:.72rem;font-weight:600;color:var(--accent);text-decoration:none;border:1px solid var(--accent);border-radius:8px;padding:5px 11px';
+            el.appendChild(a);
+          }
         });
       });
     }
 
     (async () => {
-      guideMap = await loadGuides();
+      await loadData();
       enhance();
       const obs = new MutationObserver(() => enhance());
       obs.observe(document.body, { childList: true, subtree: true });
