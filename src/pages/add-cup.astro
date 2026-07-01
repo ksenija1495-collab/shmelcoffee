@@ -14,10 +14,13 @@ import { DB, countryOrder } from '../data/countries';
       <h1>Добавить своё кофе</h1>
       <p class="addcup-sub">Кофе из дома или заказанный вне подборок. Запись наполнит вашу Карту вкуса и откроет страны.</p>
       <div class="addcup-card" id="formCard">
+        <div id="fromGuide" class="fromguide" style="display:none"></div>
         <label class="fl">Кофе / зерно *</label>
         <input type="text" id="f_name" placeholder="напр. Эфиопия Гедео"/>
         <label class="fl">Обжарщик</label>
         <input type="text" id="f_roaster" placeholder="напр. Tasty Coffee, Rockets"/>
+        <label class="fl">Сорт</label>
+        <select id="f_variety"></select>
         <div class="row2">
           <div><label class="fl">Страна</label><select id="f_country"></select></div>
           <div><label class="fl">Обработка</label><select id="f_process"></select></div>
@@ -66,6 +69,12 @@ import { DB, countryOrder } from '../data/countries';
   .save-btn { width: 100%; margin-top: 20px; }
   .addcup-msg { margin-top: 12px; font-size: .84rem; text-align: center; min-height: 20px; }
   .addcup-msg.error { color: var(--accent-warm); }
+  .fromguide { padding: 14px 16px; margin-bottom: 8px; border-radius: 12px; background: rgba(168,124,79,.08); border: 1px solid rgba(168,124,79,.3); }
+  .fromguide .fg-h { font-size: .78rem; font-weight: 700; color: var(--accent); margin-bottom: 8px; }
+  .fromguide .fg-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+  .fromguide .fg-chip { font-size: .78rem; padding: 4px 11px; border-radius: 20px; background: var(--surface); border: 1px solid var(--border); color: var(--text-dim); font-weight: 600; }
+  .fromguide .fg-note { font-size: .8rem; color: var(--text-dim); line-height: 1.5; }
+  .fromguide .fg-note b { color: var(--text); }
   @media (max-width: 600px) { .addcup-page { padding-top: 72px; } .row2 { grid-template-columns: 1fr; } }
 </style>
 
@@ -73,6 +82,7 @@ import { DB, countryOrder } from '../data/countries';
   import { createClient } from '@supabase/supabase-js';
   import { wheelData } from '../data/wheel';
   import { DB, countryOrder } from '../data/countries';
+  import { BEAN_VARIETIES } from '../data/varieties';
 
   const supabase = createClient(
     import.meta.env.PUBLIC_SUPABASE_URL,
@@ -85,10 +95,26 @@ import { DB, countryOrder } from '../data/countries';
   const SLIDERS = [['acidity','Кислотность'],['sweetness','Сладость'],['bitterness','Горечь'],['body','Тело']];
 
   const sel: any = { acidity:3, sweetness:3, bitterness:2, body:3, notes:new Set<string>(), rating:0 };
+  const params = new URLSearchParams(location.search);
+  const flagByName: Record<string,string> = {};
+  for (const k of Object.keys(DB)) flagByName[(DB as any)[k].name] = (DB as any)[k].flag;
 
-  function fill(id:string, arr:string[], ph:string){
+  function fill(id:string, arr:readonly string[], ph:string){
     const s = document.getElementById(id) as HTMLSelectElement;
     s.innerHTML = `<option value="">${ph}</option>` + arr.map(x=>`<option>${x}</option>`).join('');
+  }
+
+  function setSelect(id: string, val: string) {
+    if (!val) return;
+    const s = document.getElementById(id) as HTMLSelectElement;
+    const low = val.trim().toLowerCase();
+    for (const o of Array.from(s.options)) {
+      if (o.value.toLowerCase() === low || o.text.toLowerCase() === low) { s.value = o.value; return; }
+    }
+    // частичное совпадение (напр. «Мытая» ↔ «Мытая (Washed)»)
+    for (const o of Array.from(s.options)) {
+      if (o.text && (o.text.toLowerCase().startsWith(low) || low.startsWith(o.text.toLowerCase().split(' (')[0]))) { s.value = o.value; return; }
+    }
   }
 
   async function guard(){
@@ -97,7 +123,36 @@ import { DB, countryOrder } from '../data/countries';
     return user;
   }
 
+  function prefill(){
+    const g = (k: string) => params.get(k) || '';
+    (document.getElementById('f_name') as HTMLInputElement).value = g('name');
+    (document.getElementById('f_roaster') as HTMLInputElement).value = g('roaster');
+    setSelect('f_variety', g('variety'));
+    setSelect('f_country', g('country'));
+    setSelect('f_process', g('process'));
+    setSelect('f_brew', g('brew'));
+    const noteWords = g('notes').split(',').map(s=>s.trim().toLowerCase()).filter(Boolean);
+    if (noteWords.length) {
+      document.querySelectorAll('#noteFamilies .chip').forEach(ch => {
+        const n = (ch as HTMLElement).dataset.n!.toLowerCase();
+        if (noteWords.some(w => w === n || w.includes(n) || n.includes(w))) { sel.notes.add((ch as HTMLElement).dataset.n!); ch.classList.add('on'); }
+      });
+    }
+    if (g('from') === 'guide') {
+      const country = g('country'), variety = g('variety'), process = g('process'), brew = g('brew'), focus = g('focus'), notes = g('notes');
+      const chips: string[] = [];
+      if (country) chips.push(`${flagByName[country] || '🌍'} ${country}`);
+      if (variety) chips.push(`🌱 ${variety}`);
+      if (process) chips.push(`⚗️ ${process}`);
+      if (brew) chips.push(`☕ ${brew}`);
+      const el = document.getElementById('fromGuide')!;
+      el.innerHTML = `<div class="fg-h">📔 Из твоего гида дегустации</div>${chips.length ? `<div class="fg-chips">${chips.map(c=>`<span class="fg-chip">${c}</span>`).join('')}</div>` : ''}${notes ? `<div class="fg-note">Ожидались ноты: <b>${notes.split(',').map(s=>s.trim()).filter(Boolean).join(', ')}</b>. Сравни с тем, что почувствуешь.</div>` : ''}${focus ? `<div class="fg-note" style="margin-top:6px">На что обратить внимание: <b>${focus}</b></div>` : ''}`;
+      el.style.display = 'block';
+    }
+  }
+
   function build(){
+    fill('f_variety', BEAN_VARIETIES, '— не знаю / смесь');
     fill('f_country', countryOrder.map((k:string)=>(DB as any)[k].name), 'выберите страну');
     fill('f_process', PROCESSES, 'выберите обработку');
     fill('f_brew', BREWS, 'выберите метод');
@@ -117,6 +172,7 @@ import { DB, countryOrder } from '../data/countries';
     document.querySelectorAll('#rating .star').forEach(st=>{
       st.addEventListener('click', ()=>{ sel.rating=+(st as HTMLElement).dataset.i!; document.querySelectorAll('#rating .star').forEach(s2=>{ s2.classList.toggle('on', +(s2 as HTMLElement).dataset.i! <= sel.rating); }); });
     });
+    prefill();
   }
 
   async function save(){
@@ -131,6 +187,7 @@ import { DB, countryOrder } from '../data/countries';
       user_id: user.id,
       name,
       roaster: (document.getElementById('f_roaster') as HTMLInputElement).value.trim() || null,
+      variety: (document.getElementById('f_variety') as HTMLSelectElement).value || null,
       country: (document.getElementById('f_country') as HTMLSelectElement).value || null,
       process: (document.getElementById('f_process') as HTMLSelectElement).value || null,
       brew_method: (document.getElementById('f_brew') as HTMLSelectElement).value || null,
