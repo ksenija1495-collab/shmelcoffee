@@ -14,7 +14,7 @@ export const BEAN_VARIETIES = [
   'Марагогипе (Maragogipe)',
   'Ruiru 11',
   'Сангри (S795)',
-  'Кастillo',
+  'Кастийо (Castillo)',
   'Tabi',
   'Другой / смесь',
 ] as const;
