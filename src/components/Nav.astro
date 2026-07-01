@@ -16,3 +16,87 @@ const isActive = (path: string) => currentPath === path || currentPath.startsWit
     </ul>
   </div>
 </nav>
+
+<script>
+  // Энхансер плана дегустации: на /account добавляет к каждому дню «Плана недели»
+  // ссылку «Записать чашку» с префиллом из данных гида. Живёт здесь, чтобы не трогать
+  // большой account.astro (который нельзя переписать целиком через API без риска).
+  import { createClient } from '@supabase/supabase-js';
+  import { DB } from '../data/countries';
+
+  if (location.pathname === '/account' || location.pathname === '/account/') {
+    const supabase = createClient(
+      import.meta.env.PUBLIC_SUPABASE_URL,
+      import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+      { auth: { flowType: 'implicit' } }
+    );
+
+    const METHOD_MAP: Record<string, string> = {
+      'Воронка V60': 'V60', 'Kalita Wave': 'Kalita', 'Кемекс': 'Chemex', 'Аэропресс': 'Aeropress',
+      'Френч-пресс': 'Френч-пресс', 'Турка': 'Турка', 'Гейзер (мока)': 'Гейзерная',
+      'Эспрессо-машина': 'Эспрессо', 'Cold Brew': 'Cold Brew',
+    };
+
+    let guideMap: Record<string, any> | null = null;
+
+    async function loadGuides() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return {};
+      const { data } = await supabase.from('guides').select('id,content').eq('user_id', user.id);
+      const map: Record<string, any> = {};
+      (data || []).forEach((g: any) => {
+        try { const c = JSON.parse(g.content); if (c && Array.isArray(c.weekPlan)) map[g.id] = c; } catch (e) {}
+      });
+      return map;
+    }
+
+    function buildLink(day: any, beanByName: Record<string, any>) {
+      const bn = beanByName[day.bean] || {};
+      const brew = METHOD_MAP[day.method] || '';
+      const notes = (bn.tags || []).join(',');
+      const q = new URLSearchParams();
+      q.set('name', day.bean || '');
+      if (bn.roaster) q.set('roaster', bn.roaster);
+      if (bn.country) q.set('country', bn.country);
+      if (bn.variety) q.set('variety', bn.variety);
+      if (bn.process) q.set('process', bn.process);
+      if (brew) q.set('brew', brew);
+      if (notes) q.set('notes', notes);
+      if (day.focus) q.set('focus', day.focus);
+      q.set('from', 'guide');
+      return '/add-cup?' + q.toString();
+    }
+
+    function enhance() {
+      if (!guideMap) return;
+      document.querySelectorAll('.guide-rich[data-gid]').forEach((card) => {
+        const gid = card.getAttribute('data-gid')!;
+        const data = guideMap![gid];
+        if (!data) return;
+        const beanByName: Record<string, any> = {};
+        (data.beans || []).forEach((b: any) => { beanByName[b.name] = b; });
+        const pane = card.querySelector('[data-gp="' + gid + '|plan"]');
+        if (!pane) return;
+        const days = pane.querySelectorAll('.gp-day');
+        days.forEach((el, i) => {
+          if ((el as HTMLElement).getAttribute('data-logadded')) return;
+          const day = data.weekPlan[i];
+          if (!day) return;
+          (el as HTMLElement).setAttribute('data-logadded', '1');
+          const a = document.createElement('a');
+          a.href = buildLink(day, beanByName);
+          a.textContent = '📔 Записать чашку';
+          a.style.cssText = 'display:inline-block;margin-top:8px;font-size:.72rem;font-weight:600;color:var(--accent);text-decoration:none;border:1px solid var(--accent);border-radius:8px;padding:5px 11px;';
+          el.appendChild(a);
+        });
+      });
+    }
+
+    (async () => {
+      guideMap = await loadGuides();
+      enhance();
+      const obs = new MutationObserver(() => enhance());
+      obs.observe(document.body, { childList: true, subtree: true });
+    })();
+  }
+</script>
