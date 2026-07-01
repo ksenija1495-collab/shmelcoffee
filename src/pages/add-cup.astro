@@ -27,6 +27,14 @@ import { DB, countryOrder } from '../data/countries';
         </div>
         <label class="fl">Способ заваривания</label>
         <select id="f_brew"></select>
+        <label class="fl">Рецепт — как ты заваривал</label>
+        <div class="recipe-grid">
+          <input type="text" id="r_grind" placeholder="Помол (напр. средний)"/>
+          <input type="text" id="r_ratio" placeholder="Пропорция (напр. 1:16)"/>
+          <input type="text" id="r_temp" placeholder="Вода °C (напр. 94)"/>
+          <input type="text" id="r_time" placeholder="Время (напр. 2:30)"/>
+        </div>
+        <div id="recipeHint" class="recipe-hint" style="display:none">Подставлен рецепт из гида — поправь под то, как заварил на самом деле.</div>
         <div id="sliders"></div>
         <label class="fl">Вкус и ароматы — отметьте, что чувствуете</label>
         <div id="noteFamilies"></div>
@@ -55,6 +63,8 @@ import { DB, countryOrder } from '../data/countries';
   }
   .addcup-card textarea { resize: vertical; }
   .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .recipe-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .recipe-hint { font-size: .76rem; color: var(--accent); margin-top: 8px; }
   .sliderrow { margin: 12px 0; }
   .sliderrow .top { display: flex; justify-content: space-between; font-size: .82rem; margin-bottom: 3px; }
   .sliderrow .val { color: var(--accent); font-weight: 700; }
@@ -111,7 +121,6 @@ import { DB, countryOrder } from '../data/countries';
     for (const o of Array.from(s.options)) {
       if (o.value.toLowerCase() === low || o.text.toLowerCase() === low) { s.value = o.value; return; }
     }
-    // частичное совпадение (напр. «Мытая» ↔ «Мытая (Washed)»)
     for (const o of Array.from(s.options)) {
       if (o.text && (o.text.toLowerCase().startsWith(low) || low.startsWith(o.text.toLowerCase().split(' (')[0]))) { s.value = o.value; return; }
     }
@@ -131,6 +140,13 @@ import { DB, countryOrder } from '../data/countries';
     setSelect('f_country', g('country'));
     setSelect('f_process', g('process'));
     setSelect('f_brew', g('brew'));
+    (document.getElementById('r_grind') as HTMLInputElement).value = g('grind');
+    (document.getElementById('r_ratio') as HTMLInputElement).value = g('ratio');
+    (document.getElementById('r_temp') as HTMLInputElement).value = g('temp');
+    (document.getElementById('r_time') as HTMLInputElement).value = g('time');
+    if (g('grind') || g('ratio') || g('temp') || g('time')) {
+      (document.getElementById('recipeHint') as HTMLElement).style.display = 'block';
+    }
     const noteWords = g('notes').split(',').map(s=>s.trim().toLowerCase()).filter(Boolean);
     if (noteWords.length) {
       document.querySelectorAll('#noteFamilies .chip').forEach(ch => {
@@ -183,6 +199,9 @@ import { DB, countryOrder } from '../data/countries';
     if(!name){ msg.className='addcup-msg error'; msg.textContent='Добавьте название кофе'; return; }
     const btn = document.getElementById('saveBtn') as HTMLButtonElement;
     btn.disabled = true; btn.textContent = 'Сохраняем...';
+    const rv = (id: string) => (document.getElementById(id) as HTMLInputElement).value.trim();
+    const recipe: any = { grind: rv('r_grind') || null, ratio: rv('r_ratio') || null, temp: rv('r_temp') || null, time: rv('r_time') || null };
+    const hasRecipe = Object.values(recipe).some(Boolean);
     const payload:any = {
       user_id: user.id,
       name,
@@ -191,6 +210,7 @@ import { DB, countryOrder } from '../data/countries';
       country: (document.getElementById('f_country') as HTMLSelectElement).value || null,
       process: (document.getElementById('f_process') as HTMLSelectElement).value || null,
       brew_method: (document.getElementById('f_brew') as HTMLSelectElement).value || null,
+      recipe: hasRecipe ? recipe : null,
       acidity: sel.acidity, sweetness: sel.sweetness, bitterness: sel.bitterness, body: sel.body,
       notes: [...sel.notes],
       rating: sel.rating || null,
