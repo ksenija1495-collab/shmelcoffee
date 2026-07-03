@@ -153,6 +153,8 @@ import Nav from '../components/Nav.astro';
   .my-guides-h { font-weight: 700; font-size: .95rem; margin: 22px 0 10px; }
   .passport-btn { display: inline-block; margin-top: 14px; text-decoration: none; }
   .soon-badge { font-size: .64rem; font-weight: 800; letter-spacing: .06em; background: var(--surface-2); color: var(--text-muted); border: 1px solid var(--border); padding: 4px 10px; border-radius: 20px; }
+  .comm-join { margin-bottom: 18px; }
+  .comm-join .comm-tg-btn { display: inline-block; text-decoration: none; font-size: .88rem; padding: 11px 22px; }
 
   .guide-rich { padding: 22px; }
   .gr-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
@@ -480,6 +482,9 @@ import Nav from '../components/Nav.astro';
       : `<div class="empty-state">Пока нет персональных гидов. ${credits > 0 ? '<a href="/generate">Создать первый гид →</a>' : 'Купи гид и собери первый рецепт под своё зерно и способ.'}</div>`;
     const guidesPanel = `${createCardHtml}${generalGuideHtml}<div class="my-guides-h">Мои персональные гиды</div>${myGuidesHtml}`;
 
+    const COMMUNITY_TG = 'https://t.me/+d-5pv_HChBwxNjM6';
+    const communityJoin = `<div class="pro-card comm-join"><div class="pro-title" style="margin-bottom:6px">☕ ShmelCoffee Community</div><div class="pro-desc" style="margin-bottom:14px">Закрытый чат исследователей кофе — делитесь открытиями, зёрнами и впечатлениями от чашек. Без шума, с людьми, которым тоже интересен вкус.</div><a class="btn btn-primary comm-tg-btn" href="${COMMUNITY_TG}" target="_blank" rel="noopener noreferrer">Вступить в Telegram →</a></div>`;
+
     const twinSoon = `<div class="pro-card soon" style="margin-top:14px"><div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:6px"><div class="pro-title" style="margin:0">🤝 Вкусовой близнец</div><span class="soon-badge">Скоро</span></div><div class="pro-desc" style="margin:0">Найдём людей с похожим на твой вкусом — и полные противоположности. Можно будет обмениваться находками и зёрнами.</div></div>`;
 
     page.innerHTML = `
@@ -501,7 +506,7 @@ import Nav from '../components/Nav.astro';
       <section class="acc-panel" data-panel="shelf"><div class="panel-h"><span>🪵 Моя полка</span><span style="display:flex;gap:6px"><a href="/add-shelf?kind=bean" class="add-cup-btn">+ Зерно</a><a href="/add-shelf?kind=equipment" class="add-cup-btn">+ Оборудование</a></span></div>${shelfPanel}</section>
       <section class="acc-panel" data-panel="selections"><div class="panel-h">☕ Мои подборки</div>${selectionsPanel}</section>
       <section class="acc-panel" data-panel="guides"><div class="panel-h">📖 Гиды</div>${paidBanner}${guidesPanel}</section>
-      <section class="acc-panel" data-panel="community"><div class="panel-h">🌐 Сообщество</div><div class="profile-card" id="communityCard"><div class="profile-label" style="min-width:0">Загружаем статистику…</div></div>${twinSoon}</section>
+      <section class="acc-panel" data-panel="community"><div class="panel-h">🌐 Сообщество</div>${communityJoin}<div class="profile-card" id="communityCard"><div class="profile-label" style="min-width:0">Загружаем статистику…</div></div>${twinSoon}</section>
     `;
 
     renderTasteWheel(prefFams);
