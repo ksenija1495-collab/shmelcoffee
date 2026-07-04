@@ -1,4 +1,6 @@
 ---
+import Analytics from '@vercel/analytics/astro';
+
 interface Props {
   title: string;
   description?: string;
@@ -64,6 +66,7 @@ const canonicalUrl = canonical || new URL(Astro.url.pathname, siteUrl).href;
     <a href="/account" id="mobileAccount"><span class="mn-icon">👤</span>Кабинет</a>
   </div>
   <div class="footer">Shmelco · product atelier · Specialty Coffee Guide</div>
+  <Analytics />
 </body>
 </html>
 

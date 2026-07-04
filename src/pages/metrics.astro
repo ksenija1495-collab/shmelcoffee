@@ -18,13 +18,18 @@ const OWNER = 'ksenija14.95@gmail.com';
   .mx-page { padding-top: 96px; max-width: 760px; margin: 0 auto; min-height: 60vh; padding-bottom: 80px; }
   .mx-loading { text-align: center; padding: 80px 0; color: var(--text-muted); }
   .mx-h { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.8rem; font-weight: 600; margin: 0 0 4px; }
-  .mx-sub { font-size: .82rem; color: var(--text-muted); margin-bottom: 24px; }
-  .mx-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+  .mx-sub { font-size: .82rem; color: var(--text-muted); margin-bottom: 24px; line-height: 1.5; }
+  .mx-sub a { color: var(--accent); }
+  .mx-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
   .mx-card { padding: 18px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); box-shadow: var(--shadow); }
+  .mx-card.today { border-color: var(--accent); background: rgba(168,124,79,.06); }
   .mx-num { font-family: 'Cormorant Garamond', serif; font-size: 2.1rem; font-weight: 700; color: var(--accent); line-height: 1; }
-  .mx-lbl { font-size: .76rem; color: var(--text-dim); margin-top: 6px; }
+  .mx-lbl { font-size: .76rem; color: var(--text-dim); margin-top: 6px; line-height: 1.35; }
   .mx-sec { font-weight: 700; font-size: .9rem; margin: 26px 0 12px; }
+  .mx-sec:first-of-type { margin-top: 0; }
   .mx-deny { text-align: center; padding: 40px 20px; color: var(--text-muted); }
+  .mx-emails { margin-top: 12px; font-size: .78rem; color: var(--text-dim); line-height: 1.5; }
+  .mx-emails span { display: block; padding: 4px 0; border-bottom: 1px dashed var(--border); }
   .loader-spinner { width: 28px; height: 28px; border: 2px solid var(--border); border-top-color: var(--text); border-radius: 50%; animation: spin .6s linear infinite; margin: 0 auto 16px; }
   @keyframes spin { to { transform: rotate(360deg); } }
 </style>
@@ -34,8 +39,11 @@ const OWNER = 'ksenija14.95@gmail.com';
   const supabase = createClient(import.meta.env.PUBLIC_SUPABASE_URL, import.meta.env.PUBLIC_SUPABASE_ANON_KEY, { auth: { flowType: 'implicit' } });
   const page = document.getElementById('mxPage');
 
-  function card(num, lbl) { return `<div class="mx-card"><div class="mx-num">${num}</div><div class="mx-lbl">${lbl}</div></div>`; }
+  function card(num, lbl, today) {
+    return `<div class="mx-card${today ? ' today' : ''}"><div class="mx-num">${num}</div><div class="mx-lbl">${lbl}</div></div>`;
+  }
   function pct(a, b) { return b > 0 ? Math.round((a / b) * 100) + '%' : '—'; }
+  const esc = (s) => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
 
   async function init() {
     const { data: { user } } = await supabase.auth.getUser();
@@ -44,14 +52,34 @@ const OWNER = 'ksenija14.95@gmail.com';
       page.innerHTML = '<div class="mx-deny">Эта страница доступна только владельцу проекта.</div>';
       return;
     }
-    const { data, error } = await supabase.rpc('get_metrics');
-    if (error || !data) { page.innerHTML = '<div class="mx-deny">Не удалось загрузить метрики.</div>'; return; }
-    const m = data;
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token || '';
+    const res = await fetch('/api/admin-metrics', { headers: { Authorization: 'Bearer ' + token } });
+    if (!res.ok) { page.innerHTML = '<div class="mx-deny">Не удалось загрузить метрики.</div>'; return; }
+    const { totals: m, today: t } = await res.json();
+
+    const emailsHtml = (t.registration_emails || []).length
+      ? `<div class="mx-emails">${t.registration_emails.map((e) => `<span>${esc(e)}</span>`).join('')}</div>`
+      : '';
+
     page.innerHTML = `
       <div class="mx-h">Метрики Shmelco</div>
-      <div class="mx-sub">Обновляется в реальном времени · только для тебя</div>
+      <div class="mx-sub">Обновляется в реальном времени · только для тебя<br>Трафик страниц — в <a href="https://vercel.com/dashboard" target="_blank" rel="noopener">Vercel → Analytics</a> (после включения)</div>
 
-      <div class="mx-sec">Воронка</div>
+      <div class="mx-sec">Сегодня · ${t.date_label || 'МСК'}</div>
+      <div class="mx-grid">
+        ${card(t.registrations || 0, 'Новых регистраций', true)}
+        ${card(t.profiles || 0, 'Прошли тест', true)}
+        ${card(t.selections || 0, 'Новых подборок', true)}
+        ${card(t.cups || 0, 'Чашек в дневнике', true)}
+        ${card(t.shelf_items || 0, 'На полку', true)}
+        ${card(t.bean_clicks || 0, 'Кликов «Купить»', true)}
+        ${card(t.guides || 0, 'Гидов создано', true)}
+        ${card(t.purchases || 0, 'Оплат', true)}
+      </div>
+      ${emailsHtml}
+
+      <div class="mx-sec">Всего · воронка</div>
       <div class="mx-grid">
         ${card(m.registrations || 0, 'Регистраций')}
         ${card(m.quiz_done || 0, 'Прошли тест')}
