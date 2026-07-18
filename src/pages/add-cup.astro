@@ -21,6 +21,9 @@ import { DB, countryOrder } from '../data/countries';
         <input type="text" id="f_roaster" placeholder="напр. Tasty Coffee, Rockets"/>
         <label class="fl">Сорт</label>
         <select id="f_variety"></select>
+        <div id="varietyCustomRow" class="variety-custom" style="display:none">
+          <input type="text" id="f_variety_custom" placeholder="Какой сорт? напр. Sidra, Pink Bourbon"/>
+        </div>
         <div class="row2">
           <div><label class="fl">Страна</label><select id="f_country"></select></div>
           <div><label class="fl">Обработка</label><select id="f_process"></select></div>
@@ -137,6 +140,11 @@ import { DB, countryOrder } from '../data/countries';
   .note-custom-add:hover { border-color: var(--accent); background: rgba(168,124,79,.06); }
   .template-row { margin-bottom: 4px; }
   .template-hint { font-size: .72rem; color: var(--text-muted); margin-top: 4px; line-height: 1.4; }
+  .variety-custom { margin-top: 8px; }
+  .variety-custom input {
+    width: 100%; padding: 11px 12px; border: 1px solid var(--border); border-radius: 10px;
+    font-size: .92rem; background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif;
+  }
   .recipe-hint { font-size: .76rem; color: var(--accent); margin-top: 8px; }
   .sliderrow { margin: 12px 0; }
   .sliderrow .top { display: flex; justify-content: space-between; font-size: .82rem; margin-bottom: 3px; }
@@ -170,6 +178,7 @@ import { DB, countryOrder } from '../data/countries';
   import { DB, countryOrder } from '../data/countries';
   import { BEAN_VARIETIES } from '../data/varieties';
   import { normalizeRecipe, recipeHasData, parseGramsFromRatioText } from '../lib/cupRecipe';
+  import { bindVarietyOther, readVarietyValue, setVarietyValue } from '../lib/beanVarietyField';
 
   const supabase = createClient(
     import.meta.env.PUBLIC_SUPABASE_URL,
@@ -315,7 +324,7 @@ import { DB, countryOrder } from '../data/countries';
   function prefillFromCup(cup: any) {
     (document.getElementById('f_name') as HTMLInputElement).value = cup.name || '';
     (document.getElementById('f_roaster') as HTMLInputElement).value = cup.roaster || '';
-    setSelect('f_variety', cup.variety || '');
+    setVarietyValue(cup.variety);
     setSelect('f_country', cup.country || '');
     setSelect('f_process', cup.process || '');
     setSelect('f_brew', cup.brew_method || '');
@@ -480,7 +489,7 @@ import { DB, countryOrder } from '../data/countries';
     const g = (k: string) => params.get(k) || '';
     (document.getElementById('f_name') as HTMLInputElement).value = g('name');
     (document.getElementById('f_roaster') as HTMLInputElement).value = g('roaster');
-    setSelect('f_variety', g('variety'));
+    setVarietyValue(g('variety'));
     setSelect('f_country', g('country'));
     setSelect('f_process', g('process'));
     setSelect('f_brew', g('brew'));
@@ -523,6 +532,7 @@ import { DB, countryOrder } from '../data/countries';
 
   function build(){
     fill('f_variety', BEAN_VARIETIES, '— не знаю / смесь');
+    bindVarietyOther();
     fill('f_country', countryOrder.map((k:string)=>(DB as any)[k].name), 'выберите страну');
     fill('f_process', PROCESSES, 'выберите обработку');
     fill('f_brew', BREWS, 'выберите метод');
@@ -570,7 +580,7 @@ import { DB, countryOrder } from '../data/countries';
     const payload:any = {
       name,
       roaster: (document.getElementById('f_roaster') as HTMLInputElement).value.trim() || null,
-      variety: (document.getElementById('f_variety') as HTMLSelectElement).value || null,
+      variety: readVarietyValue(),
       country: (document.getElementById('f_country') as HTMLSelectElement).value || null,
       process: (document.getElementById('f_process') as HTMLSelectElement).value || null,
       brew_method: (document.getElementById('f_brew') as HTMLSelectElement).value || null,

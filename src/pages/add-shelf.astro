@@ -22,6 +22,9 @@ import { DB, countryOrder } from '../data/countries';
         <div id="beanFields">
           <label class="fl">Сорт</label>
           <select id="f_variety"></select>
+          <div id="varietyCustomRow" class="variety-custom" style="display:none">
+            <input type="text" id="f_variety_custom" placeholder="Какой сорт? напр. Sidra, Pink Bourbon"/>
+          </div>
           <label class="fl">Обжарщик</label>
           <input type="text" id="f_roaster" placeholder="напр. Tasty Coffee"/>
           <div class="row2">
@@ -53,6 +56,11 @@ import { DB, countryOrder } from '../data/countries';
   .sf-card .fl { display: block; font-size: .8rem; font-weight: 600; color: var(--text); margin: 14px 0 6px; }
   .sf-card input[type=text], .sf-card select { width: 100%; padding: 11px 12px; border: 1px solid var(--border); border-radius: 10px; font-size: .92rem; background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; }
   .sf-card input[type=file] { font-size: .82rem; }
+  .variety-custom { margin-top: 8px; }
+  .variety-custom input {
+    width: 100%; padding: 11px 12px; border: 1px solid var(--border); border-radius: 10px;
+    font-size: .92rem; background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif;
+  }
   .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .kind-toggle { display: flex; gap: 8px; margin-bottom: 6px; }
   .kind-btn { flex: 1; padding: 11px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg); font-size: .88rem; cursor: pointer; font-family: 'Inter', sans-serif; transition: .15s; }
@@ -69,6 +77,7 @@ import { DB, countryOrder } from '../data/countries';
   import { createClient } from '@supabase/supabase-js';
   import { DB, countryOrder } from '../data/countries';
   import { BEAN_VARIETIES } from '../data/varieties';
+  import { bindVarietyOther, readVarietyValue } from '../lib/beanVarietyField';
 
   const supabase = createClient(
     import.meta.env.PUBLIC_SUPABASE_URL,
@@ -102,6 +111,7 @@ import { DB, countryOrder } from '../data/countries';
 
   function build() {
     fill('f_variety', BEAN_VARIETIES, '— не знаю / смесь');
+    bindVarietyOther();
     fill('f_country', countryOrder.map((k: string) => (DB as any)[k].name), 'выберите страну');
     fill('f_process', PROCESSES, 'выберите обработку');
     fill('f_category', CATEGORIES, 'выберите категорию');
@@ -137,7 +147,7 @@ import { DB, countryOrder } from '../data/countries';
       }
       const payload: any = {
         user_id: user.id, kind, name,
-        variety: kind === 'bean' ? ((document.getElementById('f_variety') as HTMLSelectElement).value || null) : null,
+        variety: kind === 'bean' ? readVarietyValue() : null,
         roaster: kind === 'bean' ? ((document.getElementById('f_roaster') as HTMLInputElement).value.trim() || null) : null,
         country: kind === 'bean' ? ((document.getElementById('f_country') as HTMLSelectElement).value || null) : null,
         process: kind === 'bean' ? ((document.getElementById('f_process') as HTMLSelectElement).value || null) : null,

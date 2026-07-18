@@ -19,4 +19,6 @@ export const BEAN_VARIETIES = [
   'Другой / смесь',
 ] as const;
 
+export const BEAN_VARIETY_OTHER = 'Другой / смесь' as const;
+
 export type BeanVariety = (typeof BEAN_VARIETIES)[number];
