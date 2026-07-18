@@ -55,6 +55,7 @@ import { DB, countryOrder } from '../data/countries';
         <div id="recipeHint" class="recipe-hint" style="display:none">Подставлен рецепт из гида — поправь под то, как заварил на самом деле.</div>
         <div id="sliders"></div>
         <label class="fl">Вкус и ароматы — что чувствуешь в чашке</label>
+        <p class="note-cat-hint">Раскрой категорию ▶ — выбери подсказку или добавь свою ноту</p>
         <div id="selectedNotes" class="note-selected"></div>
         <div id="noteFamilies"></div>
         <label class="fl">Оценка</label>
@@ -120,13 +121,23 @@ import { DB, countryOrder } from '../data/countries';
     display: flex; align-items: center; gap: 8px; user-select: none;
   }
   .note-cat-sum::-webkit-details-marker { display: none; }
+  .note-cat-sum::marker { content: ''; }
+  .note-cat-name { flex: 1; min-width: 0; }
+  .note-cat-chevron {
+    flex-shrink: 0; font-size: 1.05rem; line-height: 1; color: var(--text-muted);
+    transition: transform .18s ease; margin-left: auto;
+  }
+  .note-cat[open] .note-cat-chevron { transform: rotate(90deg); color: var(--accent); }
   .note-cat-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--cat-color, var(--accent)); flex-shrink: 0; }
   .note-cat-badge {
-    margin-left: auto; font-size: .68rem; font-weight: 700; padding: 2px 8px; border-radius: 20px;
-    background: var(--surface-2); color: var(--text-muted); min-width: 22px; text-align: center;
+    font-size: .68rem; font-weight: 700; padding: 2px 8px; border-radius: 20px;
+    background: var(--surface-2); color: var(--text-muted); min-width: 22px; text-align: center; flex-shrink: 0;
   }
   .note-cat-badge.has { background: rgba(168,124,79,.15); color: var(--accent); }
   .note-cat-body { padding: 0 14px 14px; border-top: 1px solid var(--border); }
+  .note-cat-hint {
+    font-size: .72rem; color: var(--text-muted); margin: 0 0 10px; line-height: 1.45;
+  }
   .note-hint { font-size: .72rem; color: var(--text-muted); margin: 10px 0 8px; }
   .note-custom-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin-top: 10px; }
   .note-custom-inp {
@@ -398,7 +409,7 @@ import { DB, countryOrder } from '../data/countries';
   function renderSelectedNotes() {
     const el = document.getElementById('selectedNotes')!;
     if (!sel.notes.size) {
-      el.innerHTML = '<span class="note-empty">Пока пусто — раскрой категорию ниже, выбери подсказку или добавь свою ноту</span>';
+      el.innerHTML = '<span class="note-empty">Пока пусто — раскрой категорию ▶ ниже, выбери подсказку или добавь свою</span>';
       return;
     }
     el.innerHTML = [...sel.notes].map((n) =>
@@ -418,7 +429,7 @@ import { DB, countryOrder } from '../data/countries';
 
   function updateCategoryBadges() {
     (wheelData as any[]).forEach((f) => {
-      const badge = document.querySelector(`[data-cat-badge="${f.name}"]`);
+      const badge = document.querySelector(`[data-cat-badge="${CSS.escape(f.name)}"]`);
       if (!badge) return;
       const count = [...sel.notes].filter((n) => noteInCategory(n, f.name)).length;
       badge.textContent = String(count);
@@ -432,13 +443,21 @@ import { DB, countryOrder } from '../data/countries';
     updateCategoryBadges();
   }
 
-  function addCustomNote(cat: string) {
-    const inp = document.querySelector(`.note-custom-inp[data-cat="${cat}"]`) as HTMLInputElement;
-    if (!inp) return;
+  function addCustomNote(btn: HTMLButtonElement) {
+    const row = btn.closest('.note-custom-row');
+    const inp = row?.querySelector('.note-custom-inp') as HTMLInputElement | null;
+    const cat = btn.dataset.cat || inp?.dataset.cat || '';
+    if (!inp || !cat) return;
     const val = inp.value.trim();
-    if (!val) return;
+    if (!val) {
+      inp.focus();
+      inp.style.borderColor = 'var(--accent-warm)';
+      setTimeout(() => { inp.style.borderColor = ''; }, 1200);
+      return;
+    }
     addNote(val, cat);
     inp.value = '';
+    inp.focus();
   }
 
   function buildNotes() {
@@ -446,28 +465,43 @@ import { DB, countryOrder } from '../data/countries';
     container.innerHTML = (wheelData as any[]).map((f, idx) => `
       <details class="note-cat"${idx === 0 ? ' open' : ''}>
         <summary class="note-cat-sum" style="--cat-color:${f.color}">
-          <span class="note-cat-dot"></span>${f.name}
-          <span class="note-cat-badge" data-cat-badge="${f.name}">0</span>
+          <span class="note-cat-dot"></span>
+          <span class="note-cat-name">${escNote(f.name)}</span>
+          <span class="note-cat-chevron" aria-hidden="true">›</span>
+          <span class="note-cat-badge" data-cat-badge="${escNote(f.name)}">0</span>
         </summary>
         <div class="note-cat-body">
           <div class="note-hint">Подсказки — нажми, чтобы добавить</div>
           <div class="chips">${f.subs.map((s: any) => `<button type="button" class="chip" data-n="${escNote(s.name)}" data-cat="${escNote(f.name)}">${escNote(s.name)}</button>`).join('')}</div>
           <div class="note-custom-row">
-            <input type="text" class="note-custom-inp" data-cat="${escNote(f.name)}" placeholder="Своя нота в «${escNote(f.name)}»…"/>
+            <input type="text" class="note-custom-inp" data-cat="${escNote(f.name)}" placeholder="Своя нота…"/>
             <button type="button" class="note-custom-add" data-cat="${escNote(f.name)}" aria-label="Добавить ноту">+</button>
           </div>
         </div>
       </details>`).join('');
 
-    container.querySelectorAll('.chip').forEach((ch) => {
-      ch.addEventListener('click', () => toggleNote((ch as HTMLElement).dataset.n!, (ch as HTMLElement).dataset.cat));
-    });
-    container.querySelectorAll('.note-custom-add').forEach((btn) => {
-      btn.addEventListener('click', () => addCustomNote((btn as HTMLElement).dataset.cat!));
+    container.addEventListener('click', (e) => {
+      const target = e.target as HTMLElement;
+      const chip = target.closest('.chip') as HTMLElement | null;
+      if (chip) {
+        e.preventDefault();
+        toggleNote(chip.dataset.n!, chip.dataset.cat);
+        return;
+      }
+      const addBtn = target.closest('.note-custom-add') as HTMLButtonElement | null;
+      if (addBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        addCustomNote(addBtn);
+      }
     });
     container.querySelectorAll('.note-custom-inp').forEach((inp) => {
       inp.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') { e.preventDefault(); addCustomNote((inp as HTMLElement).dataset.cat!); }
+        if (e.key !== 'Enter') return;
+        e.preventDefault();
+        const row = (inp as HTMLElement).closest('.note-custom-row');
+        const addBtn = row?.querySelector('.note-custom-add') as HTMLButtonElement | null;
+        if (addBtn) addCustomNote(addBtn);
       });
     });
     refreshNotesUI();
