@@ -247,16 +247,38 @@ import Layout from '../layouts/Layout.astro';
     });
   }
 
+  async function loadCupCard(id: string): Promise<{ cup: any; isOwner: boolean } | null> {
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (user) {
+      const { data: owned, error: ownErr } = await supabase
+        .from('cups')
+        .select('*')
+        .eq('id', id)
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (!ownErr && owned) return { cup: owned, isOwner: true };
+    }
+
+    const { data, error } = await supabase.rpc('get_cup_card', { p_id: id });
+    if (data) {
+      const isOwner = !!(user && (await supabase.from('cups').select('id').eq('id', id).eq('user_id', user.id).maybeSingle()).data);
+      return { cup: data, isOwner };
+    }
+
+    if (error?.message?.includes('get_cup_card')) {
+      showError('Чашка сохранена. Карточка по ссылке — после SQL-миграции (supabase/FIX-RUN-NOW.sql).');
+      return null;
+    }
+
+    showError(error?.message || 'Чашка не найдена');
+    return null;
+  }
+
   (async () => {
     if (!cupId) { showError('Не указана чашка'); return; }
-    const { data, error } = await supabase.rpc('get_cup_card', { p_id: cupId });
-    if (error || !data) { showError(error?.message || 'Чашка не найдена'); return; }
-    const { data: { user } } = await supabase.auth.getUser();
-    let isOwner = false;
-    if (user) {
-      const { data: owned } = await supabase.from('cups').select('id').eq('id', cupId).eq('user_id', user.id).maybeSingle();
-      isOwner = !!owned;
-    }
-    renderCup(data, isOwner);
+    const loaded = await loadCupCard(cupId);
+    if (!loaded) return;
+    renderCup(loaded.cup, loaded.isOwner);
   })();
 </script>
