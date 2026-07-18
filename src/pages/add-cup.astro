@@ -25,7 +25,7 @@ import { DB, countryOrder } from '../data/countries';
           <input type="text" id="f_variety_custom" placeholder="Какой сорт? напр. Sidra, Pink Bourbon"/>
         </div>
         <div class="row2">
-          <div><label class="fl">Страна</label><select id="f_country"></select></div>
+          <div><label class="fl">Страна</label><select id="f_country"></select><p class="field-hint">Открывает страну на карте — можно подставить из названия кофе</p></div>
           <div><label class="fl">Обработка</label><select id="f_process"></select></div>
         </div>
         <label class="fl">Способ заваривания</label>
@@ -165,6 +165,7 @@ import { DB, countryOrder } from '../data/countries';
   .sliderrow .val { color: var(--accent); font-weight: 700; }
   .sliderrow input[type=range] { width: 100%; accent-color: var(--accent); }
   .balance-hint { font-size: .72rem; color: var(--text-muted); margin: -4px 0 10px; line-height: 1.45; }
+  .field-hint { font-size: .68rem; color: var(--text-muted); margin: 4px 0 0; line-height: 1.4; }
   .char-block {
     margin: 14px 0 0; padding: 12px 12px 10px; border: 1px dashed var(--border); border-radius: 12px;
     background: rgba(168,124,79,.03);
@@ -217,6 +218,7 @@ import { DB, countryOrder } from '../data/countries';
   import { bindBrewTimeInput, parseBrewTimeInput, readBrewTimeInput, setBrewTimeInputValue } from '../lib/brewTime';
   import { TASTE_CHARACTER, TASTE_CHARACTER_DIMS } from '../data/tasteCharacter';
   import { normalizeTasteCharacter, type TasteCharacter } from '../lib/tasteCharacter';
+  import { countryNameForKey, resolveCountryKey } from '../lib/countryResolve';
 
   const supabase = createClient(
     import.meta.env.PUBLIC_SUPABASE_URL,
@@ -247,6 +249,23 @@ import { DB, countryOrder } from '../data/countries';
   });
 
   const escNote = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+
+  function guessCountryFromName() {
+    const selCountry = document.getElementById('f_country') as HTMLSelectElement;
+    if (selCountry.value) return;
+    const name = (document.getElementById('f_name') as HTMLInputElement).value.trim();
+    if (!name) return;
+    const key = resolveCountryKey(null, name);
+    if (key) setSelect('f_country', countryNameForKey(key)!);
+  }
+
+  function readCountryValue(): string | null {
+    const sel = document.getElementById('f_country') as HTMLSelectElement;
+    if (sel.value) return sel.value;
+    const name = (document.getElementById('f_name') as HTMLInputElement).value.trim();
+    const key = resolveCountryKey(null, name);
+    return key ? countryNameForKey(key) : null;
+  }
 
   function fill(id:string, arr:readonly string[], ph:string){
     const s = document.getElementById(id) as HTMLSelectElement;
@@ -679,6 +698,7 @@ import { DB, countryOrder } from '../data/countries';
     });
     buildTasteChars();
     buildNotes();
+    document.getElementById('f_name')!.addEventListener('blur', guessCountryFromName);
     document.getElementById('rating')!.innerHTML = [1,2,3,4,5].map(i=>`<span class="star" data-i="${i}">★</span>`).join('');
     document.querySelectorAll('#rating .star').forEach(st=>{
       st.addEventListener('click', ()=>{ sel.rating=+(st as HTMLElement).dataset.i!; document.querySelectorAll('#rating .star').forEach(s2=>{ s2.classList.toggle('on', +(s2 as HTMLElement).dataset.i! <= sel.rating); }); });
@@ -692,6 +712,7 @@ import { DB, countryOrder } from '../data/countries';
     const name = (document.getElementById('f_name') as HTMLInputElement).value.trim();
     const msg = document.getElementById('msg')!;
     if(!name){ msg.className='addcup-msg error'; msg.textContent='Добавьте название кофе'; return; }
+    guessCountryFromName();
     const btn = document.getElementById('saveBtn') as HTMLButtonElement;
     btn.disabled = true; btn.textContent = 'Сохраняем...';
     const rv = (id: string) => (document.getElementById(id) as HTMLInputElement).value.trim();
@@ -716,7 +737,7 @@ import { DB, countryOrder } from '../data/countries';
       name,
       roaster: (document.getElementById('f_roaster') as HTMLInputElement).value.trim() || null,
       variety: readVarietyValue(),
-      country: (document.getElementById('f_country') as HTMLSelectElement).value || null,
+      country: readCountryValue(),
       process: (document.getElementById('f_process') as HTMLSelectElement).value || null,
       brew_method: (document.getElementById('f_brew') as HTMLSelectElement).value || null,
       recipe: hasRecipe ? recipe : null,

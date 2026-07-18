@@ -224,6 +224,7 @@ import Nav from '../components/Nav.astro';
   import { beanOutUrl } from '../lib/beanOutUrl';
   import { formatCupRecipe, recipeFingerprint } from '../lib/cupRecipe';
   import { formatTasteCharacterLine, normalizeTasteCharacter } from '../lib/tasteCharacter';
+  import { resolveCountryKey } from '../lib/countryResolve';
 
   const supabase = createClient(
     import.meta.env.PUBLIC_SUPABASE_URL,
@@ -466,16 +467,23 @@ import Nav from '../components/Nav.astro';
     const topNamesSet = new Set((latestProfile?.profile_type || '').split(',').map((s: string) => s.trim()).filter(Boolean));
 
     const answers = latestProfile?.answers || null;
-    const nameToKey: Record<string, string> = {};
-    for (const [k, c] of Object.entries(DB) as [string, any][]) nameToKey[c.name] = k;
     const openedKeys = new Set<string>();
     const openSelStatuses = new Set(['ordered', 'received', 'tasted']);
     selections.forEach((s: any) => {
       if (!openSelStatuses.has(s.status)) return;
-      (s.coffees || []).forEach((c: any) => { const k = nameToKey[c.origin]; if (k) openedKeys.add(k); });
+      (s.coffees || []).forEach((c: any) => {
+        const k = resolveCountryKey(c.origin, c.name);
+        if (k) openedKeys.add(k);
+      });
     });
-    cups.forEach((c: any) => { const k = nameToKey[c.country]; if (k) openedKeys.add(k); });
-    shelf.forEach((s: any) => { const k = nameToKey[s.country]; if (k) openedKeys.add(k); });
+    cups.forEach((c: any) => {
+      const k = resolveCountryKey(c.country, c.name);
+      if (k) openedKeys.add(k);
+    });
+    shelf.forEach((s: any) => {
+      const k = resolveCountryKey(s.country, s.name);
+      if (k) openedKeys.add(k);
+    });
     const topKeys = calcTop(answers);
     const recommendedFirst = topKeys.filter(k => !openedKeys.has(k)).slice(0, 3);
     const prefFams = new Set<string>();
@@ -497,9 +505,7 @@ import Nav from '../components/Nav.astro';
       : '';
     const profilePanel = `${profileCard}${tasteCard ? `<div class="sub-h">🗺️ Карта вкуса</div>${tasteCard}` : ''}`;
 
-    const discoPanel = answers
-      ? `<div class="profile-card"><div class="disco-top"><div class="disco-ring">${ringSVG(openedKeys.size, countryOrder.length)}</div><div><div class="disco-count">${openedKeys.size} / ${countryOrder.length}</div><div class="profile-label" style="min-width:0">стран открыто</div></div></div>${recommendedFirst.length ? `<div class="disco-subtitle">Откройте первыми — под ваш вкус</div><div class="disco-rec">${recommendedFirst.map(k => { const c: any = DB[k]; return `<a class="disco-rec-card" href="/countries?c=${k}"><span class="drc-flag">${c.flag}</span><span class="drc-name">${c.name}</span><span class="drc-why">${c.flavors.slice(0, 3).join(' · ')}</span></a>`; }).join('')}</div>` : ''}<div class="disco-subtitle">Весь мир кофе · нажмите на страну</div><div class="disco-grid">${countryOrder.map((k: string) => { const c: any = DB[k]; const open = openedKeys.has(k); return `<span class="disco-chip ${open ? 'open' : 'closed'}" data-k="${k}">${c.flag} ${c.name}${open ? ' ✓' : ''}</span>`; }).join('')}</div><div id="discoInfo" class="info-panel"></div><div class="disco-hint">Пробуйте новые страны и записывайте чашки — карта открывается, а профиль становится точнее.</div></div>`
-      : `<div class="empty-state">Карта открытий появится после диагностики. <a href="/quiz">Пройти тест →</a></div>`;
+    const discoPanel = `<div class="profile-card"><div class="disco-top"><div class="disco-ring">${ringSVG(openedKeys.size, countryOrder.length)}</div><div><div class="disco-count">${openedKeys.size} / ${countryOrder.length}</div><div class="profile-label" style="min-width:0">стран открыто</div></div></div>${answers && recommendedFirst.length ? `<div class="disco-subtitle">Откройте первыми — под ваш вкус</div><div class="disco-rec">${recommendedFirst.map(k => { const c: any = DB[k]; return `<a class="disco-rec-card" href="/countries?c=${k}"><span class="drc-flag">${c.flag}</span><span class="drc-name">${c.name}</span><span class="drc-why">${c.flavors.slice(0, 3).join(' · ')}</span></a>`; }).join('')}</div>` : ''}<div class="disco-subtitle">Весь мир кофе · нажмите на страну</div><div class="disco-grid">${countryOrder.map((k: string) => { const c: any = DB[k]; const open = openedKeys.has(k); return `<span class="disco-chip ${open ? 'open' : 'closed'}" data-k="${k}">${c.flag} ${c.name}${open ? ' ✓' : ''}</span>`; }).join('')}</div><div id="discoInfo" class="info-panel"></div><div class="disco-hint">${answers ? 'Пробуйте новые страны и записывайте чашки — карта открывается, а профиль становится точнее.' : 'Записывай чашки с указанием страны (или «Эфиопия …» в названии) — страна откроется на карте. <a href="/quiz">Пройди диагностику</a> для персональных подсказок.'}</div></div>`;
 
     const brewMethods = [...new Set(cups.map((c: any) => c.brew_method).filter(Boolean))].sort() as string[];
     const diaryFilters = cups.length ? `<div class="diary-filters">
