@@ -53,7 +53,10 @@ import { DB, countryOrder } from '../data/countries';
           <button type="button" class="pour-add" id="addPourBtn">+ Пролив</button>
         </div>
         <div id="recipeHint" class="recipe-hint" style="display:none">Подставлен рецепт из гида — поправь под то, как заварил на самом деле.</div>
+        <label class="fl">Баланс вкуса</label>
+        <p class="balance-hint">Ползунок — насколько. Ниже — характер (тренировка палитры)</p>
         <div id="sliders"></div>
+        <div id="tasteChars"></div>
         <label class="fl">Вкус и ароматы — что чувствуешь в чашке</label>
         <p class="note-cat-hint">Раскрой категорию ▶ — выбери подсказку или добавь свою ноту</p>
         <div id="selectedNotes" class="note-selected"></div>
@@ -161,6 +164,26 @@ import { DB, countryOrder } from '../data/countries';
   .sliderrow .top { display: flex; justify-content: space-between; font-size: .82rem; margin-bottom: 3px; }
   .sliderrow .val { color: var(--accent); font-weight: 700; }
   .sliderrow input[type=range] { width: 100%; accent-color: var(--accent); }
+  .balance-hint { font-size: .72rem; color: var(--text-muted); margin: -4px 0 10px; line-height: 1.45; }
+  .char-block {
+    margin: 14px 0 0; padding: 12px 12px 10px; border: 1px dashed var(--border); border-radius: 12px;
+    background: rgba(168,124,79,.03);
+  }
+  .char-block-h { font-size: .78rem; font-weight: 700; color: var(--text); margin-bottom: 2px; }
+  .char-block-sub { font-size: .7rem; color: var(--text-muted); margin-bottom: 8px; line-height: 1.4; }
+  .char-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+  .char-chip {
+    padding: 5px 10px; border-radius: 16px; border: 1px solid var(--border); background: var(--bg);
+    font-size: .74rem; cursor: pointer; transition: .12s; font-family: 'Inter', sans-serif; color: var(--text);
+    text-align: left; line-height: 1.25;
+  }
+  .char-chip small { display: block; font-size: .62rem; color: var(--text-muted); font-weight: 500; margin-top: 1px; }
+  .char-chip.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .char-chip.on small { color: rgba(255,255,255,.85); }
+  .char-custom {
+    width: 100%; padding: 9px 11px; border: 1px solid var(--border); border-radius: 10px; font-size: .82rem;
+    background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif;
+  }
   .famhdr { font-size: .72rem; font-weight: 700; color: var(--text-muted); margin: 12px 0 5px; text-transform: uppercase; letter-spacing: .04em; }
   .chips { display: flex; flex-wrap: wrap; gap: 7px; }
   .chip {
@@ -192,6 +215,8 @@ import { DB, countryOrder } from '../data/countries';
   import { bindVarietyOther, readVarietyValue, setVarietyValue } from '../lib/beanVarietyField';
   import { tableHasColumn } from '../lib/supabaseSchema';
   import { bindBrewTimeInput, parseBrewTimeInput, readBrewTimeInput, setBrewTimeInputValue } from '../lib/brewTime';
+  import { TASTE_CHARACTER, TASTE_CHARACTER_DIMS } from '../data/tasteCharacter';
+  import { normalizeTasteCharacter, type TasteCharacter } from '../lib/tasteCharacter';
 
   const supabase = createClient(
     import.meta.env.PUBLIC_SUPABASE_URL,
@@ -203,7 +228,11 @@ import { DB, countryOrder } from '../data/countries';
   const BREWS = ['V60','Kalita','Chemex','Aeropress','Френч-пресс','Гейзерная','Турка','Эспрессо','Капсулы','Cold Brew','Другое'];
   const SLIDERS = [['acidity','Кислотность'],['sweetness','Сладость'],['bitterness','Горечь'],['body','Тело']];
 
-  const sel: any = { acidity:3, sweetness:3, bitterness:2, body:3, notes:new Set<string>(), noteCats:new Map<string,string>(), rating:0 };
+  const sel: any = {
+    acidity: 3, sweetness: 3, bitterness: 2, body: 3,
+    notes: new Set<string>(), noteCats: new Map<string, string>(),
+    rating: 0, tasteChar: {} as TasteCharacter,
+  };
   const params = new URLSearchParams(location.search);
   const editCupId = params.get('edit');
   let selectedTemplateId: string | null = params.get('template') || null;
@@ -352,6 +381,7 @@ import { DB, countryOrder } from '../data/countries';
       if (lbl) lbl.textContent = String(sel[k]);
     });
     sel.rating = cup.rating || 0;
+    setTasteCharacterUI(normalizeTasteCharacter(cup.taste_character));
     document.querySelectorAll('#rating .star').forEach((s2) => {
       s2.classList.toggle('on', +(s2 as HTMLElement).dataset.i! <= sel.rating);
     });
@@ -458,6 +488,77 @@ import { DB, countryOrder } from '../data/countries';
     addNote(val, cat);
     inp.value = '';
     inp.focus();
+  }
+
+  function syncTasteCharChips() {
+    TASTE_CHARACTER_DIMS.forEach((dim) => {
+      const preset = sel.tasteChar[dim]?.preset;
+      document.querySelectorAll(`.char-chip[data-dim="${dim}"]`).forEach((ch) => {
+        ch.classList.toggle('on', preset === (ch as HTMLElement).dataset.id);
+      });
+    });
+  }
+
+  function setTasteCharacterUI(tc: TasteCharacter | null) {
+    sel.tasteChar = tc ? { ...tc } : {};
+    TASTE_CHARACTER_DIMS.forEach((dim) => {
+      const inp = document.querySelector(`.char-custom[data-dim="${dim}"]`) as HTMLInputElement | null;
+      if (inp) inp.value = sel.tasteChar[dim]?.custom || '';
+    });
+    syncTasteCharChips();
+  }
+
+  function readTasteCharacterFromForm(): TasteCharacter | null {
+    const out: TasteCharacter = {};
+    TASTE_CHARACTER_DIMS.forEach((dim) => {
+      const preset = sel.tasteChar[dim]?.preset || null;
+      const custom = (document.querySelector(`.char-custom[data-dim="${dim}"]`) as HTMLInputElement | null)?.value.trim() || null;
+      if (preset || custom) out[dim] = { preset, custom };
+    });
+    return Object.keys(out).length ? out : null;
+  }
+
+  function buildTasteChars() {
+    const box = document.getElementById('tasteChars')!;
+    box.innerHTML = TASTE_CHARACTER_DIMS.map((dim) => {
+      const cfg = TASTE_CHARACTER[dim];
+      const chips = cfg.options.map((o) =>
+        `<button type="button" class="char-chip" data-dim="${dim}" data-id="${escNote(o.id)}"><span>${escNote(o.label)}</span><small>${escNote(o.desc)}</small></button>`
+      ).join('');
+      return `<div class="char-block" data-dim-block="${dim}">
+        <div class="char-block-h">${escNote(cfg.label)} — характер</div>
+        <div class="char-block-sub">${escNote(cfg.hint)}</div>
+        <div class="char-chips">${chips}</div>
+        <input type="text" class="char-custom" data-dim="${dim}" placeholder="Или свой вариант…"/>
+      </div>`;
+    }).join('');
+
+    box.addEventListener('click', (e) => {
+      const chip = (e.target as HTMLElement).closest('.char-chip') as HTMLElement | null;
+      if (!chip) return;
+      e.preventDefault();
+      const dim = chip.dataset.dim as keyof TasteCharacter;
+      const id = chip.dataset.id!;
+      const cur = sel.tasteChar[dim]?.preset;
+      if (cur === id) {
+        if (sel.tasteChar[dim]) sel.tasteChar[dim]!.preset = null;
+        if (!sel.tasteChar[dim]?.custom) delete sel.tasteChar[dim];
+      } else {
+        sel.tasteChar[dim] = { ...sel.tasteChar[dim], preset: id };
+      }
+      syncTasteCharChips();
+    });
+    box.querySelectorAll('.char-custom').forEach((inp) => {
+      inp.addEventListener('input', () => {
+        const dim = (inp as HTMLElement).dataset.dim as keyof TasteCharacter;
+        const v = (inp as HTMLInputElement).value.trim();
+        if (v) sel.tasteChar[dim] = { ...sel.tasteChar[dim], custom: v };
+        else if (sel.tasteChar[dim]) {
+          sel.tasteChar[dim]!.custom = null;
+          if (!sel.tasteChar[dim]!.preset) delete sel.tasteChar[dim];
+        }
+      });
+    });
   }
 
   function buildNotes() {
@@ -576,6 +677,7 @@ import { DB, countryOrder } from '../data/countries';
     document.querySelectorAll('#sliders input[type=range]').forEach(inp=>{
       inp.addEventListener('input', (e:any)=>{ const k=e.target.dataset.k; sel[k]=+e.target.value; document.getElementById('v_'+k)!.textContent=e.target.value; });
     });
+    buildTasteChars();
     buildNotes();
     document.getElementById('rating')!.innerHTML = [1,2,3,4,5].map(i=>`<span class="star" data-i="${i}">★</span>`).join('');
     document.querySelectorAll('#rating .star').forEach(st=>{
@@ -625,6 +727,10 @@ import { DB, countryOrder } from '../data/countries';
     };
     if (await tableHasColumn(supabase, 'cups', 'brew_recipe_id')) {
       payload.brew_recipe_id = selectedTemplateId || null;
+    }
+    const tasteCharacter = readTasteCharacterFromForm();
+    if (tasteCharacter && await tableHasColumn(supabase, 'cups', 'taste_character')) {
+      payload.taste_character = tasteCharacter;
     }
     if (editCupId) {
       const { error } = await supabase.from('cups').update(payload).eq('id', editCupId).eq('user_id', user.id);

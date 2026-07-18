@@ -76,6 +76,11 @@ import Layout from '../layouts/Layout.astro';
     color: var(--text); margin-bottom: 4px;
   }
   .cupcard-recipe-t { font-size: .82rem; color: var(--text-dim); line-height: 1.55; }
+  .cupcard-chars {
+    margin: 0 16px 12px; padding: 10px 14px; border-radius: 12px;
+    background: rgba(168,124,79,.06); border: 1px solid rgba(168,124,79,.15);
+    font-size: .76rem; color: var(--text-dim); line-height: 1.55; position: relative; z-index: 1;
+  }
   .cupcard-foot {
     padding: 14px 22px 18px; border-top: 1px solid rgba(228,208,185,.6);
     display: flex; justify-content: space-between; align-items: center; gap: 10px;
@@ -111,6 +116,7 @@ import Layout from '../layouts/Layout.astro';
   import { createClient } from '@supabase/supabase-js';
   import { balanceWheelSvg } from '../lib/cupBalanceWheel';
   import { formatCupRecipe, formatCupRecipeShort, normalizeRecipe } from '../lib/cupRecipe';
+  import { formatTasteCharacterLine, normalizeTasteCharacter } from '../lib/tasteCharacter';
 
   const supabase = createClient(
     import.meta.env.PUBLIC_SUPABASE_URL,
@@ -167,6 +173,7 @@ import Layout from '../layouts/Layout.astro';
     const recipeLine = formatCupRecipe(cup.recipe);
     const recipeShort = formatCupRecipeShort(cup.recipe, cup.brew_method);
     const meta = [cup.roaster, cup.country, cup.process].filter(Boolean).map(esc).join(' · ');
+    const tasteCharLine = formatTasteCharacterLine(normalizeTasteCharacter(cup.taste_character));
     const dateStr = cup.created_at ? new Date(cup.created_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
     const wheel = balanceWheelSvg({
       acidity: cup.acidity ?? 0,
@@ -204,6 +211,7 @@ import Layout from '../layouts/Layout.astro';
             ${cup.rating ? `<div class="cupcard-stars">${'★'.repeat(cup.rating)}${'☆'.repeat(5 - cup.rating)}</div>` : ''}
           </div>
           <div class="cupcard-wheel">${wheel}</div>
+          ${tasteCharLine ? `<div class="cupcard-chars">${esc(tasteCharLine)}</div>` : ''}
           ${notes.length ? `<div class="cupcard-notes">${notes.map(n => `<span class="cupcard-note">${esc(n)}</span>`).join('')}</div>` : ''}
           ${recipeLine || cup.brew_method ? `
             <div class="cupcard-recipe">
