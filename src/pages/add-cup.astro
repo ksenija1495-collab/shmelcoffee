@@ -34,10 +34,9 @@ import { DB, countryOrder } from '../data/countries';
         </div>
         <label class="fl">Рецепт — как ты заваривал</label>
         <div class="recipe-grid">
-          <input type="number" id="r_coffee_g" inputmode="decimal" min="0" step="0.1" placeholder="Кофе, г (напр. 15)"/>
+          <input type="number" id="r_coffee_g" inputmode="decimal" min="0" step="0.1" placeholder="Зерно, г (напр. 15)"/>
           <input type="number" id="r_water_g" inputmode="decimal" min="0" step="1" placeholder="Вода, г (напр. 250)"/>
           <input type="text" id="r_grind" placeholder="Помол (напр. средний)"/>
-          <input type="text" id="r_ratio" placeholder="Пропорция (напр. 1:16)"/>
           <input type="text" id="r_temp" placeholder="Вода °C (напр. 94)"/>
           <input type="text" id="r_time" placeholder="Общее время (напр. 2:30)"/>
         </div>
@@ -170,7 +169,7 @@ import { DB, countryOrder } from '../data/countries';
   import { wheelData } from '../data/wheel';
   import { DB, countryOrder } from '../data/countries';
   import { BEAN_VARIETIES } from '../data/varieties';
-  import { normalizeRecipe, recipeHasData } from '../lib/cupRecipe';
+  import { normalizeRecipe, recipeHasData, parseGramsFromRatioText } from '../lib/cupRecipe';
 
   const supabase = createClient(
     import.meta.env.PUBLIC_SUPABASE_URL,
@@ -268,7 +267,6 @@ import { DB, countryOrder } from '../data/countries';
     (document.getElementById('r_coffee_g') as HTMLInputElement).value = r.coffee_g ? String(r.coffee_g) : '';
     (document.getElementById('r_water_g') as HTMLInputElement).value = r.water_g ? String(r.water_g) : '';
     (document.getElementById('r_grind') as HTMLInputElement).value = r.grind || '';
-    (document.getElementById('r_ratio') as HTMLInputElement).value = r.ratio || '';
     (document.getElementById('r_temp') as HTMLInputElement).value = r.temp || '';
     (document.getElementById('r_time') as HTMLInputElement).value = r.time || '';
     (document.getElementById('p_bloom') as HTMLInputElement).value = r.blooming || '';
@@ -488,8 +486,12 @@ import { DB, countryOrder } from '../data/countries';
     setSelect('f_brew', g('brew'));
     (document.getElementById('r_coffee_g') as HTMLInputElement).value = g('coffee_g');
     (document.getElementById('r_water_g') as HTMLInputElement).value = g('water_g');
+    if (!g('coffee_g') && !g('water_g') && g('ratio')) {
+      const parsed = parseGramsFromRatioText(g('ratio'));
+      if (parsed.coffee_g) (document.getElementById('r_coffee_g') as HTMLInputElement).value = String(parsed.coffee_g);
+      if (parsed.water_g) (document.getElementById('r_water_g') as HTMLInputElement).value = String(parsed.water_g);
+    }
     (document.getElementById('r_grind') as HTMLInputElement).value = g('grind');
-    (document.getElementById('r_ratio') as HTMLInputElement).value = g('ratio');
     (document.getElementById('r_temp') as HTMLInputElement).value = g('temp');
     (document.getElementById('r_time') as HTMLInputElement).value = g('time');
     (document.getElementById('p_bloom') as HTMLInputElement).value = g('blooming');
@@ -502,7 +504,7 @@ import { DB, countryOrder } from '../data/countries';
         if (pourTimes[i]) (inp as HTMLInputElement).value = pourTimes[i];
       });
     }
-    if (g('coffee_g') || g('water_g') || g('grind') || g('ratio') || g('temp') || g('time') || g('blooming') || pourTimes.length) {
+    if (g('coffee_g') || g('water_g') || g('ratio') || g('grind') || g('temp') || g('time') || g('blooming') || pourTimes.length) {
       (document.getElementById('recipeHint') as HTMLElement).style.display = 'block';
     }
     if (g('notes')) prefillNotesFromParam(g('notes'));
@@ -558,7 +560,6 @@ import { DB, countryOrder } from '../data/countries';
       coffee_g: rn('r_coffee_g'),
       water_g: rn('r_water_g'),
       grind: rv('r_grind') || null,
-      ratio: rv('r_ratio') || null,
       temp: rv('r_temp') || null,
       time: rv('r_time') || null,
       blooming: rv('p_bloom') || null,

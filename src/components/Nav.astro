@@ -76,7 +76,15 @@ const isActive = (path: string) => currentPath === path || currentPath.startsWit
       if (bn.process) q.set('process', bn.process);
       if (brew) q.set('brew', brew);
       if (rec.grind) q.set('grind', rec.grind);
-      if (rec.ratio) q.set('ratio', rec.ratio);
+      if (rec.ratio) {
+        const { coffee_g, water_g } = (() => {
+          const m = String(rec.ratio).match(/(\d+(?:[.,]\d+)?)\s*г[^\d]*(\d+(?:[.,]\d+)?)\s*мл/i);
+          if (!m) return {};
+          return { coffee_g: m[1].replace(',', '.'), water_g: m[2].replace(',', '.') };
+        })();
+        if (coffee_g) q.set('coffee_g', coffee_g);
+        if (water_g) q.set('water_g', water_g);
+      }
       if (rec.temp) q.set('temp', rec.temp);
       if (rec.time) q.set('time', rec.time);
       if (notes) q.set('notes', notes);
