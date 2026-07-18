@@ -525,7 +525,7 @@ import Nav from '../components/Nav.astro';
         ${asNoteList(c.notes).length ? `<div class="profile-tags" style="margin-top:6px">${asNoteList(c.notes).map((n: string) => `<span class="profile-tag">${esc(n)}</span>`).join('')}</div>` : ''}
         ${c.comment ? `<div class="coffee-detail" style="margin-top:4px;font-style:italic">${esc(c.comment)}</div>` : ''}
         <a href="/cup?id=${c.id}" class="cup-open-card">Карточка →</a>
-        <a href="/add-cup?edit=${c.id}" class="cup-open-card">Редактировать</a>
+        <a href="/add-cup?edit=${c.id}" class="cup-open-card cup-open-edit">Редактировать →</a>
       </div>`;
     };
     const diaryPanel = cups.length

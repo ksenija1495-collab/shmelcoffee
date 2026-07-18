@@ -228,46 +228,64 @@ import Layout from '../layouts/Layout.astro';
         </article>
 
         <div class="cupcard-actions">
-          <button type="button" class="btn btn-primary" id="shareBtn">Поделиться карточкой</button>
-          <div class="cupcard-actions-row">
+          ${isOwner ? `<a class="btn btn-primary" href="/add-cup?edit=${cup.id}" style="display:block;text-align:center;text-decoration:none">✏️ Редактировать</a>` : ''}
+          <button type="button" class="btn ${isOwner ? 'btn-ghost' : 'btn-primary'}" id="shareBtn">Поделиться карточкой</button>
+          ${isOwner ? `<div class="cupcard-actions-row">
             <button type="button" class="btn-ghost" id="saveRecipeBtn">⭐ Базовый рецепт</button>
             <a class="btn-ghost" href="${repeatUrl}" style="display:flex;align-items:center;justify-content:center;text-decoration:none">+ Так же заварить</a>
-          </div>
-          ${isOwner ? `<a class="btn btn-ghost" href="/add-cup?edit=${cup.id}" style="display:block;text-align:center;text-decoration:none;padding:11px">✏️ Редактировать чашку</a>` : ''}
+          </div>` : ''}
           <a href="/account" class="btn btn-ghost" style="display:block;text-align:center;text-decoration:none;padding:11px">← В дневник</a>
           <div class="cupcard-msg" id="cupMsg"></div>
         </div>
       </div>`;
 
     document.getElementById('shareBtn')!.addEventListener('click', shareCard);
-    document.getElementById('saveRecipeBtn')!.addEventListener('click', async () => {
+    const saveBtn = document.getElementById('saveRecipeBtn');
+    saveBtn?.addEventListener('click', async () => {
       const id = await saveAsBaseRecipe(cup);
       const msg = document.getElementById('cupMsg')!;
       if (id) { msg.textContent = 'Рецепт сохранён — можно применять в новых чашках'; msg.classList.remove('error'); }
     });
   }
 
-  async function loadCupCard(id: string): Promise<{ cup: any; isOwner: boolean } | null> {
+  async function waitForAuthUser() {
+    for (let i = 0; i < 12; i++) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) return session.user;
+      await new Promise((r) => setTimeout(r, 150));
+    }
     const { data: { user } } = await supabase.auth.getUser();
+    return user;
+  }
+
+  async function loadCupCard(id: string): Promise<{ cup: any; isOwner: boolean } | null> {
+    const user = await waitForAuthUser();
 
     if (user) {
-      const { data: owned, error: ownErr } = await supabase
-        .from('cups')
-        .select('*')
-        .eq('id', id)
-        .eq('user_id', user.id)
-        .maybeSingle();
-      if (!ownErr && owned) return { cup: owned, isOwner: true };
+      const { data: cup, error } = await supabase.from('cups').select('*').eq('id', id).maybeSingle();
+      if (error) {
+        showError('Ошибка загрузки: ' + error.message);
+        return null;
+      }
+      if (cup && cup.user_id === user.id) {
+        return { cup, isOwner: true };
+      }
+      if (cup) {
+        showError('Эта чашка принадлежит другому пользователю');
+        return null;
+      }
     }
 
     const { data, error } = await supabase.rpc('get_cup_card', { p_id: id });
-    if (data) {
-      const isOwner = !!(user && (await supabase.from('cups').select('id').eq('id', id).eq('user_id', user.id).maybeSingle()).data);
-      return { cup: data, isOwner };
+    if (data) return { cup: data, isOwner: false };
+
+    if (!user) {
+      window.location.href = '/login?next=' + encodeURIComponent(location.pathname + location.search);
+      return null;
     }
 
     if (error?.message?.includes('get_cup_card')) {
-      showError('Чашка сохранена. Карточка по ссылке — после SQL-миграции (supabase/FIX-RUN-NOW.sql).');
+      showError('Чашка не найдена');
       return null;
     }
 
