@@ -179,6 +179,7 @@ import { DB, countryOrder } from '../data/countries';
   import { BEAN_VARIETIES } from '../data/varieties';
   import { normalizeRecipe, recipeHasData, parseGramsFromRatioText } from '../lib/cupRecipe';
   import { bindVarietyOther, readVarietyValue, setVarietyValue } from '../lib/beanVarietyField';
+  import { tableHasColumn } from '../lib/supabaseSchema';
 
   const supabase = createClient(
     import.meta.env.PUBLIC_SUPABASE_URL,
@@ -292,6 +293,8 @@ import { DB, countryOrder } from '../data/countries';
   async function loadSavedRecipes() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
+    const { error: tableErr } = await supabase.from('saved_brew_recipes').select('id').limit(0);
+    if (tableErr) return;
     const { data } = await supabase.from('saved_brew_recipes').select('id,name,brew_method,recipe').order('created_at', { ascending: false });
     const row = document.getElementById('templateRow')!;
     const tpl = document.getElementById('f_template') as HTMLSelectElement;
@@ -584,13 +587,15 @@ import { DB, countryOrder } from '../data/countries';
       country: (document.getElementById('f_country') as HTMLSelectElement).value || null,
       process: (document.getElementById('f_process') as HTMLSelectElement).value || null,
       brew_method: (document.getElementById('f_brew') as HTMLSelectElement).value || null,
-      brew_recipe_id: selectedTemplateId || null,
       recipe: hasRecipe ? recipe : null,
       acidity: sel.acidity, sweetness: sel.sweetness, bitterness: sel.bitterness, body: sel.body,
       notes: [...sel.notes],
       rating: sel.rating || null,
       comment: (document.getElementById('f_comment') as HTMLTextAreaElement).value.trim() || null,
     };
+    if (await tableHasColumn(supabase, 'cups', 'brew_recipe_id')) {
+      payload.brew_recipe_id = selectedTemplateId || null;
+    }
     if (editCupId) {
       const { error } = await supabase.from('cups').update(payload).eq('id', editCupId).eq('user_id', user.id);
       if (error) { msg.className = 'addcup-msg error'; msg.textContent = 'Ошибка: ' + error.message; btn.disabled = false; btn.textContent = 'Сохранить изменения'; return; }
