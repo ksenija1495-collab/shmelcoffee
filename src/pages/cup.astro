@@ -1,0 +1,255 @@
+---
+export const prerender = true;
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Моя чашка — Shmelco" description="Карточка дегустации кофe">
+  <div class="cupcard-page" id="cupPage">
+    <div class="cupcard-loading" id="cupLoading">
+      <div class="loader-spinner"></div>
+      <p>Загружаем чашку…</p>
+    </div>
+  </div>
+</Layout>
+
+<style is:global>
+  .cupcard-page {
+    min-height: 100vh; padding: 72px 20px 48px; display: flex; align-items: flex-start;
+    justify-content: center; background: radial-gradient(ellipse at 50% 0%, rgba(228,208,185,.35), transparent 55%), var(--bg);
+  }
+  .cupcard-loading { text-align: center; color: var(--text-muted); padding: 80px 0; width: 100%; }
+  .loader-spinner {
+    width: 28px; height: 28px; border: 2px solid var(--border); border-top-color: var(--accent);
+    border-radius: 50%; animation: cupSpin .6s linear infinite; margin: 0 auto 14px;
+  }
+  @keyframes cupSpin { to { transform: rotate(360deg); } }
+
+  .cupcard-wrap { width: 100%; max-width: 420px; animation: cupIn .5s ease both; }
+  @keyframes cupIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+
+  .cupcard {
+    position: relative; border-radius: 20px; overflow: hidden;
+    background: linear-gradient(165deg, #fff 0%, #faf8f0 48%, #f3ece0 100%);
+    border: 1px solid var(--border);
+    box-shadow: 0 24px 60px rgba(70,41,24,.12), 0 2px 8px rgba(70,41,24,.06);
+  }
+  .cupcard::before {
+    content: ''; position: absolute; inset: 0; pointer-events: none; opacity: .04;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  .cupcard-top {
+    padding: 22px 22px 0; text-align: center; position: relative; z-index: 1;
+  }
+  .cupcard-brand {
+    font-size: .58rem; letter-spacing: .32em; text-transform: uppercase; color: var(--text-muted);
+    font-weight: 600; margin-bottom: 14px;
+  }
+  .cupcard-name {
+    font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.85rem; font-weight: 600;
+    line-height: 1.15; color: var(--text); margin-bottom: 6px;
+  }
+  .cupcard-meta { font-size: .8rem; color: var(--text-dim); line-height: 1.5; }
+  .cupcard-stars { color: #E0B81E; font-size: 1rem; letter-spacing: 2px; margin-top: 8px; }
+
+  .cupcard-wheel {
+    display: flex; justify-content: center; padding: 8px 0 4px; position: relative; z-index: 1;
+  }
+  .cupcard-notes {
+    padding: 0 22px 16px; display: flex; flex-wrap: wrap; gap: 6px; justify-content: center;
+    position: relative; z-index: 1;
+  }
+  .cupcard-note {
+    font-size: .72rem; font-weight: 600; padding: 5px 11px; border-radius: 20px;
+    background: rgba(168,124,79,.1); border: 1px solid rgba(168,124,79,.25); color: var(--text);
+  }
+  .cupcard-recipe {
+    margin: 0 16px 16px; padding: 14px 16px; border-radius: 14px;
+    background: rgba(70,41,24,.04); border: 1px solid rgba(228,208,185,.8);
+    position: relative; z-index: 1;
+  }
+  .cupcard-recipe-h {
+    font-size: .62rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--accent); margin-bottom: 6px;
+  }
+  .cupcard-brew {
+    font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.15rem; font-weight: 600;
+    color: var(--text); margin-bottom: 4px;
+  }
+  .cupcard-recipe-t { font-size: .82rem; color: var(--text-dim); line-height: 1.55; }
+  .cupcard-foot {
+    padding: 14px 22px 18px; border-top: 1px solid rgba(228,208,185,.6);
+    display: flex; justify-content: space-between; align-items: center; gap: 10px;
+    font-size: .72rem; color: var(--text-muted); position: relative; z-index: 1;
+  }
+
+  .cupcard-actions {
+    display: flex; flex-direction: column; gap: 8px; margin-top: 16px; width: 100%; max-width: 420px;
+  }
+  .cupcard-actions .btn { width: 100%; justify-content: center; text-align: center; text-decoration: none; }
+  .cupcard-actions-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .cupcard-actions-row .btn { font-size: .78rem; padding: 10px 12px; }
+  .btn-ghost {
+    background: var(--surface); border: 1px solid var(--border); color: var(--text);
+    border-radius: 10px; font-weight: 600; cursor: pointer; font-family: 'Inter', sans-serif;
+    transition: .15s;
+  }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+  .cupcard-msg { font-size: .8rem; text-align: center; color: var(--accent-green); min-height: 20px; margin-top: 8px; }
+  .cupcard-msg.error { color: var(--accent-warm); }
+
+  .cupcard-success {
+    text-align: center; margin-bottom: 12px; font-size: .88rem; color: var(--accent-green); font-weight: 600;
+  }
+
+  @media (max-width: 480px) {
+    .cupcard-page { padding-top: 64px; }
+    .cupcard-name { font-size: 1.55rem; }
+  }
+</style>
+
+<script>
+  import { createClient } from '@supabase/supabase-js';
+  import { balanceWheelSvg } from '../lib/cupBalanceWheel';
+  import { formatCupRecipe, formatCupRecipeShort, normalizeRecipe } from '../lib/cupRecipe';
+
+  const supabase = createClient(
+    import.meta.env.PUBLIC_SUPABASE_URL,
+    import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+    { auth: { flowType: 'implicit' } }
+  );
+
+  const page = document.getElementById('cupPage')!;
+  const params = new URLSearchParams(location.search);
+  const cupId = params.get('id');
+  const isNew = params.get('new') === '1';
+
+  const esc = (s: unknown) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+  const asNotes = (n: unknown): string[] => Array.isArray(n) ? n.map(String) : n ? [String(n)] : [];
+
+  function showError(msg: string) {
+    page.innerHTML = `<div class="cupcard-wrap"><div class="cupcard-loading"><p style="color:var(--accent-warm)">${esc(msg)}</p><a href="/account" class="btn btn-primary" style="display:inline-block;margin-top:16px;text-decoration:none">← В дневник</a></div></div>`;
+  }
+
+  async function saveAsBaseRecipe(cup: any) {
+    const recipe = normalizeRecipe(cup.recipe);
+    if (!recipe) { alert('В чашке нет рецепта для сохранения'); return null; }
+    const defaultName = [cup.brew_method, recipe.coffee_g && recipe.water_g ? `${recipe.coffee_g}/${recipe.water_g}` : ''].filter(Boolean).join(' · ') || 'Мой рецепт';
+    const name = prompt('Название базового рецепта', defaultName);
+    if (!name?.trim()) return null;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { window.location.href = '/login'; return null; }
+    const { data, error } = await supabase.from('saved_brew_recipes').insert({
+      user_id: user.id,
+      name: name.trim(),
+      brew_method: cup.brew_method || null,
+      recipe,
+    }).select('id').single();
+    if (error) { alert('Ошибка: ' + error.message); return null; }
+    return data?.id;
+  }
+
+  async function shareCard() {
+    const url = location.href.split('?')[0] + '?id=' + cupId;
+    const title = document.querySelector('.cupcard-name')?.textContent || 'Моя чашка';
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: title + ' — Shmelco', text: 'Моя дегустация кофe', url });
+        return;
+      }
+    } catch (e) { /* cancelled */ }
+    await navigator.clipboard.writeText(url);
+    const msg = document.getElementById('cupMsg');
+    if (msg) { msg.textContent = 'Ссылка скопирована'; setTimeout(() => { msg.textContent = ''; }, 2500); }
+  }
+
+  function renderCup(cup: any, isOwner = false) {
+    const notes = asNotes(cup.notes);
+    const recipeLine = formatCupRecipe(cup.recipe);
+    const recipeShort = formatCupRecipeShort(cup.recipe, cup.brew_method);
+    const meta = [cup.roaster, cup.country, cup.process].filter(Boolean).map(esc).join(' · ');
+    const dateStr = cup.created_at ? new Date(cup.created_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+    const wheel = balanceWheelSvg({
+      acidity: cup.acidity ?? 0,
+      sweetness: cup.sweetness ?? 0,
+      bitterness: cup.bitterness ?? 0,
+      body: cup.body ?? 0,
+    }, 210);
+
+    const repeatUrl = '/add-cup?' + new URLSearchParams({
+      ...(cup.brew_method ? { brew: cup.brew_method } : {}),
+      ...(normalizeRecipe(cup.recipe) ? Object.fromEntries(
+        (() => {
+          const r = normalizeRecipe(cup.recipe)!;
+          const q: Record<string, string> = {};
+          if (r.coffee_g) q.coffee_g = String(r.coffee_g);
+          if (r.water_g) q.water_g = String(r.water_g);
+          if (r.grind) q.grind = r.grind;
+          if (r.ratio) q.ratio = r.ratio;
+          if (r.temp) q.temp = r.temp;
+          if (r.time) q.time = r.time;
+          if (r.blooming) q.blooming = r.blooming;
+          if (r.pours?.length) q.pours = r.pours.join(',');
+          return Object.entries(q);
+        })()
+      ) : {}),
+    }).toString();
+
+    page.innerHTML = `
+      <div class="cupcard-wrap">
+        ${isNew ? '<div class="cupcard-success">✓ Чашка сохранена</div>' : ''}
+        <article class="cupcard" id="shareCard">
+          <div class="cupcard-top">
+            <div class="cupcard-brand">Shmelco · coffee diary</div>
+            <h1 class="cupcard-name">${esc(cup.name)}</h1>
+            ${meta ? `<div class="cupcard-meta">${meta}</div>` : ''}
+            ${cup.rating ? `<div class="cupcard-stars">${'★'.repeat(cup.rating)}${'☆'.repeat(5 - cup.rating)}</div>` : ''}
+          </div>
+          <div class="cupcard-wheel">${wheel}</div>
+          ${notes.length ? `<div class="cupcard-notes">${notes.map(n => `<span class="cupcard-note">${esc(n)}</span>`).join('')}</div>` : ''}
+          ${recipeLine || cup.brew_method ? `
+            <div class="cupcard-recipe">
+              <div class="cupcard-recipe-h">Заваривание</div>
+              ${cup.brew_method ? `<div class="cupcard-brew">☕ ${esc(cup.brew_method)}</div>` : ''}
+              <div class="cupcard-recipe-t">${esc(recipeShort || recipeLine)}</div>
+              ${recipeLine && recipeShort !== recipeLine ? `<div class="cupcard-recipe-t" style="margin-top:6px;font-size:.76rem">${esc(recipeLine)}</div>` : ''}
+            </div>` : ''}
+          ${cup.comment ? `<div class="cupcard-recipe" style="margin-top:-8px"><div class="cupcard-recipe-t" style="font-style:italic">«${esc(cup.comment)}»</div></div>` : ''}
+          <div class="cupcard-foot">
+            <span>${dateStr}</span>
+            <span>shmelcoffee.com</span>
+          </div>
+        </article>
+
+        <div class="cupcard-actions">
+          <button type="button" class="btn btn-primary" id="shareBtn">Поделиться карточкой</button>
+          <div class="cupcard-actions-row">
+            <button type="button" class="btn-ghost" id="saveRecipeBtn">⭐ Базовый рецепт</button>
+            <a class="btn-ghost" href="${repeatUrl}" style="display:flex;align-items:center;justify-content:center;text-decoration:none">+ Так же заварить</a>
+          </div>
+          ${isOwner ? `<a class="btn btn-ghost" href="/add-cup?edit=${cup.id}" style="display:block;text-align:center;text-decoration:none;padding:11px">✏️ Редактировать чашку</a>` : ''}
+          <a href="/account" class="btn btn-ghost" style="display:block;text-align:center;text-decoration:none;padding:11px">← В дневник</a>
+          <div class="cupcard-msg" id="cupMsg"></div>
+        </div>
+      </div>`;
+
+    document.getElementById('shareBtn')!.addEventListener('click', shareCard);
+    document.getElementById('saveRecipeBtn')!.addEventListener('click', async () => {
+      const id = await saveAsBaseRecipe(cup);
+      const msg = document.getElementById('cupMsg')!;
+      if (id) { msg.textContent = 'Рецепт сохранён — можно применять в новых чашках'; msg.classList.remove('error'); }
+    });
+  }
+
+  (async () => {
+    if (!cupId) { showError('Не указана чашка'); return; }
+    const { data, error } = await supabase.rpc('get_cup_card', { p_id: cupId });
+    if (error || !data) { showError(error?.message || 'Чашка не найдена'); return; }
+    const { data: { user } } = await supabase.auth.getUser();
+    let isOwner = false;
+    if (user) {
+      const { data: owned } = await supabase.from('cups').select('id').eq('id', cupId).eq('user_id', user.id).maybeSingle();
+      isOwner = !!owned;
+    }
+    renderCup(data, isOwner);
+  })();
+</script>

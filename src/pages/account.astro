@@ -87,6 +87,16 @@ import Nav from '../components/Nav.astro';
   .comm-row .n { font-weight: 700; min-width: 26px; text-align: right; }
   .cup-item { padding: 12px 0; border-bottom: 1px solid var(--border); }
   .cup-item:last-child { border-bottom: 0; }
+  .cup-card-link { color: var(--text); text-decoration: none; font-weight: 700; }
+  .cup-card-link:hover { color: var(--accent); }
+  .cup-open-card { display: inline-block; margin-top: 6px; margin-right: 12px; font-size: .72rem; font-weight: 600; color: var(--accent); text-decoration: none; }
+  .cup-open-card:hover { text-decoration: underline; }
+  .diary-filters { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+  .diary-filters select {
+    width: 100%; padding: 9px 11px; border: 1px solid var(--border); border-radius: 10px;
+    font-size: .82rem; background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif;
+  }
+  @media (max-width: 560px) { .diary-filters { grid-template-columns: 1fr; } }
   .cup-head { font-weight: 700; font-size: .9rem; color: var(--text); }
   .cup-star { color: #E0B81E; font-size: .82rem; }
   .add-cup-btn { font-size: .76rem; padding: 7px 14px; border-radius: 6px; background: var(--text); color: var(--bg); border: 1px solid var(--text); cursor: pointer; text-decoration: none; transition: all .2s; }
@@ -212,6 +222,7 @@ import Nav from '../components/Nav.astro';
   import { BREW_METHODS, FAMILY_ICON } from '../data/methods';
   import { buildProdamusBuyUrl } from '../lib/prodamusBuyUrl';
   import { beanOutUrl } from '../lib/beanOutUrl';
+  import { formatCupRecipe, recipeFingerprint } from '../lib/cupRecipe';
 
   const supabase = createClient(
     import.meta.env.PUBLIC_SUPABASE_URL,
@@ -233,6 +244,15 @@ import Nav from '../components/Nav.astro';
   const FLAG_BY_NAME: Record<string, string> = {};
   for (const [, c] of Object.entries(DB) as [string, any][]) FLAG_BY_NAME[c.name] = c.flag;
   const esc = (s: any) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+  const asNoteList = (notes: unknown): string[] =>
+    Array.isArray(notes) ? notes : notes ? [String(notes)] : [];
+  const isFetchError = (msg?: string | null) =>
+    !!msg && /fetch failed|failed to fetch|network|ENOTFOUND|NXDOMAIN/i.test(msg);
+
+  function showLoadError(message: string) {
+    page.innerHTML = `<div class="account-loading"><p style="max-width:420px;margin:0 auto 16px;line-height:1.55">${esc(message)}</p><button type="button" class="logout-btn" id="retryAccount">Повторить</button></div>`;
+    document.getElementById('retryAccount')?.addEventListener('click', () => init());
+  }
 
   function renderGuide(content: string, gid: string, dateStr: string): string {
     const actions = `<div class="gr-actions"><button class="gr-icon-btn" data-guide-toggle="${gid}" title="Свернуть">▾</button><button class="gr-icon-btn gr-del" data-guide-del="${gid}" title="Удалить">✕</button></div>`;
@@ -382,10 +402,19 @@ import Nav from '../components/Nav.astro';
   }
 
   async function init() {
-    const { data: { user } } = await supabase.auth.getUser();
+    try {
+    const { data: { user }, error: authErr } = await supabase.auth.getUser();
+    if (authErr && isFetchError(authErr.message)) {
+      showLoadError('Сервер данных временно недоступен. Если через 10 минут не заработает — напишите @ksenijashmel.');
+      return;
+    }
     if (!user) { window.location.href = '/login'; return; }
 
-    const { data: profileCheck } = await supabase.from('taste_profiles').select('id').eq('user_id', user.id).limit(1);
+    const { data: profileCheck, error: profileErr } = await supabase.from('taste_profiles').select('id').eq('user_id', user.id).limit(1);
+    if (profileErr && isFetchError(profileErr.message)) {
+      showLoadError('Сервер данных временно недоступен. Если через 10 минут не заработает — напишите @ksenijashmel.');
+      return;
+    }
     if (!profileCheck?.length) {
       const { count } = await supabase.from('coffee_selections').select('id', { count: 'exact', head: true }).eq('user_id', user.id);
       if (!count) { window.location.href = '/quiz'; return; }
@@ -402,18 +431,26 @@ import Nav from '../components/Nav.astro';
     const credits = creditsResult.balance;
     const creditsKnown = creditsResult.ok;
 
-    const [profilesRes, selectionsRes, guidesRes, cupsRes, shelfRes] = await Promise.all([
+    const [profilesRes, selectionsRes, guidesRes, cupsRes, shelfRes, recipesRes] = await Promise.all([
       supabase.from('taste_profiles').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
       supabase.from('coffee_selections').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
       supabase.from('guides').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
       supabase.from('cups').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
       supabase.from('shelf_items').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
+      supabase.from('saved_brew_recipes').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
     ]);
+
+    const loadErr = [profilesRes, selectionsRes, guidesRes, cupsRes, shelfRes].find(r => r.error)?.error;
+    if (loadErr && isFetchError(loadErr.message)) {
+      showLoadError('Сервер данных временно недоступен. Если через 10 минут не заработает — напишите @ksenijashmel.');
+      return;
+    }
 
     const profiles = profilesRes.data || [];
     const selections = selectionsRes.data || [];
     const guides = guidesRes.data || [];
     const cups = cupsRes.data || [];
+    const savedRecipes = recipesRes.error ? [] : (recipesRes.data || []);
     const shelf = shelfRes.data || [];
     const buyUrl = buildProdamusBuyUrl(PRODAMUS_URL, user, window.location.origin);
     const paidBanner = isPaidReturn
@@ -463,8 +500,27 @@ import Nav from '../components/Nav.astro';
       ? `<div class="profile-card"><div class="disco-top"><div class="disco-ring">${ringSVG(openedKeys.size, countryOrder.length)}</div><div><div class="disco-count">${openedKeys.size} / ${countryOrder.length}</div><div class="profile-label" style="min-width:0">стран открыто</div></div></div>${recommendedFirst.length ? `<div class="disco-subtitle">Откройте первыми — под ваш вкус</div><div class="disco-rec">${recommendedFirst.map(k => { const c: any = DB[k]; return `<a class="disco-rec-card" href="/countries?c=${k}"><span class="drc-flag">${c.flag}</span><span class="drc-name">${c.name}</span><span class="drc-why">${c.flavors.slice(0, 3).join(' · ')}</span></a>`; }).join('')}</div>` : ''}<div class="disco-subtitle">Весь мир кофе · нажмите на страну</div><div class="disco-grid">${countryOrder.map((k: string) => { const c: any = DB[k]; const open = openedKeys.has(k); return `<span class="disco-chip ${open ? 'open' : 'closed'}" data-k="${k}">${c.flag} ${c.name}${open ? ' ✓' : ''}</span>`; }).join('')}</div><div id="discoInfo" class="info-panel"></div><div class="disco-hint">Пробуйте новые страны и записывайте чашки — карта открывается, а профиль становится точнее.</div></div>`
       : `<div class="empty-state">Карта открытий появится после диагностики. <a href="/quiz">Пройти тест →</a></div>`;
 
+    const brewMethods = [...new Set(cups.map((c: any) => c.brew_method).filter(Boolean))].sort() as string[];
+    const diaryFilters = cups.length ? `<div class="diary-filters">
+      <select id="diaryFilterBrew"><option value="">Все способы заварки</option>${brewMethods.map((m) => `<option value="${esc(m)}">${esc(m)}</option>`).join('')}</select>
+      <select id="diaryFilterRecipe"><option value="">Все базовые рецепты</option>${savedRecipes.map((r: any) => `<option value="${r.id}">${esc(r.name)}</option>`).join('')}</select>
+    </div>` : '';
+    const renderCupItem = (c: any) => {
+      const recipeLine = formatCupRecipe(c.recipe);
+      const fp = recipeFingerprint(c.recipe);
+      return `<div class="cup-item" data-brew="${esc(c.brew_method || '')}" data-recipe-id="${esc(c.brew_recipe_id || '')}" data-recipe-fp="${esc(fp)}">
+        <div class="cup-head"><a href="/cup?id=${c.id}" class="cup-card-link">${esc(c.name)}</a>${c.rating ? ` <span class="cup-star">${'★'.repeat(c.rating)}</span>` : ''}</div>
+        <div class="coffee-detail">${[c.roaster, c.country, c.process, c.brew_method].filter(Boolean).map(esc).join(' · ') || '—'}</div>
+        ${recipeLine ? `<div class="coffee-detail">${esc(recipeLine)}</div>` : ''}
+        <div class="coffee-detail">кислотность ${c.acidity ?? '–'} · сладость ${c.sweetness ?? '–'} · горечь ${c.bitterness ?? '–'} · тело ${c.body ?? '–'}</div>
+        ${asNoteList(c.notes).length ? `<div class="profile-tags" style="margin-top:6px">${asNoteList(c.notes).map((n: string) => `<span class="profile-tag">${esc(n)}</span>`).join('')}</div>` : ''}
+        ${c.comment ? `<div class="coffee-detail" style="margin-top:4px;font-style:italic">${esc(c.comment)}</div>` : ''}
+        <a href="/cup?id=${c.id}" class="cup-open-card">Карточка →</a>
+        <a href="/add-cup?edit=${c.id}" class="cup-open-card">Редактировать</a>
+      </div>`;
+    };
     const diaryPanel = cups.length
-      ? `<div class="profile-card">${cups.map((c: any) => `<div class="cup-item"><div class="cup-head">${esc(c.name)}${c.rating ? ` <span class="cup-star">${'★'.repeat(c.rating)}</span>` : ''}</div><div class="coffee-detail">${[c.roaster, c.country, c.process, c.brew_method].filter(Boolean).map(esc).join(' · ') || '—'}</div><div class="coffee-detail">кислотность ${c.acidity ?? '–'} · сладость ${c.sweetness ?? '–'} · горечь ${c.bitterness ?? '–'} · тело ${c.body ?? '–'}</div>${c.notes && c.notes.length ? `<div class="profile-tags" style="margin-top:6px">${c.notes.map((n: string) => `<span class="profile-tag">${esc(n)}</span>`).join('')}</div>` : ''}${c.comment ? `<div class="coffee-detail" style="margin-top:4px;font-style:italic">${esc(c.comment)}</div>` : ''}</div>`).join('')}</div>`
+      ? `<div class="profile-card">${diaryFilters}<div id="diaryList">${cups.map(renderCupItem).join('')}</div><div id="diaryEmpty" class="empty-state" style="display:none">Нет чашек по этому фильтру</div></div>`
       : `<div class="empty-state">Записывайте кофе, который пьёте дома или заказали сами — он наполнит вашу Карту вкуса.<br><a href="/add-cup">Добавить первую чашку →</a></div>`;
 
     const shelfPanel = shelf.length
@@ -511,6 +567,27 @@ import Nav from '../components/Nav.astro';
 
     renderTasteWheel(prefFams);
     loadCommunity();
+
+    function applyDiaryFilters() {
+      const brew = (document.getElementById('diaryFilterBrew') as HTMLSelectElement)?.value || '';
+      const recipeId = (document.getElementById('diaryFilterRecipe') as HTMLSelectElement)?.value || '';
+      const saved = savedRecipes.find((r: any) => r.id === recipeId);
+      const fp = saved ? recipeFingerprint(saved.recipe) : '';
+      let visible = 0;
+      document.querySelectorAll('#diaryList .cup-item').forEach((el) => {
+        const item = el as HTMLElement;
+        const matchBrew = !brew || item.dataset.brew === brew;
+        const matchRecipe = !recipeId || item.dataset.recipeId === recipeId || (!!fp && item.dataset.recipeFp === fp);
+        const show = matchBrew && matchRecipe;
+        item.style.display = show ? '' : 'none';
+        if (show) visible++;
+      });
+      const empty = document.getElementById('diaryEmpty');
+      if (empty) empty.style.display = visible ? 'none' : 'block';
+    }
+    document.getElementById('diaryFilterBrew')?.addEventListener('change', applyDiaryFilters);
+    document.getElementById('diaryFilterRecipe')?.addEventListener('change', applyDiaryFilters);
+
     page.querySelectorAll('.disco-chip[data-k]').forEach(ch => { ch.addEventListener('click', () => showCountry((ch as HTMLElement).getAttribute('data-k')!)); });
     document.getElementById('logoutBtn')?.addEventListener('click', async () => { await supabase.auth.signOut(); window.location.href = '/'; });
 
@@ -564,6 +641,10 @@ import Nav from '../components/Nav.astro';
     let startTab = 'profile';
     try { const sv = localStorage.getItem('acc_tab'); if (sv && page.querySelector('.acc-tab[data-tab="' + sv + '"]')) startTab = sv; } catch (e) {}
     activateTab(startTab);
+    } catch (e: any) {
+      console.error(e);
+      showLoadError('Не удалось загрузить кабинет. Обновите страницу или напишите @ksenijashmel.');
+    }
   }
 
   init();

@@ -27,16 +27,33 @@ import { DB, countryOrder } from '../data/countries';
         </div>
         <label class="fl">Способ заваривания</label>
         <select id="f_brew"></select>
+        <div id="templateRow" class="template-row" style="display:none">
+          <label class="fl">Базовый рецепт</label>
+          <select id="f_template"></select>
+          <div class="template-hint">Подставит граммовку, проливы и параметры — подправь под эту чашку</div>
+        </div>
         <label class="fl">Рецепт — как ты заваривал</label>
         <div class="recipe-grid">
+          <input type="number" id="r_coffee_g" inputmode="decimal" min="0" step="0.1" placeholder="Кофе, г (напр. 15)"/>
+          <input type="number" id="r_water_g" inputmode="decimal" min="0" step="1" placeholder="Вода, г (напр. 250)"/>
           <input type="text" id="r_grind" placeholder="Помол (напр. средний)"/>
           <input type="text" id="r_ratio" placeholder="Пропорция (напр. 1:16)"/>
           <input type="text" id="r_temp" placeholder="Вода °C (напр. 94)"/>
-          <input type="text" id="r_time" placeholder="Время (напр. 2:30)"/>
+          <input type="text" id="r_time" placeholder="Общее время (напр. 2:30)"/>
+        </div>
+        <label class="fl">Время проливов</label>
+        <div class="pour-block">
+          <div class="pour-row">
+            <span class="pour-lbl">Блуминг</span>
+            <input type="text" id="p_bloom" class="pour-inp" placeholder="0:30"/>
+          </div>
+          <div id="pourList"></div>
+          <button type="button" class="pour-add" id="addPourBtn">+ Пролив</button>
         </div>
         <div id="recipeHint" class="recipe-hint" style="display:none">Подставлен рецепт из гида — поправь под то, как заварил на самом деле.</div>
         <div id="sliders"></div>
-        <label class="fl">Вкус и ароматы — отметьте, что чувствуете</label>
+        <label class="fl">Вкус и ароматы — что чувствуешь в чашке</label>
+        <div id="selectedNotes" class="note-selected"></div>
         <div id="noteFamilies"></div>
         <label class="fl">Оценка</label>
         <div id="rating" class="rating"></div>
@@ -57,13 +74,70 @@ import { DB, countryOrder } from '../data/countries';
   .addcup-sub { font-size: .84rem; color: var(--text-dim); margin-bottom: 20px; line-height: 1.5; }
   .addcup-card { padding: 22px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); }
   .addcup-card .fl { display: block; font-size: .8rem; font-weight: 600; color: var(--text); margin: 14px 0 6px; }
-  .addcup-card input[type=text], .addcup-card select, .addcup-card textarea {
+  .addcup-card input[type=text], .addcup-card input[type=number], .addcup-card select, .addcup-card textarea {
     width: 100%; padding: 11px 12px; border: 1px solid var(--border); border-radius: 10px;
     font-size: .92rem; background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif;
   }
   .addcup-card textarea { resize: vertical; }
   .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .recipe-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .pour-block { margin-top: 4px; display: flex; flex-direction: column; gap: 8px; }
+  .pour-row { display: grid; grid-template-columns: 92px 1fr auto; gap: 8px; align-items: center; }
+  .pour-lbl { font-size: .78rem; color: var(--text-dim); font-weight: 600; }
+  .pour-inp {
+    width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px;
+    font-size: .92rem; background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif;
+  }
+  .pour-rm {
+    width: 32px; height: 32px; border: 1px solid var(--border); border-radius: 8px;
+    background: var(--bg); color: var(--text-muted); cursor: pointer; font-size: 1rem; line-height: 1;
+  }
+  .pour-rm:hover { border-color: var(--accent-warm); color: var(--accent-warm); }
+  .pour-add {
+    align-self: flex-start; margin-top: 2px; padding: 7px 12px; border: 1px dashed var(--border);
+    border-radius: 8px; background: none; color: var(--accent); font-size: .78rem; font-weight: 600;
+    cursor: pointer; font-family: 'Inter', sans-serif;
+  }
+  .pour-add:hover { border-color: var(--accent); background: rgba(168,124,79,.06); }
+  .note-selected {
+    min-height: 44px; padding: 10px 12px; border: 1px dashed var(--border); border-radius: 12px;
+    display: flex; flex-wrap: wrap; gap: 7px; align-items: center; margin-bottom: 10px; background: var(--bg);
+  }
+  .note-empty { font-size: .78rem; color: var(--text-muted); line-height: 1.45; }
+  .note-tag {
+    display: inline-flex; align-items: center; gap: 4px; padding: 5px 10px; border-radius: 20px;
+    background: var(--accent); color: #fff; font-size: .78rem; font-weight: 600;
+  }
+  .note-tag-rm {
+    background: none; border: 0; color: rgba(255,255,255,.9); cursor: pointer; font-size: 1rem;
+    line-height: 1; padding: 0 2px;
+  }
+  .note-cat { border: 1px solid var(--border); border-radius: 12px; margin-bottom: 8px; overflow: hidden; background: var(--surface); }
+  .note-cat-sum {
+    list-style: none; cursor: pointer; padding: 12px 14px; font-size: .86rem; font-weight: 700;
+    display: flex; align-items: center; gap: 8px; user-select: none;
+  }
+  .note-cat-sum::-webkit-details-marker { display: none; }
+  .note-cat-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--cat-color, var(--accent)); flex-shrink: 0; }
+  .note-cat-badge {
+    margin-left: auto; font-size: .68rem; font-weight: 700; padding: 2px 8px; border-radius: 20px;
+    background: var(--surface-2); color: var(--text-muted); min-width: 22px; text-align: center;
+  }
+  .note-cat-badge.has { background: rgba(168,124,79,.15); color: var(--accent); }
+  .note-cat-body { padding: 0 14px 14px; border-top: 1px solid var(--border); }
+  .note-hint { font-size: .72rem; color: var(--text-muted); margin: 10px 0 8px; }
+  .note-custom-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin-top: 10px; }
+  .note-custom-inp {
+    padding: 9px 11px; border: 1px solid var(--border); border-radius: 10px; font-size: .86rem;
+    background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; width: 100%;
+  }
+  .note-custom-add {
+    width: 40px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg);
+    color: var(--accent); font-size: 1.1rem; font-weight: 700; cursor: pointer;
+  }
+  .note-custom-add:hover { border-color: var(--accent); background: rgba(168,124,79,.06); }
+  .template-row { margin-bottom: 4px; }
+  .template-hint { font-size: .72rem; color: var(--text-muted); margin-top: 4px; line-height: 1.4; }
   .recipe-hint { font-size: .76rem; color: var(--accent); margin-top: 8px; }
   .sliderrow { margin: 12px 0; }
   .sliderrow .top { display: flex; justify-content: space-between; font-size: .82rem; margin-bottom: 3px; }
@@ -71,7 +145,10 @@ import { DB, countryOrder } from '../data/countries';
   .sliderrow input[type=range] { width: 100%; accent-color: var(--accent); }
   .famhdr { font-size: .72rem; font-weight: 700; color: var(--text-muted); margin: 12px 0 5px; text-transform: uppercase; letter-spacing: .04em; }
   .chips { display: flex; flex-wrap: wrap; gap: 7px; }
-  .chip { padding: 6px 12px; border-radius: 20px; border: 1px solid var(--border); background: var(--bg); font-size: .8rem; cursor: pointer; transition: .12s; }
+  .chip {
+    padding: 6px 12px; border-radius: 20px; border: 1px solid var(--border); background: var(--bg);
+    font-size: .8rem; cursor: pointer; transition: .12s; font-family: 'Inter', sans-serif; color: var(--text);
+  }
   .chip.on { background: var(--accent); color: #fff; border-color: var(--accent); }
   .rating { display: flex; gap: 6px; }
   .star { font-size: 1.6rem; cursor: pointer; color: var(--border); transition: .12s; }
@@ -93,6 +170,7 @@ import { DB, countryOrder } from '../data/countries';
   import { wheelData } from '../data/wheel';
   import { DB, countryOrder } from '../data/countries';
   import { BEAN_VARIETIES } from '../data/varieties';
+  import { normalizeRecipe, recipeHasData } from '../lib/cupRecipe';
 
   const supabase = createClient(
     import.meta.env.PUBLIC_SUPABASE_URL,
@@ -104,10 +182,21 @@ import { DB, countryOrder } from '../data/countries';
   const BREWS = ['V60','Kalita','Chemex','Aeropress','Френч-пресс','Гейзерная','Турка','Эспрессо','Капсулы','Cold Brew','Другое'];
   const SLIDERS = [['acidity','Кислотность'],['sweetness','Сладость'],['bitterness','Горечь'],['body','Тело']];
 
-  const sel: any = { acidity:3, sweetness:3, bitterness:2, body:3, notes:new Set<string>(), rating:0 };
+  const sel: any = { acidity:3, sweetness:3, bitterness:2, body:3, notes:new Set<string>(), noteCats:new Map<string,string>(), rating:0 };
   const params = new URLSearchParams(location.search);
+  const editCupId = params.get('edit');
+  let selectedTemplateId: string | null = params.get('template') || null;
   const flagByName: Record<string,string> = {};
   for (const k of Object.keys(DB)) flagByName[(DB as any)[k].name] = (DB as any)[k].flag;
+
+  const wheelByCat: Record<string, Set<string>> = {};
+  const wheelCanonical = new Map<string, string>();
+  (wheelData as any[]).forEach((f) => {
+    wheelByCat[f.name] = new Set(f.subs.map((s: any) => s.name));
+    f.subs.forEach((s: any) => wheelCanonical.set(s.name.toLowerCase(), s.name));
+  });
+
+  const escNote = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
 
   function fill(id:string, arr:readonly string[], ph:string){
     const s = document.getElementById(id) as HTMLSelectElement;
@@ -132,6 +221,263 @@ import { DB, countryOrder } from '../data/countries';
     return user;
   }
 
+  function pourLabel(n: number) { return `${n}-й пролив`; }
+
+  function renumberPours() {
+    document.querySelectorAll('#pourList .pour-row').forEach((row, idx) => {
+      const lbl = row.querySelector('.pour-lbl');
+      if (lbl) lbl.textContent = pourLabel(idx + 1);
+    });
+  }
+
+  function appendPourRow(removable = false) {
+    const list = document.getElementById('pourList')!;
+    const n = list.querySelectorAll('.pour-row').length + 1;
+    const row = document.createElement('div');
+    row.className = 'pour-row';
+    row.innerHTML = `<span class="pour-lbl">${pourLabel(n)}</span><input type="text" class="pour-inp" placeholder="0:45"/>${removable ? '<button type="button" class="pour-rm" title="Убрать">×</button>' : ''}`;
+    if (removable) {
+      row.querySelector('.pour-rm')!.addEventListener('click', () => { row.remove(); renumberPours(); });
+    }
+    list.appendChild(row);
+  }
+
+  function ensurePourRows(count: number) {
+    const list = document.getElementById('pourList')!;
+    while (list.querySelectorAll('.pour-row').length < count) appendPourRow(list.querySelectorAll('.pour-row').length >= 3);
+    renumberPours();
+  }
+
+  function initPours() {
+    const list = document.getElementById('pourList')!;
+    list.innerHTML = '';
+    for (let i = 0; i < 3; i++) appendPourRow(false);
+    document.getElementById('addPourBtn')!.addEventListener('click', () => appendPourRow(true));
+  }
+
+  function collectPours(): string[] {
+    return [...document.querySelectorAll('#pourList .pour-inp')]
+      .map(inp => (inp as HTMLInputElement).value.trim())
+      .filter(Boolean);
+  }
+
+  function applyRecipeToForm(recipeRaw: unknown, brewMethod?: string | null) {
+    if (brewMethod) setSelect('f_brew', brewMethod);
+    const r = normalizeRecipe(recipeRaw);
+    if (!r) return;
+    (document.getElementById('r_coffee_g') as HTMLInputElement).value = r.coffee_g ? String(r.coffee_g) : '';
+    (document.getElementById('r_water_g') as HTMLInputElement).value = r.water_g ? String(r.water_g) : '';
+    (document.getElementById('r_grind') as HTMLInputElement).value = r.grind || '';
+    (document.getElementById('r_ratio') as HTMLInputElement).value = r.ratio || '';
+    (document.getElementById('r_temp') as HTMLInputElement).value = r.temp || '';
+    (document.getElementById('r_time') as HTMLInputElement).value = r.time || '';
+    (document.getElementById('p_bloom') as HTMLInputElement).value = r.blooming || '';
+    const pours = r.pours || [];
+    if (pours.length) {
+      ensurePourRows(Math.max(3, pours.length));
+      document.querySelectorAll('#pourList .pour-inp').forEach((inp, i) => {
+        (inp as HTMLInputElement).value = pours[i] || '';
+      });
+    }
+    (document.getElementById('recipeHint') as HTMLElement).style.display = 'block';
+  }
+
+  async function loadSavedRecipes() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data } = await supabase.from('saved_brew_recipes').select('id,name,brew_method,recipe').order('created_at', { ascending: false });
+    const row = document.getElementById('templateRow')!;
+    const tpl = document.getElementById('f_template') as HTMLSelectElement;
+    if (!data?.length) { row.style.display = 'none'; return; }
+    row.style.display = 'block';
+    tpl.innerHTML = '<option value="">— выбрать базовый рецепт —</option>' + data.map((t) =>
+      `<option value="${t.id}">${escNote(t.name)}${t.brew_method ? ' · ' + escNote(t.brew_method) : ''}</option>`
+    ).join('');
+    if (!editCupId && selectedTemplateId && data.some((t) => t.id === selectedTemplateId)) {
+      tpl.value = selectedTemplateId;
+      const t = data.find((x) => x.id === selectedTemplateId);
+      if (t) applyRecipeToForm(t.recipe, t.brew_method);
+    }
+    tpl.addEventListener('change', () => {
+      selectedTemplateId = tpl.value || null;
+      const t = data.find((x) => x.id === tpl.value);
+      if (t) applyRecipeToForm(t.recipe, t.brew_method);
+    });
+  }
+
+  function setEditModeUI() {
+    const h1 = document.querySelector('.addcup-page h1');
+    const sub = document.querySelector('.addcup-sub');
+    const btn = document.getElementById('saveBtn') as HTMLButtonElement;
+    if (h1) h1.textContent = 'Редактировать чашку';
+    if (sub) sub.textContent = 'Довнеси ноты, поправь баланс вкуса или рецепт — карточка обновится.';
+    if (btn) btn.textContent = 'Сохранить изменения';
+  }
+
+  function prefillFromCup(cup: any) {
+    (document.getElementById('f_name') as HTMLInputElement).value = cup.name || '';
+    (document.getElementById('f_roaster') as HTMLInputElement).value = cup.roaster || '';
+    setSelect('f_variety', cup.variety || '');
+    setSelect('f_country', cup.country || '');
+    setSelect('f_process', cup.process || '');
+    setSelect('f_brew', cup.brew_method || '');
+    sel.acidity = cup.acidity ?? 3;
+    sel.sweetness = cup.sweetness ?? 3;
+    sel.bitterness = cup.bitterness ?? 2;
+    sel.body = cup.body ?? 3;
+    SLIDERS.forEach(([k]) => {
+      const inp = document.querySelector(`#sliders input[data-k="${k}"]`) as HTMLInputElement;
+      const lbl = document.getElementById('v_' + k);
+      if (inp) inp.value = String(sel[k]);
+      if (lbl) lbl.textContent = String(sel[k]);
+    });
+    sel.rating = cup.rating || 0;
+    document.querySelectorAll('#rating .star').forEach((s2) => {
+      s2.classList.toggle('on', +(s2 as HTMLElement).dataset.i! <= sel.rating);
+    });
+    sel.notes.clear();
+    sel.noteCats.clear();
+    const notes = Array.isArray(cup.notes) ? cup.notes : cup.notes ? [String(cup.notes)] : [];
+    notes.forEach((n: string) => sel.notes.add(n));
+    refreshNotesUI();
+    (document.getElementById('f_comment') as HTMLTextAreaElement).value = cup.comment || '';
+    selectedTemplateId = cup.brew_recipe_id || null;
+    const tpl = document.getElementById('f_template') as HTMLSelectElement;
+    if (tpl && selectedTemplateId) tpl.value = selectedTemplateId;
+    applyRecipeToForm(cup.recipe, cup.brew_method);
+  }
+
+  async function loadCupForEdit() {
+    if (!editCupId) return;
+    setEditModeUI();
+    const { data: cup, error } = await supabase.from('cups').select('*').eq('id', editCupId).maybeSingle();
+    if (error || !cup) {
+      alert('Чашка не найдена');
+      window.location.href = '/account';
+      return;
+    }
+    prefillFromCup(cup);
+  }
+
+  function noteInCategory(note: string, cat: string) {
+    if (wheelByCat[cat]?.has(note)) return true;
+    return sel.noteCats.get(note) === cat;
+  }
+
+  function addNote(n: string, cat?: string) {
+    const note = n.trim();
+    if (!note) return;
+    const canonical = wheelCanonical.get(note.toLowerCase()) || note;
+    sel.notes.add(canonical);
+    const inWheel = Object.values(wheelByCat).some((set) => set.has(canonical));
+    if (inWheel) sel.noteCats.delete(canonical);
+    else if (cat) sel.noteCats.set(canonical, cat);
+    refreshNotesUI();
+  }
+
+  function removeNote(n: string) {
+    sel.notes.delete(n);
+    sel.noteCats.delete(n);
+    refreshNotesUI();
+  }
+
+  function toggleNote(n: string, cat?: string) {
+    if (sel.notes.has(n)) removeNote(n);
+    else addNote(n, cat);
+  }
+
+  function renderSelectedNotes() {
+    const el = document.getElementById('selectedNotes')!;
+    if (!sel.notes.size) {
+      el.innerHTML = '<span class="note-empty">Пока пусто — раскрой категорию ниже, выбери подсказку или добавь свою ноту</span>';
+      return;
+    }
+    el.innerHTML = [...sel.notes].map((n) =>
+      `<span class="note-tag">${escNote(n)}<button type="button" class="note-tag-rm" data-n="${encodeURIComponent(n)}" aria-label="Убрать">×</button></span>`
+    ).join('');
+    el.querySelectorAll('.note-tag-rm').forEach((btn) => {
+      btn.addEventListener('click', () => removeNote(decodeURIComponent((btn as HTMLElement).dataset.n!)));
+    });
+  }
+
+  function syncChipStates() {
+    document.querySelectorAll('#noteFamilies .chip').forEach((ch) => {
+      const n = (ch as HTMLElement).dataset.n!;
+      ch.classList.toggle('on', sel.notes.has(n));
+    });
+  }
+
+  function updateCategoryBadges() {
+    (wheelData as any[]).forEach((f) => {
+      const badge = document.querySelector(`[data-cat-badge="${f.name}"]`);
+      if (!badge) return;
+      const count = [...sel.notes].filter((n) => noteInCategory(n, f.name)).length;
+      badge.textContent = String(count);
+      badge.classList.toggle('has', count > 0);
+    });
+  }
+
+  function refreshNotesUI() {
+    renderSelectedNotes();
+    syncChipStates();
+    updateCategoryBadges();
+  }
+
+  function addCustomNote(cat: string) {
+    const inp = document.querySelector(`.note-custom-inp[data-cat="${cat}"]`) as HTMLInputElement;
+    if (!inp) return;
+    const val = inp.value.trim();
+    if (!val) return;
+    addNote(val, cat);
+    inp.value = '';
+  }
+
+  function buildNotes() {
+    const container = document.getElementById('noteFamilies')!;
+    container.innerHTML = (wheelData as any[]).map((f, idx) => `
+      <details class="note-cat"${idx === 0 ? ' open' : ''}>
+        <summary class="note-cat-sum" style="--cat-color:${f.color}">
+          <span class="note-cat-dot"></span>${f.name}
+          <span class="note-cat-badge" data-cat-badge="${f.name}">0</span>
+        </summary>
+        <div class="note-cat-body">
+          <div class="note-hint">Подсказки — нажми, чтобы добавить</div>
+          <div class="chips">${f.subs.map((s: any) => `<button type="button" class="chip" data-n="${escNote(s.name)}" data-cat="${escNote(f.name)}">${escNote(s.name)}</button>`).join('')}</div>
+          <div class="note-custom-row">
+            <input type="text" class="note-custom-inp" data-cat="${escNote(f.name)}" placeholder="Своя нота в «${escNote(f.name)}»…"/>
+            <button type="button" class="note-custom-add" data-cat="${escNote(f.name)}" aria-label="Добавить ноту">+</button>
+          </div>
+        </div>
+      </details>`).join('');
+
+    container.querySelectorAll('.chip').forEach((ch) => {
+      ch.addEventListener('click', () => toggleNote((ch as HTMLElement).dataset.n!, (ch as HTMLElement).dataset.cat));
+    });
+    container.querySelectorAll('.note-custom-add').forEach((btn) => {
+      btn.addEventListener('click', () => addCustomNote((btn as HTMLElement).dataset.cat!));
+    });
+    container.querySelectorAll('.note-custom-inp').forEach((inp) => {
+      inp.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); addCustomNote((inp as HTMLElement).dataset.cat!); }
+      });
+    });
+    refreshNotesUI();
+  }
+
+  function prefillNotesFromParam(raw: string) {
+    if (!raw) return;
+    raw.split(',').map((s) => s.trim()).filter(Boolean).forEach((note) => {
+      const low = note.toLowerCase();
+      let canonical = wheelCanonical.get(low);
+      if (!canonical) {
+        for (const [k, v] of wheelCanonical.entries()) {
+          if (low === k || low.includes(k) || k.includes(low)) { canonical = v; break; }
+        }
+      }
+      addNote(canonical || note);
+    });
+  }
+
   function prefill(){
     const g = (k: string) => params.get(k) || '';
     (document.getElementById('f_name') as HTMLInputElement).value = g('name');
@@ -140,20 +486,26 @@ import { DB, countryOrder } from '../data/countries';
     setSelect('f_country', g('country'));
     setSelect('f_process', g('process'));
     setSelect('f_brew', g('brew'));
+    (document.getElementById('r_coffee_g') as HTMLInputElement).value = g('coffee_g');
+    (document.getElementById('r_water_g') as HTMLInputElement).value = g('water_g');
     (document.getElementById('r_grind') as HTMLInputElement).value = g('grind');
     (document.getElementById('r_ratio') as HTMLInputElement).value = g('ratio');
     (document.getElementById('r_temp') as HTMLInputElement).value = g('temp');
     (document.getElementById('r_time') as HTMLInputElement).value = g('time');
-    if (g('grind') || g('ratio') || g('temp') || g('time')) {
-      (document.getElementById('recipeHint') as HTMLElement).style.display = 'block';
-    }
-    const noteWords = g('notes').split(',').map(s=>s.trim().toLowerCase()).filter(Boolean);
-    if (noteWords.length) {
-      document.querySelectorAll('#noteFamilies .chip').forEach(ch => {
-        const n = (ch as HTMLElement).dataset.n!.toLowerCase();
-        if (noteWords.some(w => w === n || w.includes(n) || n.includes(w))) { sel.notes.add((ch as HTMLElement).dataset.n!); ch.classList.add('on'); }
+    (document.getElementById('p_bloom') as HTMLInputElement).value = g('blooming');
+    const pourTimes = g('pours')
+      ? g('pours').split(',').map(s => s.trim()).filter(Boolean)
+      : [g('pour1'), g('pour2'), g('pour3')].map(s => s.trim()).filter(Boolean);
+    if (pourTimes.length) {
+      ensurePourRows(pourTimes.length);
+      document.querySelectorAll('#pourList .pour-inp').forEach((inp, i) => {
+        if (pourTimes[i]) (inp as HTMLInputElement).value = pourTimes[i];
       });
     }
+    if (g('coffee_g') || g('water_g') || g('grind') || g('ratio') || g('temp') || g('time') || g('blooming') || pourTimes.length) {
+      (document.getElementById('recipeHint') as HTMLElement).style.display = 'block';
+    }
+    if (g('notes')) prefillNotesFromParam(g('notes'));
     if (g('from') === 'guide') {
       const country = g('country'), variety = g('variety'), process = g('process'), brew = g('brew'), focus = g('focus'), notes = g('notes');
       const chips: string[] = [];
@@ -172,23 +524,19 @@ import { DB, countryOrder } from '../data/countries';
     fill('f_country', countryOrder.map((k:string)=>(DB as any)[k].name), 'выберите страну');
     fill('f_process', PROCESSES, 'выберите обработку');
     fill('f_brew', BREWS, 'выберите метод');
+    initPours();
     document.getElementById('sliders')!.innerHTML = SLIDERS.map(([k,n])=>`
       <div class="sliderrow"><div class="top"><span>${n}</span><span class="val" id="v_${k}">${sel[k]}</span></div>
       <input type="range" min="0" max="5" value="${sel[k]}" data-k="${k}"></div>`).join('');
     document.querySelectorAll('#sliders input[type=range]').forEach(inp=>{
       inp.addEventListener('input', (e:any)=>{ const k=e.target.dataset.k; sel[k]=+e.target.value; document.getElementById('v_'+k)!.textContent=e.target.value; });
     });
-    document.getElementById('noteFamilies')!.innerHTML = (wheelData as any[]).map(f=>`
-      <div class="famhdr" style="color:${f.color}">${f.name}</div>
-      <div class="chips">${f.subs.map((s:any)=>`<span class="chip" data-n="${s.name}">${s.name}</span>`).join('')}</div>`).join('');
-    document.querySelectorAll('#noteFamilies .chip').forEach(ch=>{
-      ch.addEventListener('click', ()=>{ const n=(ch as HTMLElement).dataset.n!; if(sel.notes.has(n)){sel.notes.delete(n);ch.classList.remove('on');}else{sel.notes.add(n);ch.classList.add('on');} });
-    });
+    buildNotes();
     document.getElementById('rating')!.innerHTML = [1,2,3,4,5].map(i=>`<span class="star" data-i="${i}">★</span>`).join('');
     document.querySelectorAll('#rating .star').forEach(st=>{
       st.addEventListener('click', ()=>{ sel.rating=+(st as HTMLElement).dataset.i!; document.querySelectorAll('#rating .star').forEach(s2=>{ s2.classList.toggle('on', +(s2 as HTMLElement).dataset.i! <= sel.rating); }); });
     });
-    prefill();
+    if (!editCupId) prefill();
   }
 
   async function save(){
@@ -200,26 +548,56 @@ import { DB, countryOrder } from '../data/countries';
     const btn = document.getElementById('saveBtn') as HTMLButtonElement;
     btn.disabled = true; btn.textContent = 'Сохраняем...';
     const rv = (id: string) => (document.getElementById(id) as HTMLInputElement).value.trim();
-    const recipe: any = { grind: rv('r_grind') || null, ratio: rv('r_ratio') || null, temp: rv('r_temp') || null, time: rv('r_time') || null };
-    const hasRecipe = Object.values(recipe).some(Boolean);
+    const rn = (id: string) => {
+      const v = rv(id);
+      if (!v) return null;
+      const n = parseFloat(v.replace(',', '.'));
+      return Number.isFinite(n) && n > 0 ? n : null;
+    };
+    const recipe: any = {
+      coffee_g: rn('r_coffee_g'),
+      water_g: rn('r_water_g'),
+      grind: rv('r_grind') || null,
+      ratio: rv('r_ratio') || null,
+      temp: rv('r_temp') || null,
+      time: rv('r_time') || null,
+      blooming: rv('p_bloom') || null,
+      pours: collectPours(),
+    };
+    if (!recipe.pours.length) delete recipe.pours;
+    const hasRecipe = recipeHasData(recipe);
     const payload:any = {
-      user_id: user.id,
       name,
       roaster: (document.getElementById('f_roaster') as HTMLInputElement).value.trim() || null,
       variety: (document.getElementById('f_variety') as HTMLSelectElement).value || null,
       country: (document.getElementById('f_country') as HTMLSelectElement).value || null,
       process: (document.getElementById('f_process') as HTMLSelectElement).value || null,
       brew_method: (document.getElementById('f_brew') as HTMLSelectElement).value || null,
+      brew_recipe_id: selectedTemplateId || null,
       recipe: hasRecipe ? recipe : null,
       acidity: sel.acidity, sweetness: sel.sweetness, bitterness: sel.bitterness, body: sel.body,
       notes: [...sel.notes],
       rating: sel.rating || null,
       comment: (document.getElementById('f_comment') as HTMLTextAreaElement).value.trim() || null,
     };
-    const { error } = await supabase.from('cups').insert(payload);
+    if (editCupId) {
+      const { error } = await supabase.from('cups').update(payload).eq('id', editCupId).eq('user_id', user.id);
+      if (error) { msg.className = 'addcup-msg error'; msg.textContent = 'Ошибка: ' + error.message; btn.disabled = false; btn.textContent = 'Сохранить изменения'; return; }
+      window.location.href = `/cup?id=${editCupId}`;
+      return;
+    }
+    payload.user_id = user.id;
+    const { data, error } = await supabase.from('cups').insert(payload).select('id').single();
     if(error){ msg.className='addcup-msg error'; msg.textContent='Ошибка: '+error.message; btn.disabled=false; btn.textContent='Сохранить чашку'; return; }
-    window.location.href = '/account';
+    window.location.href = `/cup?id=${data.id}&new=1`;
   }
 
-  (async ()=>{ if(await guard()){ build(); document.getElementById('saveBtn')!.addEventListener('click', save); } })();
+  (async ()=>{
+    if(await guard()){
+      build();
+      await loadSavedRecipes();
+      if (editCupId) await loadCupForEdit();
+      document.getElementById('saveBtn')!.addEventListener('click', save);
+    }
+  })();
 </script>
