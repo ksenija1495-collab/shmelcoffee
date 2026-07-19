@@ -46,9 +46,10 @@ import { DB, countryOrder } from '../data/countries';
         </div>
         <div id="grinderHint" class="recipe-hint" style="display:none;margin-top:4px">Добавь кофемолку на <a href="/add-shelf?kind=equipment">полку</a> — она появится в списке.</div>
         <label class="fl">Время проливов</label>
+        <p class="pour-block-hint">Пролив — порция воды через кофе. Первый этап — предсмачивание (блум): маленький залив, чтобы зерно «распустилось».</p>
         <div class="pour-block">
           <div class="pour-row">
-            <span class="pour-lbl">Блуминг</span>
+            <span class="pour-lbl">Предсмачивание<span class="pour-lbl-sub">блум</span></span>
             <input type="text" id="p_bloom" class="pour-inp brew-time-inp" inputmode="numeric" placeholder="30"/>
           </div>
           <div id="pourList"></div>
@@ -98,7 +99,9 @@ import { DB, countryOrder } from '../data/countries';
   .recipe-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .pour-block { margin-top: 4px; display: flex; flex-direction: column; gap: 8px; }
   .pour-row { display: grid; grid-template-columns: 92px 1fr auto; gap: 8px; align-items: center; }
-  .pour-lbl { font-size: .78rem; color: var(--text-dim); font-weight: 600; }
+  .pour-lbl { font-size: .78rem; color: var(--text-dim); font-weight: 600; line-height: 1.25; }
+  .pour-lbl-sub { display: block; font-size: .62rem; font-weight: 500; color: var(--text-muted); }
+  .pour-block-hint { font-size: .68rem; color: var(--text-muted); margin: 0 0 8px; line-height: 1.45; }
   .pour-inp {
     width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px;
     font-size: .92rem; background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif;

@@ -139,7 +139,9 @@ import { recipesData } from '../../data/recipes';
 </style>
 
 <script define:vars={{ recipesData }}>
-  const paramLabels = { dose:'Зерно', water:'Вода', ratio:'Пропорция', grind:'Помол', temp:'Температура', time:'Время', yield:'Выход', milk:'Молоко' };
+  import { decodeBrewTerms } from '../../lib/decodeBrewTerms';
+
+  const paramLabels = { dose:'Зерно', water:'Вода', ratio:'Пропорция', grind:'Помол', temp:'Температура', time:'Время', yield:'Выход в чашку', milk:'Молоко' };
   let activeTab = 'aeropress';
 
   const params = new URLSearchParams(location.search);
@@ -147,7 +149,8 @@ import { recipesData } from '../../data/recipes';
   if (tabParam && recipesData[tabParam]) activeTab = tabParam;
 
   function esc(s) {
-    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+    const raw = String(s ?? '');
+    return decodeBrewTerms(raw).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
   }
 
   function recipeQuery(method, r) {

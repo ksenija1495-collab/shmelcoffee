@@ -62,7 +62,7 @@ export function formatCupRecipe(recipe: unknown): string {
   else if (r.grinder) parts.push(r.grinder);
   if (r.temp) parts.push(`${r.temp}°C`);
   if (r.time) parts.push(`∑ ${r.time}`);
-  if (r.blooming) parts.push(`блуминг ${r.blooming}`);
+  if (r.blooming) parts.push(`предсмачивание ${r.blooming}`);
   (r.pours || []).forEach((t, i) => { if (t) parts.push(`${i + 1}-й ${t}`); });
   return parts.join(' · ');
 }
@@ -75,7 +75,7 @@ export function formatCupRecipeShort(recipe: unknown, brewMethod?: string | null
   if (r?.coffee_g && r?.water_g) bits.push(`${r.coffee_g} г · ${r.water_g} г`);
   else if (r?.coffee_g) bits.push(`${r.coffee_g} г зерна`);
   else if (r?.water_g) bits.push(`${r.water_g} г воды`);
-  if (r?.blooming) bits.push(`блум ${r.blooming}`);
+  if (r?.blooming) bits.push(`предсмач. ${r.blooming}`);
   const pours = r?.pours?.filter(Boolean) || [];
   if (pours.length) bits.push(`${pours.length} пролива`);
   return bits.join(' · ') || formatCupRecipe(recipe) || '';
@@ -96,7 +96,7 @@ export function cupRecipeLines(recipe: unknown): CupRecipeLine[] {
   }
   if (r.temp) lines.push({ label: 'Температура', value: `${r.temp}°C` });
   if (r.time) lines.push({ label: 'Общее время', value: r.time });
-  if (r.blooming) lines.push({ label: 'Блуминг', value: r.blooming });
+  if (r.blooming) lines.push({ label: 'Предсмачивание (блум)', value: r.blooming });
   (r.pours || []).forEach((t, i) => {
     if (t) lines.push({ label: `${i + 1}-й пролив`, value: t });
   });
