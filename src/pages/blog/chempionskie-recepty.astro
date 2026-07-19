@@ -1,0 +1,254 @@
+---
+export const prerender = true;
+import Layout from '../../layouts/Layout.astro';
+import Nav from '../../components/Nav.astro';
+import { recipesData } from '../../data/recipes';
+---
+
+<Layout
+  title="Банк чемпионских рецептов — Shmelco"
+  description="Рецепты чемпионов World Brewers Cup, AeroPress Championship и классика — V60, аэропресс, кемекс, эспрессо, турка."
+  keywords={['рецепт аэропресса', 'чемпионский рецепт кофе', 'V60 рецепт', 'world brewers cup']}
+>
+  <Nav />
+  <div class="container champ-page">
+    <nav class="champ-breadcrumb">
+      <a href="/blog">Блог</a> <span>›</span> <span>Чемпионские рецепты</span>
+    </nav>
+    <div class="champ-hero">
+      <h1>Банк чемпионских рецептов</h1>
+      <p class="champ-hero-sub">Проверенные схемы чемпионов и классика — по методам заваривания. Сохраняй в дневник и повторяй.</p>
+    </div>
+    <div class="recipe-tabs" id="recipeTabs"></div>
+    <div id="champCards"></div>
+    <div id="classicRecipes"></div>
+    <div class="champ-foot-cta">
+      <p>Запиши чашку по этому рецепту — откроется в твоём дневнике.</p>
+      <a href="/add-cup" class="btn btn-primary">Добавить чашку →</a>
+    </div>
+  </div>
+</Layout>
+
+<style is:global>
+  .champ-page { padding: 88px 0 72px; max-width: 720px; }
+  .champ-breadcrumb {
+    font-size: .74rem; color: var(--text-muted); margin-bottom: 18px;
+  }
+  .champ-breadcrumb a { color: var(--accent); text-decoration: none; font-weight: 600; }
+  .champ-hero { margin-bottom: 22px; }
+  .champ-hero h1 {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: 2rem; font-weight: 600; line-height: 1.15; margin-bottom: 8px;
+  }
+  .champ-hero-sub { font-size: .88rem; color: var(--text-dim); line-height: 1.55; max-width: 560px; }
+
+  .champ-cards { display: flex; flex-direction: column; gap: 18px; margin-bottom: 28px; }
+  .champ-card {
+    position: relative; border-radius: 16px; overflow: hidden;
+    border: 1px solid rgba(255,255,255,.45);
+    box-shadow: 0 16px 40px rgba(70,41,24,.12);
+  }
+  .champ-card-bg {
+    position: absolute; inset: 0;
+    background: linear-gradient(145deg, rgba(72,98,102,.88), rgba(45,62,66,.92)),
+      radial-gradient(circle at 80% 20%, rgba(168,124,79,.25), transparent 55%);
+  }
+  .champ-card--v60 .champ-card-bg {
+    background: linear-gradient(145deg, rgba(90,62,42,.9), rgba(60,40,28,.94)),
+      radial-gradient(circle at 70% 30%, rgba(224,184,30,.15), transparent 50%);
+  }
+  .champ-card--chemex .champ-card-bg {
+    background: linear-gradient(145deg, rgba(74,86,72,.9), rgba(48,56,46,.94));
+  }
+  .champ-card--espresso .champ-card-bg {
+    background: linear-gradient(145deg, rgba(50,38,32,.92), rgba(30,22,18,.96));
+  }
+  .champ-card-inner {
+    position: relative; z-index: 1; padding: 22px 20px 18px;
+    background: rgba(255,255,255,.92);
+    margin: 14px; border-radius: 12px;
+    backdrop-filter: blur(6px);
+  }
+  .champ-method {
+    display: block; font-size: .58rem; font-weight: 800; letter-spacing: .18em;
+    color: var(--text-muted); margin-bottom: 6px;
+  }
+  .champ-title {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: 1.35rem; font-weight: 700; line-height: 1.2; color: var(--text);
+    text-transform: uppercase; letter-spacing: .02em;
+  }
+  .champ-tagline {
+    margin-top: 8px; font-size: .82rem; font-style: italic; color: var(--text-dim); line-height: 1.45;
+  }
+  .champ-highlights {
+    list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px;
+  }
+  .champ-highlights li {
+    font-size: .78rem; color: var(--text); padding-left: 22px; position: relative; line-height: 1.4;
+  }
+  .champ-highlights li::before {
+    content: '✓'; position: absolute; left: 0; color: var(--accent-green); font-weight: 700;
+  }
+  .champ-steps {
+    margin: 16px 0 0; padding: 0; list-style: none; counter-reset: cstep;
+  }
+  .champ-steps li {
+    counter-increment: cstep; position: relative; padding: 0 0 10px 26px;
+    font-size: .8rem; line-height: 1.5; color: var(--text);
+    font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  }
+  .champ-steps li::before {
+    content: counter(cstep) '.'; position: absolute; left: 0; font-weight: 700; color: var(--accent);
+  }
+  .champ-profile {
+    margin-top: 14px; padding-top: 12px; border-top: 1px dashed rgba(228,208,185,.9);
+    font-size: .76rem; color: var(--text-dim); line-height: 1.45;
+  }
+  .champ-profile b { color: var(--text); font-weight: 700; }
+  .champ-profile-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .champ-profile-tag {
+    font-size: .68rem; font-weight: 600; padding: 4px 9px; border-radius: 8px;
+    background: rgba(168,124,79,.1); border: 1px solid rgba(168,124,79,.2);
+  }
+  .champ-watermark {
+    text-align: center; font-size: .62rem; letter-spacing: .08em;
+    color: rgba(255,255,255,.75); padding: 10px 0 12px; position: relative; z-index: 1;
+  }
+  .champ-use-btn {
+    display: inline-block; margin-top: 12px; padding: 8px 14px; border-radius: 8px;
+    background: var(--text); color: var(--bg); font-size: .74rem; font-weight: 700;
+    text-decoration: none; transition: .15s;
+  }
+  .champ-use-btn:hover { background: var(--accent); }
+
+  .classic-block-h {
+    font-size: .82rem; font-weight: 700; color: var(--text); margin: 8px 0 12px;
+  }
+  .champ-foot-cta {
+    margin-top: 32px; padding: 22px; text-align: center; border-radius: var(--radius-lg);
+    border: 1px solid var(--border); background: var(--surface);
+  }
+  .champ-foot-cta p { font-size: .84rem; color: var(--text-dim); margin-bottom: 12px; }
+
+  @media (max-width: 600px) {
+    .champ-page { padding-top: 72px; }
+    .champ-hero h1 { font-size: 1.65rem; }
+    .champ-card-inner { margin: 10px; padding: 18px 16px; }
+  }
+</style>
+
+<script define:vars={{ recipesData }}>
+  const paramLabels = { dose:'Зерно', water:'Вода', ratio:'Пропорция', grind:'Помол', temp:'Температура', time:'Время', yield:'Выход', milk:'Молоко' };
+  let activeTab = 'aeropress';
+
+  const params = new URLSearchParams(location.search);
+  const tabParam = params.get('tab') || params.get('method');
+  if (tabParam && recipesData[tabParam]) activeTab = tabParam;
+
+  function esc(s) {
+    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+  }
+
+  function recipeQuery(method, r) {
+    const q = new URLSearchParams();
+    q.set('brew', recipesData[method].name === 'V60' ? 'V60' : recipesData[method].name);
+    const map = { dose:'coffee_g', water:'water_g', grind:'grind', temp:'temp', time:'time' };
+    for (const [pk, qk] of Object.entries(map)) {
+      const raw = r.params[pk];
+      if (!raw) continue;
+      const num = raw.match(/[\d]+(?:[.,]\d+)?/);
+      if (qk === 'coffee_g' || qk === 'water_g') {
+        if (num) q.set(qk, num[0].replace(',', '.'));
+      } else if (qk === 'temp') {
+        const t = raw.match(/\d+/);
+        if (t) q.set('temp', t[0]);
+      } else {
+        q.set(qk, raw.replace(/\s*°C.*/, '').trim());
+      }
+    }
+    return '/add-cup?' + q.toString();
+  }
+
+  function renderChampionCard(method, r) {
+    const m = recipesData[method];
+    const highlights = r.highlights || Object.values(r.params).slice(0, 3);
+    const profileTags = r.profileTags || [];
+    return `<article class="champ-card champ-card--${method}">
+      <div class="champ-card-bg"></div>
+      <div class="champ-card-inner">
+        <span class="champ-method">${esc(m.methodLabel)}: ЧЕМПИОН</span>
+        <h2 class="champ-title">${esc(r.title)}</h2>
+        <p class="champ-tagline">${esc(r.tagline || r.sub)}</p>
+        <ul class="champ-highlights">${highlights.map(h => `<li>${esc(h)}</li>`).join('')}</ul>
+        <ol class="champ-steps">${r.steps.map(s => `<li>${esc(s)}</li>`).join('')}</ol>
+        ${r.profile ? `<div class="champ-profile"><b>Профиль:</b> ${esc(r.profile)}${
+          profileTags.length ? `<div class="champ-profile-tags">${profileTags.map(t =>
+            `<span class="champ-profile-tag">${t.emoji} ${esc(t.label)}</span>`).join('')}</div>` : ''
+        }</div>` : ''}
+        <a class="champ-use-btn" href="${recipeQuery(method, r)}">Записать чашку по рецепту →</a>
+      </div>
+      <div class="champ-watermark">@shmelcoffee</div>
+    </article>`;
+  }
+
+  function renderClassicCard(method, r, idx) {
+    return `<div class="recipe-card" id="rc-${method}-${idx}">
+      <div class="recipe-card-header" data-method="${method}" data-idx="${idx}">
+        <div class="recipe-card-left">
+          <span class="recipe-badge ${r.badge}">${esc(r.badgeText)}</span>
+          <div>
+            <div class="recipe-card-title">${esc(r.title)}</div>
+            <div class="recipe-card-sub">${esc(r.sub)}</div>
+          </div>
+        </div>
+        <span class="recipe-chevron">▼</span>
+      </div>
+      <div class="recipe-card-body">
+        <div class="recipe-params">${Object.entries(r.params).map(([pk,pv]) =>
+          `<div class="recipe-param"><div class="recipe-param-label">${paramLabels[pk]||pk}</div><div class="recipe-param-value">${esc(pv)}</div></div>`
+        ).join('')}</div>
+        <div class="recipe-steps">${r.steps.map(s => `<div class="recipe-step">${esc(s)}</div>`).join('')}</div>
+        <div class="recipe-tip"><strong>Совет:</strong> ${esc(r.tip)}</div>
+        <a class="champ-use-btn" href="${recipeQuery(method, r)}" style="margin-top:14px">Записать чашку →</a>
+      </div>
+    </div>`;
+  }
+
+  function render() {
+    const tabs = document.getElementById('recipeTabs');
+    const champEl = document.getElementById('champCards');
+    const classicEl = document.getElementById('classicRecipes');
+    const m = recipesData[activeTab];
+    if (!m) return;
+
+    tabs.innerHTML = Object.entries(recipesData).map(([k,v]) =>
+      `<div class="recipe-tab ${k===activeTab?'active':''}" data-tab="${k}">${v.icon} ${v.name}</div>`
+    ).join('');
+
+    const champions = m.recipes.filter(r => r.badge === 'champion');
+    const others = m.recipes.filter(r => r.badge !== 'champion');
+
+    champEl.innerHTML = `<div class="champ-cards">${champions.map(r => renderChampionCard(activeTab, r)).join('')}</div>`;
+    classicEl.innerHTML = others.length
+      ? `<div class="classic-block-h">Классика и простые рецепты</div>${others.map((r,i) => renderClassicCard(activeTab, r, i)).join('')}`
+      : '';
+
+    tabs.querySelectorAll('.recipe-tab').forEach(t => {
+      t.addEventListener('click', () => {
+        activeTab = t.dataset.tab;
+        const url = new URL(location.href);
+        url.searchParams.set('tab', activeTab);
+        history.replaceState({}, '', url);
+        render();
+      });
+    });
+    classicEl.querySelectorAll('.recipe-card-header').forEach(h => {
+      h.addEventListener('click', () => {
+        document.getElementById('rc-' + h.dataset.method + '-' + h.dataset.idx)?.classList.toggle('open');
+      });
+    });
+  }
+
+  render();
+</script>

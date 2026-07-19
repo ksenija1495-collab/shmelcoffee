@@ -1,17 +1,31 @@
+export type RecipeEntry = {
+  title: string;
+  badge: 'champion' | 'classic' | 'easy';
+  badgeText: string;
+  sub: string;
+  tagline?: string;
+  highlights?: string[];
+  profile?: string;
+  profileTags?: { emoji: string; label: string }[];
+  params: Record<string, string>;
+  steps: string[];
+  tip: string;
+};
+
 export const recipesData: Record<string, {
-  icon: string; name: string;
-  recipes: Array<{
-    title: string; badge: string; badgeText: string;
-    sub: string;
-    params: Record<string, string>;
-    steps: string[];
-    tip: string;
-  }>;
+  icon: string;
+  name: string;
+  methodLabel: string;
+  recipes: RecipeEntry[];
 }> = {
   v60: {
-    icon:'☕', name:'V60',
+    icon:'☕', name:'V60', methodLabel:'V60 / POUR OVER',
     recipes:[
       { title:'Тетсу Катсуя «4:6»', badge:'champion', badgeText:'Чемпион',
+        tagline:'Самый воспроизводимый чемпионский рецепт — баланс сладости и кислотности.',
+        highlights:['20 г кофе · 300 мл воды','Помол как сахар · 92°C','Метод 4:6 — два пролива на баланс'],
+        profile:'Чистая чашка с контролируемой сладостью и яркой кислотностью.',
+        profileTags:[{emoji:'🍯',label:'сладость'},{emoji:'🍋',label:'кислотность'},{emoji:'☕',label:'баланс'}],
         sub:'World Brewers Cup 2016 · Самый воспроизводимый чемпионский рецепт',
         params:{dose:'20 г',water:'300 мл',ratio:'1:15',grind:'Средний (как сахар)',temp:'92°C',time:'3:30'},
         steps:[
@@ -48,7 +62,7 @@ export const recipesData: Record<string, {
     ]
   },
   chemex: {
-    icon:'🫖', name:'Кемекс',
+    icon:'🫖', name:'Кемекс', methodLabel:'CHEMEX',
     recipes:[
       { title:'Мэтт Пергер', badge:'champion', badgeText:'Чемпион',
         sub:'World Barista Champion 2013 (адаптация для Chemex)',
@@ -76,8 +90,23 @@ export const recipesData: Record<string, {
     ]
   },
   aeropress: {
-    icon:'💉', name:'Аэропресс',
+    icon:'💉', name:'Аэропресс', methodLabel:'AEROPRESS',
     recipes:[
+      { title:'Полина Пастухова', badge:'champion', badgeText:'Чемпион',
+        tagline:'Супер сладкая, чистая чашка — эталон чемпионата.',
+        highlights:['17 г кофе','200 г воды, 92°C','Перевёрнутый метод'],
+        profile:'конфетки, спелый фрукт, чистейший баланс',
+        profileTags:[{emoji:'🍫',label:'конфетки'},{emoji:'🍑',label:'спелый фрукт'},{emoji:'⚖️',label:'баланс'}],
+        sub:'World AeroPress Championship · Россия',
+        params:{dose:'17 г',water:'200 г',ratio:'1:11.8 (+ bypass)',grind:'Средне-мелкий',temp:'92°C',time:'~2:15 + bypass'},
+        steps:[
+          'Перевёрнутый метод: поршень на 1 см, переверните. Засыпьте кофе, влейте 200 г воды 92°C → перемешайте 10 сек.',
+          'Настаивайте 1:30 с закрытой крышкой и фильтром.',
+          'Переверните и прессуйте 20–25 сек.',
+          'Добавьте 40–60 г горячей воды (bypass) — настройте крепость и сладость.',
+        ],
+        tip:'Bypass — ключ к сладости без пережаренной горечи. Подходит для светлой обжарки и фруктовых лотов.'
+      },
       { title:'Алан Адлер (изобретатель)', badge:'classic', badgeText:'Классика',
         sub:'Оригинальный рецепт от создателя Аэропресса',
         params:{dose:'14 г',water:'200 мл',ratio:'1:14',grind:'Мелкий (как мелкая соль)',temp:'80°C',time:'1:00'},
@@ -113,7 +142,7 @@ export const recipesData: Record<string, {
     ]
   },
   espresso: {
-    icon:'🔩', name:'Эспрессо',
+    icon:'🔩', name:'Эспрессо', methodLabel:'ESPRESSO',
     recipes:[
       { title:'Стандарт SCA / Итальянский', badge:'classic', badgeText:'Классика',
         sub:'Золотой стандарт эспрессо',
@@ -151,7 +180,7 @@ export const recipesData: Record<string, {
     ]
   },
   frenchpress: {
-    icon:'🍶', name:'Френч-пресс',
+    icon:'🍶', name:'Френч-пресс', methodLabel:'FRENCH PRESS',
     recipes:[
       { title:'Джеймс Хоффманн', badge:'champion', badgeText:'Лучший',
         sub:'Революционный метод, изменивший мнение о френч-прессе',
@@ -180,7 +209,7 @@ export const recipesData: Record<string, {
     ]
   },
   moka: {
-    icon:'🏔️', name:'Мока (гейзерная)',
+    icon:'🏔️', name:'Мока (гейзерная)', methodLabel:'MOKA POT',
     recipes:[
       { title:'Метод Хоффманна', badge:'champion', badgeText:'Лучший',
         sub:'Современный подход, убирающий горечь',
@@ -208,7 +237,7 @@ export const recipesData: Record<string, {
     ]
   },
   coldbrew: {
-    icon:'🧊', name:'Cold Brew',
+    icon:'🧊', name:'Cold Brew', methodLabel:'COLD BREW',
     recipes:[
       { title:'Иммерсионный классический', badge:'classic', badgeText:'Классика',
         sub:'Самый простой и популярный метод',
@@ -237,7 +266,7 @@ export const recipesData: Record<string, {
     ]
   },
   turka: {
-    icon:'☕', name:'Турка (джезва)',
+    icon:'☕', name:'Турка (джезва)', methodLabel:'CEZVE / IBRIK',
     recipes:[
       { title:'Турецкий классический', badge:'classic', badgeText:'Классика',
         sub:'Метод, не менявшийся столетиями',

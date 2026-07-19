@@ -6,10 +6,10 @@ import { getCollection } from 'astro:content';
 const posts = await getCollection('blog');
 
 const clusters = [
-  { id: 'C1', name: 'Основы specialty coffee', desc: 'Что такое спешелти, обжарка, вода, дрип-пакеты', icon: '☕' },
-  { id: 'C2', name: 'Методы заваривания', desc: 'Пуровер, аэропресс, кемекс, турка', icon: '⏳' },
-  { id: 'C3', name: 'Кофейное зерно', desc: 'Сорта, обработка, как читать упаковку', icon: '🌱' },
-  { id: 'C5', name: 'Дегустация и вкус', desc: 'Каппинг, ароматы, как описать вкус', icon: '👃' },
+  { id: 'C1', name: 'Specialty coffee', short: 'Specialty', desc: 'Что такое спешелти, обжарка, вода, дрип-пакеты', icon: '☕' },
+  { id: 'C2', name: 'Методы заваривания', short: 'Методы', desc: 'Пуровер, аэропресс, кемекс, турка', icon: '⏳' },
+  { id: 'C3', name: 'Кофейное зерно', short: 'Зерно', desc: 'Сорта, обработка, как читать упаковку', icon: '🌱' },
+  { id: 'C5', name: 'Дегустация и вкус', short: 'Дегустация', desc: 'Каппинг, ароматы, как описать вкус', icon: '👃' },
 ];
 
 const clusterPosts = clusters.map(c => ({
@@ -22,6 +22,8 @@ const clusterPosts = clusters.map(c => ({
       return b.data.date.getTime() - a.data.date.getTime();
     }),
 }));
+
+const totalPosts = posts.length;
 
 const schemaWebPage = JSON.stringify({
   '@context': 'https://schema.org',
@@ -47,29 +49,54 @@ const schemaWebPage = JSON.stringify({
       <p class="blog-hero-sub">Разбираемся в specialty — от зерна до чашки</p>
     </div>
 
-    {clusterPosts.map(cluster => (
-      <section class="blog-cluster">
-        <div class="cluster-header">
-          <span class="cluster-icon">{cluster.icon}</span>
-          <div>
-            <h2 class="cluster-name">{cluster.name}</h2>
-            <p class="cluster-desc">{cluster.desc}</p>
+    <div class="blog-filters" id="blogFilters" role="tablist" aria-label="Рубрики блога">
+      <button type="button" class="blog-filter active" data-filter="all" role="tab" aria-selected="true">
+        Все <span class="blog-filter-n">{totalPosts}</span>
+      </button>
+      {clusterPosts.map(c => (
+        <button type="button" class="blog-filter" data-filter={c.id} role="tab" aria-selected="false">
+          {c.icon} {c.short} <span class="blog-filter-n">{c.posts.length}</span>
+        </button>
+      ))}
+      <a href="/blog/chempionskie-recepty" class="blog-filter blog-filter-link">🏆 Рецепты</a>
+    </div>
+
+    <a href="/blog/chempionskie-recepty" class="blog-feature-recipes" data-show="all">
+      <span class="bfr-icon">🏆</span>
+      <div>
+        <div class="bfr-title">Банк чемпионских рецептов</div>
+        <div class="bfr-sub">AeroPress, V60, Chemex, эспрессо — схемы чемпионов и классика</div>
+      </div>
+      <span class="bfr-arrow">→</span>
+    </a>
+
+    <div id="blogClusters">
+      {clusterPosts.map(cluster => (
+        <section class="blog-cluster" data-cluster={cluster.id}>
+          <div class="cluster-header">
+            <span class="cluster-icon">{cluster.icon}</span>
+            <div>
+              <h2 class="cluster-name">{cluster.name}</h2>
+              <p class="cluster-desc">{cluster.desc}</p>
+            </div>
           </div>
-        </div>
-        <div class="cluster-articles">
-          {cluster.posts.map(post => (
-            <a href={`/blog/${post.id}`} class={`article-card ${post.data.type === 'pillar' ? 'article-pillar' : ''}`}>
-              <div class="article-card-top">
-                {post.data.type === 'pillar' && <span class="pillar-badge">Полный гид</span>}
-                <h3>{post.data.title}</h3>
-              </div>
-              <p class="article-desc">{post.data.description}</p>
-              <span class="article-arrow">Читать →</span>
-            </a>
-          ))}
-        </div>
-      </section>
-    ))}
+          <div class="cluster-articles">
+            {cluster.posts.map(post => (
+              <a href={`/blog/${post.id}`} class={`article-card ${post.data.type === 'pillar' ? 'article-pillar' : ''}`} data-cluster={cluster.id}>
+                <div class="article-card-top">
+                  {post.data.type === 'pillar' && <span class="pillar-badge">Полный гид</span>}
+                  <h3>{post.data.title}</h3>
+                </div>
+                <p class="article-desc">{post.data.description}</p>
+                <span class="article-arrow">Читать →</span>
+              </a>
+            ))}
+          </div>
+        </section>
+      ))}
+    </div>
+
+    <div class="blog-empty" id="blogEmpty" hidden>Нет статей в этой рубрике</div>
 
     <div class="blog-bottom-cta">
       <p>Не знаете, с чего начать? Пройдите диагностику вкуса — мы подберём кофе под вас.</p>
@@ -80,16 +107,53 @@ const schemaWebPage = JSON.stringify({
 
 <style>
   .blog-page { padding-top: 80px; }
-  .blog-hero { text-align: center; margin-bottom: 36px; }
+  .blog-hero { text-align: center; margin-bottom: 22px; }
   .blog-hero h1 {
     font-family: 'Cormorant Garamond', Georgia, serif;
     font-size: 2.2rem; font-weight: 600; margin-bottom: 6px;
   }
-  .blog-hero-sub {
-    font-size: .88rem; color: var(--text-dim);
+  .blog-hero-sub { font-size: .88rem; color: var(--text-dim); }
+
+  .blog-filters {
+    display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;
+    margin-bottom: 18px;
   }
+  .blog-filter {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 14px; border-radius: 999px; border: 1px solid var(--border);
+    background: var(--surface); color: var(--text-dim); cursor: pointer;
+    font-size: .78rem; font-weight: 600; font-family: 'Inter', sans-serif;
+    transition: all .15s;
+  }
+  .blog-filter:hover { border-color: var(--border-hover); color: var(--text); }
+  .blog-filter.active {
+    background: var(--text); color: var(--bg); border-color: var(--text);
+  }
+  .blog-filter-n {
+    font-size: .65rem; opacity: .75; font-weight: 700;
+  }
+  .blog-filter-link {
+    text-decoration: none; color: var(--accent); border-color: rgba(168,124,79,.35);
+    background: rgba(168,124,79,.08);
+  }
+  .blog-filter-link:hover { border-color: var(--accent); color: var(--accent); }
+
+  .blog-feature-recipes {
+    display: flex; align-items: center; gap: 14px; padding: 16px 18px;
+    margin-bottom: 28px; border-radius: var(--radius-lg);
+    border: 1px solid rgba(168,124,79,.35); background: rgba(168,124,79,.07);
+    text-decoration: none; color: inherit; transition: all .2s;
+  }
+  .blog-feature-recipes:hover {
+    border-color: var(--accent); box-shadow: var(--shadow-hover); transform: translateY(-1px);
+  }
+  .bfr-icon { font-size: 1.6rem; flex-shrink: 0; }
+  .bfr-title { font-weight: 700; font-size: .92rem; color: var(--text); }
+  .bfr-sub { font-size: .76rem; color: var(--text-muted); margin-top: 2px; }
+  .bfr-arrow { margin-left: auto; color: var(--accent); font-weight: 700; }
 
   .blog-cluster { margin-bottom: 36px; }
+  .blog-cluster[hidden] { display: none; }
   .cluster-header {
     display: flex; align-items: center; gap: 12px; margin-bottom: 14px;
   }
@@ -100,9 +164,7 @@ const schemaWebPage = JSON.stringify({
   }
   .cluster-desc { font-size: .78rem; color: var(--text-muted); margin-top: 2px; }
 
-  .cluster-articles {
-    display: grid; grid-template-columns: 1fr; gap: 8px;
-  }
+  .cluster-articles { display: grid; grid-template-columns: 1fr; gap: 8px; }
   .article-card {
     display: block; padding: 16px 18px; border-radius: var(--radius);
     background: var(--surface); border: 1px solid var(--border);
@@ -112,24 +174,23 @@ const schemaWebPage = JSON.stringify({
     border-color: var(--border-hover); box-shadow: var(--shadow-hover);
     transform: translateY(-1px);
   }
-  .article-pillar {
-    border-left: 3px solid var(--accent);
-  }
+  .article-pillar { border-left: 3px solid var(--accent); }
   .article-card-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .pillar-badge {
     padding: 2px 7px; border-radius: 4px; font-size: .65rem;
-    background: var(--accent); color: #fff; font-weight: 600;
-    flex-shrink: 0;
+    background: var(--accent); color: #fff; font-weight: 600; flex-shrink: 0;
   }
-  .article-card h3 {
-    font-size: .92rem; font-weight: 600; line-height: 1.3;
-  }
+  .article-card h3 { font-size: .92rem; font-weight: 600; line-height: 1.3; }
   .article-desc {
     font-size: .78rem; color: var(--text-dim); margin-top: 4px; line-height: 1.5;
   }
   .article-arrow {
     display: inline-block; margin-top: 6px;
     font-size: .76rem; color: var(--accent); font-weight: 500;
+  }
+
+  .blog-empty {
+    text-align: center; padding: 32px; color: var(--text-muted); font-size: .86rem;
   }
 
   .blog-bottom-cta {
@@ -144,5 +205,36 @@ const schemaWebPage = JSON.stringify({
   @media (max-width: 768px) {
     .blog-page { padding-top: 64px; }
     .blog-hero h1 { font-size: 1.7rem; }
+    .blog-filters { justify-content: flex-start; }
   }
 </style>
+
+<script>
+  const filters = document.querySelectorAll('.blog-filter[data-filter]');
+  const sections = document.querySelectorAll('.blog-cluster');
+  const empty = document.getElementById('blogEmpty')!;
+  const feature = document.querySelector('.blog-feature-recipes') as HTMLElement | null;
+
+  function setFilter(id: string) {
+    filters.forEach(btn => {
+      const on = btn.getAttribute('data-filter') === id;
+      btn.classList.toggle('active', on);
+      btn.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    let visible = 0;
+    sections.forEach(sec => {
+      const show = id === 'all' || sec.getAttribute('data-cluster') === id;
+      (sec as HTMLElement).hidden = !show;
+      if (show) visible++;
+    });
+    empty.hidden = visible > 0;
+    if (feature) feature.hidden = id !== 'all';
+  }
+
+  filters.forEach(btn => {
+    btn.addEventListener('click', () => setFilter(btn.getAttribute('data-filter') || 'all'));
+  });
+
+  const hash = new URLSearchParams(location.search).get('rubric');
+  if (hash) setFilter(hash);
+</script>

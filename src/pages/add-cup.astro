@@ -40,9 +40,11 @@ import { DB, countryOrder } from '../data/countries';
           <input type="number" id="r_coffee_g" inputmode="decimal" min="0" step="0.1" placeholder="Зерно, г (напр. 15)"/>
           <input type="number" id="r_water_g" inputmode="decimal" min="0" step="1" placeholder="Вода, г (напр. 250)"/>
           <input type="text" id="r_grind" placeholder="Помол (напр. средний)"/>
+          <select id="r_grinder"><option value="">— молка с полки —</option></select>
           <input type="text" id="r_temp" placeholder="Вода °C (напр. 94)"/>
           <input type="text" id="r_time" class="brew-time-inp" inputmode="numeric" placeholder="230"/>
         </div>
+        <div id="grinderHint" class="recipe-hint" style="display:none;margin-top:4px">Добавь кофемолку на <a href="/add-shelf?kind=equipment">полку</a> — она появится в списке.</div>
         <label class="fl">Время проливов</label>
         <div class="pour-block">
           <div class="pour-row">
@@ -53,14 +55,21 @@ import { DB, countryOrder } from '../data/countries';
           <button type="button" class="pour-add" id="addPourBtn">+ Пролив</button>
         </div>
         <div id="recipeHint" class="recipe-hint" style="display:none">Подставлен рецепт из гида — поправь под то, как заварил на самом деле.</div>
+        <div id="recipeActions" class="recipe-actions" style="display:none">
+          <button type="button" class="recipe-act-btn" id="saveBaseRecipeBtn">⭐ Сохранить как базовый рецепт</button>
+          <button type="button" class="recipe-act-btn" id="brewAgainBtn">+ Заварить так же</button>
+        </div>
         <label class="fl">Баланс вкуса</label>
         <p class="balance-hint">Ползунок — насколько. Ниже — характер (тренировка палитры)</p>
         <div id="sliders"></div>
         <div id="tasteChars"></div>
         <label class="fl">Вкус и ароматы — что чувствуешь в чашке</label>
-        <p class="note-cat-hint">Раскрой категорию ▶ — выбери подсказку или добавь свою ноту</p>
+        <p class="note-cat-hint">Колесо вкусов — нажми сектор или выбери подсказку в списке ниже</p>
         <div id="selectedNotes" class="note-selected"></div>
-        <div id="noteFamilies"></div>
+        <div class="note-wheel-wrap">
+          <svg id="noteWheelSvg" class="note-wheel-svg" viewBox="0 0 720 720" aria-label="Колесо вкусов для выбора нот"></svg>
+        </div>
+        <div id="noteWheelPanel" class="note-wheel-panel"></div>
         <label class="fl">Оценка</label>
         <div id="rating" class="rating"></div>
         <label class="fl">Заметка</label>
@@ -160,6 +169,14 @@ import { DB, countryOrder } from '../data/countries';
     font-size: .92rem; background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif;
   }
   .recipe-hint { font-size: .76rem; color: var(--accent); margin-top: 8px; }
+  .recipe-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .recipe-act-btn {
+    flex: 1; min-width: 148px; padding: 9px 12px; border-radius: 10px;
+    border: 1px solid var(--border); background: var(--bg); color: var(--text-dim);
+    font-size: .78rem; font-weight: 600; cursor: pointer; text-align: center;
+    font-family: 'Inter', sans-serif; transition: .15s;
+  }
+  .recipe-act-btn:hover { border-color: var(--accent); color: var(--accent); }
   .sliderrow { margin: 12px 0; }
   .sliderrow .top { display: flex; justify-content: space-between; font-size: .82rem; margin-bottom: 3px; }
   .sliderrow .val { color: var(--accent); font-weight: 700; }
@@ -181,10 +198,37 @@ import { DB, countryOrder } from '../data/countries';
   .char-chip small { display: block; font-size: .62rem; color: var(--text-muted); font-weight: 500; margin-top: 1px; }
   .char-chip.on { background: var(--accent); color: #fff; border-color: var(--accent); }
   .char-chip.on small { color: rgba(255,255,255,.85); }
-  .char-custom {
-    width: 100%; padding: 9px 11px; border: 1px solid var(--border); border-radius: 10px; font-size: .82rem;
-    background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif;
+  .note-wheel-wrap { margin: 4px 0 12px; text-align: center; }
+  .note-wheel-svg {
+    width: 100%; max-width: min(520px, 92vw); height: auto; margin: 0 auto; display: block;
   }
+  .note-wheel-svg path[data-type] { touch-action: manipulation; }
+  .note-wheel-svg path.wheel-seg-selected {
+    stroke: var(--text) !important; stroke-width: 3 !important; filter: brightness(0.92);
+  }
+  .note-wheel-panel {
+    display: none; padding: 16px 14px; border: 1px solid var(--border); border-radius: 12px;
+    background: var(--surface); margin-bottom: 8px;
+  }
+  .note-wheel-panel.active { display: block; }
+  .note-wheel-panel-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap; }
+  .note-wheel-panel-head h3 {
+    font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.15rem; font-weight: 600; margin: 0; flex: 1;
+  }
+  .note-wheel-panel-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+  .note-wheel-panel-count { font-size: .68rem; color: var(--text-muted); font-weight: 600; }
+  .note-wheel-panel-hint { font-size: .72rem; color: var(--text-muted); margin: 0 0 10px; }
+  .note-wheel-chip-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(148px, 1fr)); gap: 7px; }
+  .note-wheel-chip {
+    text-align: left; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--border);
+    background: var(--bg); cursor: pointer; transition: .12s; font-family: 'Inter', sans-serif;
+  }
+  .note-wheel-chip:hover { border-color: var(--accent); background: rgba(168,124,79,.05); }
+  .note-wheel-chip.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .note-wheel-chip-name { display: block; font-size: .78rem; font-weight: 700; line-height: 1.25; }
+  .note-wheel-chip-org { display: block; font-size: .64rem; color: var(--text-muted); margin-top: 2px; line-height: 1.35; }
+  .note-wheel-chip.on .note-wheel-chip-org { color: rgba(255,255,255,.82); }
+  .note-wheel-custom { margin-top: 12px; }
   .famhdr { font-size: .72rem; font-weight: 700; color: var(--text-muted); margin: 12px 0 5px; text-transform: uppercase; letter-spacing: .04em; }
   .chips { display: flex; flex-wrap: wrap; gap: 7px; }
   .chip {
@@ -212,13 +256,14 @@ import { DB, countryOrder } from '../data/countries';
   import { wheelData } from '../data/wheel';
   import { DB, countryOrder } from '../data/countries';
   import { BEAN_VARIETIES } from '../data/varieties';
-  import { normalizeRecipe, recipeHasData, parseGramsFromRatioText } from '../lib/cupRecipe';
+  import { applyRecipeToParams, normalizeRecipe, recipeHasData, parseGramsFromRatioText } from '../lib/cupRecipe';
   import { bindVarietyOther, readVarietyValue, setVarietyValue } from '../lib/beanVarietyField';
   import { tableHasColumn } from '../lib/supabaseSchema';
   import { bindBrewTimeInput, parseBrewTimeInput, readBrewTimeInput, setBrewTimeInputValue } from '../lib/brewTime';
   import { TASTE_CHARACTER, TASTE_CHARACTER_DIMS } from '../data/tasteCharacter';
   import { normalizeTasteCharacter, type TasteCharacter } from '../lib/tasteCharacter';
   import { countryNameForKey, resolveCountryKey } from '../lib/countryResolve';
+  import { initNoteWheelPicker, syncNoteWheelSelection } from '../lib/flavorWheelPicker';
 
   const supabase = createClient(
     import.meta.env.PUBLIC_SUPABASE_URL,
@@ -331,6 +376,36 @@ import { DB, countryOrder } from '../data/countries';
       .filter((t): t is string => Boolean(t));
   }
 
+  function setGrinderValue(name: string | null | undefined) {
+    const sel = document.getElementById('r_grinder') as HTMLSelectElement;
+    if (!sel) return;
+    const v = name?.trim() || '';
+    if (v && ![...sel.options].some((o) => o.value === v)) {
+      sel.add(new Option(v, v));
+    }
+    sel.value = v;
+  }
+
+  async function loadGrinders() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data } = await supabase
+      .from('shelf_items')
+      .select('name')
+      .eq('user_id', user.id)
+      .eq('kind', 'equipment')
+      .eq('category', 'Кофемолка')
+      .order('created_at', { ascending: false });
+    const sel = document.getElementById('r_grinder') as HTMLSelectElement;
+    const current = sel.value;
+    sel.innerHTML = '<option value="">— молка с полки —</option>' + (data || []).map((g) =>
+      `<option value="${escNote(g.name)}">${escNote(g.name)}</option>`
+    ).join('');
+    setGrinderValue(current);
+    const hint = document.getElementById('grinderHint') as HTMLElement;
+    if (hint) hint.style.display = data?.length ? 'none' : 'block';
+  }
+
   function applyRecipeToForm(recipeRaw: unknown, brewMethod?: string | null) {
     if (brewMethod) setSelect('f_brew', brewMethod);
     const r = normalizeRecipe(recipeRaw);
@@ -338,6 +413,7 @@ import { DB, countryOrder } from '../data/countries';
     (document.getElementById('r_coffee_g') as HTMLInputElement).value = r.coffee_g ? String(r.coffee_g) : '';
     (document.getElementById('r_water_g') as HTMLInputElement).value = r.water_g ? String(r.water_g) : '';
     (document.getElementById('r_grind') as HTMLInputElement).value = r.grind || '';
+    setGrinderValue(r.grinder);
     (document.getElementById('r_temp') as HTMLInputElement).value = r.temp || '';
     setBrewTimeInputValue(document.getElementById('r_time') as HTMLInputElement, r.time);
     setBrewTimeInputValue(document.getElementById('p_bloom') as HTMLInputElement, r.blooming);
@@ -373,12 +449,84 @@ import { DB, countryOrder } from '../data/countries';
     });
   }
 
+  function rv(id: string) {
+    return (document.getElementById(id) as HTMLInputElement).value.trim();
+  }
+
+  function rn(id: string) {
+    const v = rv(id);
+    if (!v) return null;
+    const n = parseFloat(v.replace(',', '.'));
+    return Number.isFinite(n) && n > 0 ? n : null;
+  }
+
+  function collectRecipeFromForm() {
+    const recipe: Record<string, unknown> = {
+      coffee_g: rn('r_coffee_g'),
+      water_g: rn('r_water_g'),
+      grind: rv('r_grind') || null,
+      grinder: (document.getElementById('r_grinder') as HTMLSelectElement).value.trim() || null,
+      temp: rv('r_temp') || null,
+      time: readBrewTimeInput(document.getElementById('r_time') as HTMLInputElement),
+      blooming: readBrewTimeInput(document.getElementById('p_bloom') as HTMLInputElement),
+      pours: collectPours(),
+    };
+    const pours = recipe.pours as string[];
+    if (!pours.length) delete recipe.pours;
+    return recipe;
+  }
+
+  async function saveBaseRecipeFromForm() {
+    const recipe = collectRecipeFromForm();
+    if (!recipeHasData(recipe)) {
+      alert('Сначала заполните рецепт — граммы, проливы или параметры');
+      return;
+    }
+    const brew = (document.getElementById('f_brew') as HTMLSelectElement).value;
+    const defaultName = [brew, recipe.coffee_g && recipe.water_g ? `${recipe.coffee_g}/${recipe.water_g}` : '']
+      .filter(Boolean).join(' · ') || 'Мой рецепт';
+    const name = prompt('Название базового рецепта', defaultName);
+    if (!name?.trim()) return;
+    const user = await guard();
+    if (!user) return;
+    const msg = document.getElementById('msg')!;
+    const { error } = await supabase.from('saved_brew_recipes').insert({
+      user_id: user.id,
+      name: name.trim(),
+      brew_method: brew || null,
+      recipe,
+    });
+    if (error) { msg.className = 'addcup-msg error'; msg.textContent = 'Ошибка: ' + error.message; return; }
+    msg.className = 'addcup-msg';
+    msg.textContent = 'Базовый рецепт сохранён — можно выбрать в новых чашках';
+    await loadSavedRecipes();
+  }
+
+  function brewAgainFromForm() {
+    const recipe = collectRecipeFromForm();
+    if (!recipeHasData(recipe)) {
+      alert('Сначала заполните рецепт');
+      return;
+    }
+    const brew = (document.getElementById('f_brew') as HTMLSelectElement).value;
+    const q = applyRecipeToParams(recipe as any, brew || null);
+    window.location.href = '/add-cup?' + q.toString();
+  }
+
+  function bindRecipeActions() {
+    if (!editCupId) return;
+    const row = document.getElementById('recipeActions')!;
+    row.style.display = 'flex';
+    document.getElementById('saveBaseRecipeBtn')!.addEventListener('click', saveBaseRecipeFromForm);
+    document.getElementById('brewAgainBtn')!.addEventListener('click', brewAgainFromForm);
+  }
+
   function setEditModeUI() {
     const h1 = document.querySelector('.addcup-page h1');
     const sub = document.querySelector('.addcup-sub');
     const btn = document.getElementById('saveBtn') as HTMLButtonElement;
     if (h1) h1.textContent = 'Редактировать чашку';
-    if (sub) sub.textContent = 'Довнеси ноты, поправь баланс вкуса или рецепт — карточка обновится.';
+    if (sub) sub.textContent = 'Довнеси ноты, поправь баланс или рецепт — карточка обновится.';
     if (btn) btn.textContent = 'Сохранить изменения';
   }
 
@@ -428,11 +576,6 @@ import { DB, countryOrder } from '../data/countries';
     prefillFromCup(cup);
   }
 
-  function noteInCategory(note: string, cat: string) {
-    if (wheelByCat[cat]?.has(note)) return true;
-    return sel.noteCats.get(note) === cat;
-  }
-
   function addNote(n: string, cat?: string) {
     const note = n.trim();
     if (!note) return;
@@ -458,7 +601,7 @@ import { DB, countryOrder } from '../data/countries';
   function renderSelectedNotes() {
     const el = document.getElementById('selectedNotes')!;
     if (!sel.notes.size) {
-      el.innerHTML = '<span class="note-empty">Пока пусто — раскрой категорию ▶ ниже, выбери подсказку или добавь свою</span>';
+      el.innerHTML = '<span class="note-empty">Пока пусто — нажми на колесе или выбери подсказку ниже</span>';
       return;
     }
     el.innerHTML = [...sel.notes].map((n) =>
@@ -469,44 +612,13 @@ import { DB, countryOrder } from '../data/countries';
     });
   }
 
-  function syncChipStates() {
-    document.querySelectorAll('#noteFamilies .chip').forEach((ch) => {
-      const n = (ch as HTMLElement).dataset.n!;
-      ch.classList.toggle('on', sel.notes.has(n));
-    });
-  }
-
-  function updateCategoryBadges() {
-    (wheelData as any[]).forEach((f) => {
-      const badge = document.querySelector(`[data-cat-badge="${CSS.escape(f.name)}"]`);
-      if (!badge) return;
-      const count = [...sel.notes].filter((n) => noteInCategory(n, f.name)).length;
-      badge.textContent = String(count);
-      badge.classList.toggle('has', count > 0);
-    });
-  }
-
   function refreshNotesUI() {
     renderSelectedNotes();
-    syncChipStates();
-    updateCategoryBadges();
-  }
-
-  function addCustomNote(btn: HTMLButtonElement) {
-    const row = btn.closest('.note-custom-row');
-    const inp = row?.querySelector('.note-custom-inp') as HTMLInputElement | null;
-    const cat = btn.dataset.cat || inp?.dataset.cat || '';
-    if (!inp || !cat) return;
-    const val = inp.value.trim();
-    if (!val) {
-      inp.focus();
-      inp.style.borderColor = 'var(--accent-warm)';
-      setTimeout(() => { inp.style.borderColor = ''; }, 1200);
-      return;
-    }
-    addNote(val, cat);
-    inp.value = '';
-    inp.focus();
+    syncNoteWheelSelection('noteWheelSvg', (n) => sel.notes.has(n));
+    document.querySelectorAll('#noteWheelPanel .note-wheel-chip').forEach((ch) => {
+      const n = (ch as HTMLElement).dataset.note!;
+      ch.classList.toggle('on', sel.notes.has(n));
+    });
   }
 
   function syncTasteCharChips() {
@@ -520,10 +632,6 @@ import { DB, countryOrder } from '../data/countries';
 
   function setTasteCharacterUI(tc: TasteCharacter | null) {
     sel.tasteChar = tc ? { ...tc } : {};
-    TASTE_CHARACTER_DIMS.forEach((dim) => {
-      const inp = document.querySelector(`.char-custom[data-dim="${dim}"]`) as HTMLInputElement | null;
-      if (inp) inp.value = sel.tasteChar[dim]?.custom || '';
-    });
     syncTasteCharChips();
   }
 
@@ -531,8 +639,7 @@ import { DB, countryOrder } from '../data/countries';
     const out: TasteCharacter = {};
     TASTE_CHARACTER_DIMS.forEach((dim) => {
       const preset = sel.tasteChar[dim]?.preset || null;
-      const custom = (document.querySelector(`.char-custom[data-dim="${dim}"]`) as HTMLInputElement | null)?.value.trim() || null;
-      if (preset || custom) out[dim] = { preset, custom };
+      if (preset) out[dim] = { preset, custom: null };
     });
     return Object.keys(out).length ? out : null;
   }
@@ -548,7 +655,6 @@ import { DB, countryOrder } from '../data/countries';
         <div class="char-block-h">${escNote(cfg.label)} — характер</div>
         <div class="char-block-sub">${escNote(cfg.hint)}</div>
         <div class="char-chips">${chips}</div>
-        <input type="text" class="char-custom" data-dim="${dim}" placeholder="Или свой вариант…"/>
       </div>`;
     }).join('');
 
@@ -561,68 +667,22 @@ import { DB, countryOrder } from '../data/countries';
       const cur = sel.tasteChar[dim]?.preset;
       if (cur === id) {
         if (sel.tasteChar[dim]) sel.tasteChar[dim]!.preset = null;
-        if (!sel.tasteChar[dim]?.custom) delete sel.tasteChar[dim];
+        delete sel.tasteChar[dim];
       } else {
-        sel.tasteChar[dim] = { ...sel.tasteChar[dim], preset: id };
+        sel.tasteChar[dim] = { preset: id, custom: null };
       }
       syncTasteCharChips();
-    });
-    box.querySelectorAll('.char-custom').forEach((inp) => {
-      inp.addEventListener('input', () => {
-        const dim = (inp as HTMLElement).dataset.dim as keyof TasteCharacter;
-        const v = (inp as HTMLInputElement).value.trim();
-        if (v) sel.tasteChar[dim] = { ...sel.tasteChar[dim], custom: v };
-        else if (sel.tasteChar[dim]) {
-          sel.tasteChar[dim]!.custom = null;
-          if (!sel.tasteChar[dim]!.preset) delete sel.tasteChar[dim];
-        }
-      });
     });
   }
 
   function buildNotes() {
-    const container = document.getElementById('noteFamilies')!;
-    container.innerHTML = (wheelData as any[]).map((f, idx) => `
-      <details class="note-cat"${idx === 0 ? ' open' : ''}>
-        <summary class="note-cat-sum" style="--cat-color:${f.color}">
-          <span class="note-cat-dot"></span>
-          <span class="note-cat-name">${escNote(f.name)}</span>
-          <span class="note-cat-chevron" aria-hidden="true">›</span>
-          <span class="note-cat-badge" data-cat-badge="${escNote(f.name)}">0</span>
-        </summary>
-        <div class="note-cat-body">
-          <div class="note-hint">Подсказки — нажми, чтобы добавить</div>
-          <div class="chips">${f.subs.map((s: any) => `<button type="button" class="chip" data-n="${escNote(s.name)}" data-cat="${escNote(f.name)}">${escNote(s.name)}</button>`).join('')}</div>
-          <div class="note-custom-row">
-            <input type="text" class="note-custom-inp" data-cat="${escNote(f.name)}" placeholder="Своя нота…"/>
-            <button type="button" class="note-custom-add" data-cat="${escNote(f.name)}" aria-label="Добавить ноту">+</button>
-          </div>
-        </div>
-      </details>`).join('');
-
-    container.addEventListener('click', (e) => {
-      const target = e.target as HTMLElement;
-      const chip = target.closest('.chip') as HTMLElement | null;
-      if (chip) {
-        e.preventDefault();
-        toggleNote(chip.dataset.n!, chip.dataset.cat);
-        return;
-      }
-      const addBtn = target.closest('.note-custom-add') as HTMLButtonElement | null;
-      if (addBtn) {
-        e.preventDefault();
-        e.stopPropagation();
-        addCustomNote(addBtn);
-      }
-    });
-    container.querySelectorAll('.note-custom-inp').forEach((inp) => {
-      inp.addEventListener('keydown', (e) => {
-        if (e.key !== 'Enter') return;
-        e.preventDefault();
-        const row = (inp as HTMLElement).closest('.note-custom-row');
-        const addBtn = row?.querySelector('.note-custom-add') as HTMLButtonElement | null;
-        if (addBtn) addCustomNote(addBtn);
-      });
+    initNoteWheelPicker(wheelData as any[], {
+      svgId: 'noteWheelSvg',
+      panelId: 'noteWheelPanel',
+      isSelected: (n) => sel.notes.has(n),
+      onToggle: (n, cat) => toggleNote(n, cat),
+      onCustomAdd: (n, cat) => addNote(n, cat),
+      escHtml: escNote,
     });
     refreshNotesUI();
   }
@@ -657,6 +717,7 @@ import { DB, countryOrder } from '../data/countries';
       if (parsed.water_g) (document.getElementById('r_water_g') as HTMLInputElement).value = String(parsed.water_g);
     }
     (document.getElementById('r_grind') as HTMLInputElement).value = g('grind');
+    setGrinderValue(g('grinder') || null);
     (document.getElementById('r_temp') as HTMLInputElement).value = g('temp');
     setBrewTimeInputValue(document.getElementById('r_time') as HTMLInputElement, g('time'));
     setBrewTimeInputValue(document.getElementById('p_bloom') as HTMLInputElement, g('blooming'));
@@ -715,23 +776,7 @@ import { DB, countryOrder } from '../data/countries';
     guessCountryFromName();
     const btn = document.getElementById('saveBtn') as HTMLButtonElement;
     btn.disabled = true; btn.textContent = 'Сохраняем...';
-    const rv = (id: string) => (document.getElementById(id) as HTMLInputElement).value.trim();
-    const rn = (id: string) => {
-      const v = rv(id);
-      if (!v) return null;
-      const n = parseFloat(v.replace(',', '.'));
-      return Number.isFinite(n) && n > 0 ? n : null;
-    };
-    const recipe: any = {
-      coffee_g: rn('r_coffee_g'),
-      water_g: rn('r_water_g'),
-      grind: rv('r_grind') || null,
-      temp: rv('r_temp') || null,
-      time: readBrewTimeInput(document.getElementById('r_time') as HTMLInputElement),
-      blooming: readBrewTimeInput(document.getElementById('p_bloom') as HTMLInputElement),
-      pours: collectPours(),
-    };
-    if (!recipe.pours.length) delete recipe.pours;
+    const recipe: any = collectRecipeFromForm();
     const hasRecipe = recipeHasData(recipe);
     const payload:any = {
       name,
@@ -768,8 +813,12 @@ import { DB, countryOrder } from '../data/countries';
   (async ()=>{
     if(await guard()){
       build();
+      await loadGrinders();
       await loadSavedRecipes();
-      if (editCupId) await loadCupForEdit();
+      if (editCupId) {
+        await loadCupForEdit();
+        bindRecipeActions();
+      }
       document.getElementById('saveBtn')!.addEventListener('click', save);
     }
   })();

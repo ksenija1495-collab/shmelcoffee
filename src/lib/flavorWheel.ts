@@ -93,12 +93,13 @@ function centerMarkup(label: FlavorWheelOptions['centerLabel']) {
     font-family="'Cormorant Garamond',Georgia,serif" font-size="16" font-weight="600" fill="${TEXT}">ВКУСЫ</text>`;
 }
 
-export function initFlavorWheel(wheelData: WheelCat[], options: FlavorWheelOptions = {}) {
-  const svg = document.getElementById('wheelSvg');
-  if (!svg) return;
+export type BuildWheelSvgOptions = {
+  centerLabel?: 'single' | 'double';
+  /** Extra attributes on sub-sector paths, e.g. data-note */
+  subPathExtra?: (cat: WheelCat, sub: WheelSub) => string;
+};
 
-  svg.setAttribute('viewBox', `0 0 ${SIZE} ${SIZE}`);
-
+export function buildFlavorWheelSvgHtml(wheelData: WheelCat[], options: BuildWheelSvgOptions = {}): string {
   const n = wheelData.length;
   const catAng = 360 / n;
   let html = `<circle cx="${CX}" cy="${CY}" r="${IR1 - 6}" fill="${HALO}"/>`;
@@ -122,7 +123,8 @@ export function initFlavorWheel(wheelData: WheelCat[], options: FlavorWheelOptio
       const sa2 = a1 + (j + 1) * subAng - GAP * 0.35;
       const hsl = hexToHSL(cat.color);
       const lShift = j % 2 === 0 ? 5 : -5;
-      html += `<path d="${arcSector(CX, CY, OR1, OR2, sa1, sa2)}" fill="hsl(${hsl.h},${hsl.s}%,${hsl.l + lShift}%)" data-type="sub" data-cat="${i}" data-sub="${j}" style="cursor:pointer;stroke:${HALO};stroke-width:1"/>`;
+      const extra = options.subPathExtra?.(cat, sub) || '';
+      html += `<path d="${arcSector(CX, CY, OR1, OR2, sa1, sa2)}" fill="hsl(${hsl.h},${hsl.s}%,${hsl.l + lShift}%)" data-type="sub" data-cat="${i}" data-sub="${j}" data-note="${sub.name.replace(/"/g, '&quot;')}" ${extra} style="cursor:pointer;stroke:${HALO};stroke-width:1"/>`;
 
       const smA = (sa1 + sa2) / 2;
       const sR = (OR1 + OR2) / 2;
@@ -135,7 +137,15 @@ export function initFlavorWheel(wheelData: WheelCat[], options: FlavorWheelOptio
     });
   });
 
-  svg.innerHTML = html;
+  return html;
+}
+
+export function initFlavorWheel(wheelData: WheelCat[], options: FlavorWheelOptions = {}) {
+  const svg = document.getElementById('wheelSvg');
+  if (!svg) return;
+
+  svg.setAttribute('viewBox', `0 0 ${SIZE} ${SIZE}`);
+  svg.innerHTML = buildFlavorWheelSvgHtml(wheelData, { centerLabel: options.centerLabel ?? 'single' });
 
   const linkOrigins = options.linkOrigins ?? ((t: string) => t);
   const subPrefix = options.subTooltipPrefix ?? '';

@@ -2,6 +2,7 @@ export type BrewRecipe = {
   coffee_g?: number | null;
   water_g?: number | null;
   grind?: string | null;
+  grinder?: string | null;
   ratio?: string | null;
   temp?: string | null;
   time?: string | null;
@@ -9,7 +10,7 @@ export type BrewRecipe = {
   pours?: string[];
 };
 
-const RECIPE_KEYS = ['coffee_g', 'water_g', 'grind', 'temp', 'time', 'blooming', 'pours'] as const;
+const RECIPE_KEYS = ['coffee_g', 'water_g', 'grind', 'grinder', 'temp', 'time', 'blooming', 'pours'] as const;
 
 /** Парсит «15 г / 250 мл» из текстовых рецептов методов (legacy). */
 export function parseGramsFromRatioText(text: string): { coffee_g?: number; water_g?: number } {
@@ -43,6 +44,7 @@ export function normalizeRecipe(raw: unknown): BrewRecipe | null {
     if (parsed.water_g) out.water_g = parsed.water_g;
   }
   if (r.grind) out.grind = String(r.grind);
+  if (r.grinder) out.grinder = String(r.grinder);
   if (r.temp) out.temp = String(r.temp);
   if (r.time) out.time = String(r.time);
   if (r.blooming) out.blooming = String(r.blooming);
@@ -56,7 +58,8 @@ export function formatCupRecipe(recipe: unknown): string {
   const parts: string[] = [];
   if (r.coffee_g) parts.push(`${r.coffee_g} г зерна`);
   if (r.water_g) parts.push(`${r.water_g} г воды`);
-  if (r.grind) parts.push(`помол ${r.grind}`);
+  if (r.grind) parts.push(`помол ${r.grind}${r.grinder ? ` · ${r.grinder}` : ''}`);
+  else if (r.grinder) parts.push(r.grinder);
   if (r.temp) parts.push(`${r.temp}°C`);
   if (r.time) parts.push(`∑ ${r.time}`);
   if (r.blooming) parts.push(`блуминг ${r.blooming}`);
@@ -78,6 +81,28 @@ export function formatCupRecipeShort(recipe: unknown, brewMethod?: string | null
   return bits.join(' · ') || formatCupRecipe(recipe) || '';
 }
 
+export type CupRecipeLine = { label: string; value: string };
+
+/** Структурированные строки рецепта для карточки чашки */
+export function cupRecipeLines(recipe: unknown): CupRecipeLine[] {
+  const r = normalizeRecipe(recipe);
+  if (!r) return [];
+  const lines: CupRecipeLine[] = [];
+  if (r.coffee_g) lines.push({ label: 'Зерно', value: `${r.coffee_g} г` });
+  if (r.water_g) lines.push({ label: 'Вода', value: `${r.water_g} г` });
+  if (r.grind || r.grinder) {
+    const grindBits = [r.grind, r.grinder].filter(Boolean).join(' · ');
+    lines.push({ label: 'Помол', value: grindBits });
+  }
+  if (r.temp) lines.push({ label: 'Температура', value: `${r.temp}°C` });
+  if (r.time) lines.push({ label: 'Общее время', value: r.time });
+  if (r.blooming) lines.push({ label: 'Блуминг', value: r.blooming });
+  (r.pours || []).forEach((t, i) => {
+    if (t) lines.push({ label: `${i + 1}-й пролив`, value: t });
+  });
+  return lines;
+}
+
 export function recipeFingerprint(recipe: unknown): string {
   const r = normalizeRecipe(recipe);
   if (!r) return '';
@@ -96,6 +121,7 @@ export function applyRecipeToParams(recipe: BrewRecipe, brewMethod?: string | nu
   if (recipe.coffee_g) q.set('coffee_g', String(recipe.coffee_g));
   if (recipe.water_g) q.set('water_g', String(recipe.water_g));
   if (recipe.grind) q.set('grind', recipe.grind);
+  if (recipe.grinder) q.set('grinder', recipe.grinder);
   if (recipe.temp) q.set('temp', recipe.temp);
   if (recipe.time) q.set('time', recipe.time);
   if (recipe.blooming) q.set('blooming', recipe.blooming);

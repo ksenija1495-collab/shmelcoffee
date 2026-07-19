@@ -5,11 +5,11 @@ export type BalanceScores = {
   body: number;
 };
 
-const AXES: { key: keyof BalanceScores; label: string; angle: number }[] = [
-  { key: 'acidity', label: 'Кислотность', angle: -90 },
-  { key: 'sweetness', label: 'Сладость', angle: 0 },
-  { key: 'body', label: 'Тело', angle: 90 },
-  { key: 'bitterness', label: 'Горечь', angle: 180 },
+const AXES: { key: keyof BalanceScores; label: string; short: string; angle: number }[] = [
+  { key: 'acidity', label: 'Кислотность', short: 'Кислот.', angle: -90 },
+  { key: 'sweetness', label: 'Сладость', short: 'Слад.', angle: 0 },
+  { key: 'body', label: 'Тело', short: 'Тело', angle: 90 },
+  { key: 'bitterness', label: 'Горечь', short: 'Гор.', angle: 180 },
 ];
 
 function pt(cx: number, cy: number, r: number, deg: number) {
@@ -18,10 +18,12 @@ function pt(cx: number, cy: number, r: number, deg: number) {
 }
 
 /** Radar «колесо баланса» 0–5 для карточки чашки */
-export function balanceWheelSvg(scores: BalanceScores, size = 220): string {
-  const cx = size / 2;
-  const cy = size / 2;
-  const maxR = size * 0.34;
+export function balanceWheelSvg(scores: BalanceScores, size = 260): string {
+  const pad = 36;
+  const vb = size + pad * 2;
+  const cx = vb / 2;
+  const cy = vb / 2;
+  const maxR = size * 0.3;
   const maxVal = 5;
 
   let svg = '';
@@ -45,18 +47,18 @@ export function balanceWheelSvg(scores: BalanceScores, size = 220): string {
 
   svg += `<polygon points="${poly}" fill="rgba(168,124,79,.22)" stroke="#a87c4f" stroke-width="2.2" stroke-linejoin="round"/>`;
 
-  AXES.forEach(({ key, label, angle }) => {
+  AXES.forEach(({ key, short, angle }) => {
     const val = Math.max(0, Math.min(maxVal, scores[key] ?? 0));
     const r = (maxR * val) / maxVal;
     const p = pt(cx, cy, r, angle);
     svg += `<circle cx="${p.x}" cy="${p.y}" r="3.5" fill="#a87c4f"/>`;
-    const lp = pt(cx, cy, maxR + 18, angle);
+    const lp = pt(cx, cy, maxR + 28, angle);
     const anchor = Math.abs(angle) === 90 ? 'middle' : angle > -90 && angle < 90 ? 'start' : 'end';
-    svg += `<text x="${lp.x}" y="${lp.y + 4}" text-anchor="${anchor}" font-family="Inter,sans-serif" font-size="9" font-weight="600" fill="#7a5c48">${label}</text>`;
-    svg += `<text x="${lp.x}" y="${lp.y + 16}" text-anchor="${anchor}" font-family="'Cormorant Garamond',serif" font-size="13" font-weight="700" fill="#462918">${val}</text>`;
+    svg += `<text x="${lp.x}" y="${lp.y + 3}" text-anchor="${anchor}" font-family="Inter,sans-serif" font-size="10" font-weight="600" fill="#7a5c48">${short}</text>`;
+    svg += `<text x="${lp.x}" y="${lp.y + 17}" text-anchor="${anchor}" font-family="'Cormorant Garamond',serif" font-size="14" font-weight="700" fill="#462918">${val}</text>`;
   });
 
-  svg += `<text x="${cx}" y="${cy + 5}" text-anchor="middle" font-family="'Cormorant Garamond',serif" font-size="11" font-weight="600" fill="#a89080">баланс</text>`;
+  svg += `<text x="${cx}" y="${cy + 4}" text-anchor="middle" font-family="'Cormorant Garamond',serif" font-size="11" font-weight="600" fill="#a89080">баланс</text>`;
 
-  return `<svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Колесо баланса вкуса">${svg}</svg>`;
+  return `<svg viewBox="0 0 ${vb} ${vb}" width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Колесо баланса вкуса" style="overflow:visible">${svg}</svg>`;
 }
