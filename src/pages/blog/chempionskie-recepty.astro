@@ -90,6 +90,13 @@ import { recipesData } from '../../data/recipes';
   .champ-highlights li::before {
     content: '✓'; position: absolute; left: 0; color: var(--accent-green); font-weight: 700;
   }
+  .champ-params { margin-top: 12px; }
+  .champ-params .recipe-param--grind {
+    grid-column: 1 / -1;
+    background: rgba(168,124,79,.08);
+    border-color: rgba(168,124,79,.25);
+  }
+  .champ-params .recipe-param--grind .recipe-param-value { line-height: 1.45; }
   .champ-steps {
     margin: 16px 0 0; padding: 0; list-style: none; counter-reset: cstep;
   }
@@ -173,9 +180,20 @@ import { recipesData } from '../../data/recipes';
     return '/add-cup?' + q.toString();
   }
 
+  function renderChampParams(r) {
+    const order = ['dose', 'water', 'grind', 'ratio', 'temp', 'time', 'yield', 'milk'];
+    const cells = order
+      .filter((k) => r.params[k])
+      .map((k) => {
+        const cls = k === 'grind' ? ' recipe-param--grind' : '';
+        return `<div class="recipe-param${cls}"><div class="recipe-param-label">${paramLabels[k] || k}</div><div class="recipe-param-value">${esc(r.params[k])}</div></div>`;
+      });
+    return cells.length ? `<div class="champ-params recipe-params">${cells.join('')}</div>` : '';
+  }
+
   function renderChampionCard(method, r) {
     const m = recipesData[method];
-    const highlights = r.highlights || Object.values(r.params).slice(0, 3);
+    const highlights = r.highlights || [];
     const profileTags = r.profileTags || [];
     return `<article class="champ-card champ-card--${method}">
       <div class="champ-card-bg"></div>
@@ -183,7 +201,8 @@ import { recipesData } from '../../data/recipes';
         <span class="champ-method">${esc(m.methodLabel)}: ЧЕМПИОН</span>
         <h2 class="champ-title">${esc(r.title)}</h2>
         <p class="champ-tagline">${esc(r.tagline || r.sub)}</p>
-        <ul class="champ-highlights">${highlights.map(h => `<li>${esc(h)}</li>`).join('')}</ul>
+        ${highlights.length ? `<ul class="champ-highlights">${highlights.map(h => `<li>${esc(h)}</li>`).join('')}</ul>` : ''}
+        ${renderChampParams(r)}
         <ol class="champ-steps">${r.steps.map(s => `<li>${esc(s)}</li>`).join('')}</ol>
         ${r.profile ? `<div class="champ-profile"><b>Профиль:</b> ${esc(r.profile)}${
           profileTags.length ? `<div class="champ-profile-tags">${profileTags.map(t =>
