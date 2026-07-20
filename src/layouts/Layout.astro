@@ -21,6 +21,11 @@ const {
 
 const siteUrl = 'https://shmelcoffee.com';
 const canonicalUrl = canonical || new URL(Astro.url.pathname, siteUrl).href;
+const path = Astro.url.pathname;
+const isBlog = path === '/blog' || path.startsWith('/blog/');
+const isHome = path === '/';
+const isCountries = path === '/countries' || path.startsWith('/countries/');
+const isAccount = path === '/account' || path.startsWith('/account/');
 ---
 
 <!DOCTYPE html>
@@ -60,10 +65,10 @@ const canonicalUrl = canonical || new URL(Astro.url.pathname, siteUrl).href;
 <body>
   <slot />
   <div class="mobile-nav">
-    <a href="/"><span class="mn-icon">🏠</span>Главная</a>
-    <a href="/quiz"><span class="mn-icon">🎯</span>Тест</a>
-    <a href="/countries"><span class="mn-icon">🌍</span>Страны</a>
-    <a href="/account" id="mobileAccount"><span class="mn-icon">👤</span>Кабинет</a>
+    <a href="/" class={isHome ? 'active' : ''}><span class="mn-icon">🏠</span>Главная</a>
+    <a href="/blog" class={isBlog ? 'active' : ''}><span class="mn-icon">📖</span>Блог</a>
+    <a href="/countries" class={isCountries ? 'active' : ''}><span class="mn-icon">🌍</span>Страны</a>
+    <a href="/account" id="mobileAccount" class={isAccount ? 'active' : ''}><span class="mn-icon">👤</span>Кабинет</a>
   </div>
   <div class="footer">Shmelco · product atelier · Specialty Coffee Guide</div>
   <Analytics />
