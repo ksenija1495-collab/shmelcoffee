@@ -16,8 +16,8 @@ const activeTab = resolveRecipeTab(recipesData, Astro.url.searchParams);
 
 <Layout
   title="Банк чемпионских рецептов — Shmelco"
-  description="Рецепты чемпионов World Brewers Cup, AeroPress Championship и классика — V60, аэропресс, кемекс, эспрессо, турка."
-  keywords={['рецепт аэропресса', 'чемпионский рецепт кофе', 'V60 рецепт', 'world brewers cup']}
+  description="Рецепты чемпионов World Brewers Cup, AeroPress Championship и классика — V60, Hario Switch, аэропресс, кемекс, эспрессо, турка."
+  keywords={['рецепт аэропресса', 'чемпионский рецепт кофе', 'V60 рецепт', 'Hario Switch рецепт', 'world brewers cup']}
 >
   <Nav />
   <div class="container champ-page">
@@ -184,6 +184,10 @@ const activeTab = resolveRecipeTab(recipesData, Astro.url.searchParams);
   .champ-card--v60 .champ-card-bg {
     background: linear-gradient(145deg, rgba(90,62,42,.9), rgba(60,40,28,.94)),
       radial-gradient(circle at 70% 30%, rgba(224,184,30,.15), transparent 50%);
+  }
+  .champ-card--switch .champ-card-bg {
+    background: linear-gradient(145deg, rgba(38,68,62,.92), rgba(24,44,40,.96)),
+      radial-gradient(circle at 75% 25%, rgba(100,160,140,.22), transparent 50%);
   }
   .champ-card--chemex .champ-card-bg {
     background: linear-gradient(145deg, rgba(74,86,72,.9), rgba(48,56,46,.94));

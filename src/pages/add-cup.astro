@@ -50,11 +50,18 @@ import { DB, countryOrder } from '../data/countries';
         </div>
         <p class="field-hint brew-time-hint">Время в формате м:сс — набираешь 150, получаешь 1:50</p>
         <div id="grinderHint" class="recipe-hint" style="display:none;margin-top:4px">Добавь кофемолку на <a href="/add-shelf?kind=equipment">полку</a> — она появится в списке.</div>
-        <label class="fl">Время проливов</label>
-        <p class="pour-block-hint">Пролив — порция воды через кофе. Первый этап — предсмачивание (блум): маленький залив, чтобы зерно «распустилось».</p>
+        <label class="fl">Проливы</label>
+        <p class="pour-block-hint">Пролив — порция воды через кофе. Укажи объём (мл) и время каждого этапа. Первый — предсмачивание (блум).</p>
+        <div class="pour-block-head">
+          <span class="pour-col-spacer"></span>
+          <span class="pour-col-h">мл</span>
+          <span class="pour-col-h">время</span>
+          <span class="pour-col-spacer pour-col-spacer--btn"></span>
+        </div>
         <div class="pour-block">
-          <div class="pour-row">
+          <div class="pour-row pour-row--bloom">
             <span class="pour-lbl">Предсмачивание<span class="pour-lbl-sub">блум</span></span>
+            <input type="number" id="p_bloom_ml" class="pour-inp pour-ml-inp" inputmode="decimal" min="0" step="1" placeholder="40"/>
             <input type="text" id="p_bloom" class="pour-inp brew-time-inp" inputmode="numeric" placeholder="0:30"/>
           </div>
           <div id="pourList"></div>
@@ -102,7 +109,14 @@ import { DB, countryOrder } from '../data/countries';
   .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .recipe-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .pour-block { margin-top: 4px; display: flex; flex-direction: column; gap: 8px; }
-  .pour-row { display: grid; grid-template-columns: 92px 1fr auto; gap: 8px; align-items: center; }
+  .pour-block-head {
+    display: grid; grid-template-columns: 92px 1fr 1fr 32px; gap: 8px; align-items: center;
+    padding: 0 0 2px;
+  }
+  .pour-col-h { font-size: .62rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--text-muted); text-align: center; }
+  .pour-col-spacer--btn { width: 32px; }
+  .pour-row { display: grid; grid-template-columns: 92px 1fr 1fr 32px; gap: 8px; align-items: center; }
+  .pour-row--bloom { grid-template-columns: 92px 1fr 1fr; }
   .pour-lbl { font-size: .78rem; color: var(--text-dim); font-weight: 600; line-height: 1.25; }
   .pour-lbl-sub { display: block; font-size: .62rem; font-weight: 500; color: var(--text-muted); }
   .pour-block-hint { font-size: .68rem; color: var(--text-muted); margin: 0 0 8px; line-height: 1.45; }
@@ -224,6 +238,7 @@ import { DB, countryOrder } from '../data/countries';
   .balance-hint { font-size: .72rem; color: var(--text-muted); margin: -4px 0 10px; line-height: 1.45; }
   .field-hint { font-size: .68rem; color: var(--text-muted); margin: 4px 0 0; line-height: 1.4; }
   .brew-time-inp, .pour-inp.brew-time-inp { font-variant-numeric: tabular-nums; letter-spacing: .02em; }
+  .pour-ml-inp { font-variant-numeric: tabular-nums; text-align: center; }
   .brew-time-hint { margin-top: 6px; }
   .taste-dim-block {
     margin: 16px 0 0; padding: 14px 12px 12px; border: 1px solid var(--border); border-radius: 12px;
@@ -298,7 +313,13 @@ import { DB, countryOrder } from '../data/countries';
   .fromguide .fg-chip { font-size: .78rem; padding: 4px 11px; border-radius: 20px; background: var(--surface); border: 1px solid var(--border); color: var(--text-dim); font-weight: 600; }
   .fromguide .fg-note { font-size: .8rem; color: var(--text-dim); line-height: 1.5; }
   .fromguide .fg-note b { color: var(--text); }
-  @media (max-width: 600px) { .addcup-page { padding-top: 72px; } .row2 { grid-template-columns: 1fr; } }
+  @media (max-width: 600px) {
+    .addcup-page { padding-top: 72px; }
+    .row2 { grid-template-columns: 1fr; }
+    .pour-block-head, .pour-row { grid-template-columns: 72px 1fr 1fr 28px; gap: 6px; }
+    .pour-row--bloom { grid-template-columns: 72px 1fr 1fr; }
+    .pour-lbl { font-size: .72rem; }
+  }
 </style>
 
 <script>
@@ -306,10 +327,11 @@ import { DB, countryOrder } from '../data/countries';
   import { wheelData } from '../data/wheel';
   import { DB, countryOrder } from '../data/countries';
   import { BEAN_VARIETIES } from '../data/varieties';
-  import { applyRecipeToParams, normalizeRecipe, recipeHasData, parseGramsFromRatioText } from '../lib/cupRecipe';
+  import { applyRecipeToParams, decodePoursParam, normalizeRecipe, recipeHasData, parseGramsFromRatioText, type BrewPour } from '../lib/cupRecipe';
+  import { normalizePour, pourHasData } from '../lib/brewPour';
   import { bindVarietyOther, readVarietyValue, setVarietyValue } from '../lib/beanVarietyField';
   import { tableHasColumn } from '../lib/supabaseSchema';
-  import { bindBrewTimeInput, parseBrewTimeInput, readBrewTimeInput, setBrewTimeInputValue } from '../lib/brewTime';
+  import { bindBrewTimeInput, readBrewTimeInput, setBrewTimeInputValue } from '../lib/brewTime';
   import { TASTE_CHARACTER, TASTE_CHARACTER_DIMS } from '../data/tasteCharacter';
   import { normalizeTasteCharacter, type TasteCharacter } from '../lib/tasteCharacter';
   import { countryNameForKey, resolveCountryKey } from '../lib/countryResolve';
@@ -324,7 +346,7 @@ import { DB, countryOrder } from '../data/countries';
   );
 
   const PROCESSES = ['Мытая (Washed)','Натуральная (Natural)','Хани (Honey)','Анаэробная','Carbonic maceration','Wet-hulled','Другая'];
-  const BREWS = ['V60','Kalita','Chemex','Aeropress','Френч-пресс','Гейзерная','Турка','Эспрессо','Капсулы','Cold Brew','Другое'];
+  const BREWS = ['V60','Hario Switch','Kalita','Chemex','Aeropress','Френч-пресс','Гейзерная','Турка','Эспрессо','Капсулы','Cold Brew','Другое'];
   const SLIDERS = [['acidity','Кислотность'],['sweetness','Сладость'],['bitterness','Горечь'],['body','Тело']];
 
   const sel: any = {
@@ -398,25 +420,76 @@ import { DB, countryOrder } from '../data/countries';
     });
   }
 
-  function appendPourRow() {
+  function pourRowHtml(label: string) {
+    return `<span class="pour-lbl">${label}</span>
+      <input type="number" class="pour-inp pour-ml-inp" inputmode="decimal" min="0" step="1" placeholder="мл"/>
+      <input type="text" class="pour-inp brew-time-inp pour-time-inp" inputmode="numeric" placeholder="0:45"/>
+      <button type="button" class="pour-rm" title="Убрать пролив">×</button>`;
+  }
+
+  function bindPourRow(row: HTMLElement) {
+    bindBrewTimeInput(row.querySelector('.pour-time-inp') as HTMLInputElement);
+    row.querySelector('.pour-rm')?.addEventListener('click', () => { row.remove(); renumberPours(); });
+  }
+
+  function readPourMl(inp: HTMLInputElement | null): number | null {
+    if (!inp) return null;
+    const v = inp.value.trim().replace(',', '.');
+    if (!v) return null;
+    const n = parseFloat(v);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  }
+
+  function readPourRow(row: Element): BrewPour | null {
+    const ml = readPourMl(row.querySelector('.pour-ml-inp') as HTMLInputElement);
+    const time = readBrewTimeInput(row.querySelector('.pour-time-inp') as HTMLInputElement);
+    if (!ml && !time) return null;
+    return { ml, time };
+  }
+
+  function setPourRow(row: Element, p: BrewPour) {
+    const mlInp = row.querySelector('.pour-ml-inp') as HTMLInputElement;
+    const timeInp = row.querySelector('.pour-time-inp') as HTMLInputElement;
+    if (mlInp) mlInp.value = p.ml != null && p.ml > 0 ? String(p.ml) : '';
+    setBrewTimeInputValue(timeInp, p.time);
+  }
+
+  function setBloomOnForm(bloom: BrewPour | null | undefined) {
+    const mlInp = document.getElementById('p_bloom_ml') as HTMLInputElement;
+    const timeInp = document.getElementById('p_bloom') as HTMLInputElement;
+    if (!bloom) {
+      mlInp.value = '';
+      timeInp.value = '';
+      return;
+    }
+    mlInp.value = bloom.ml != null && bloom.ml > 0 ? String(bloom.ml) : '';
+    setBrewTimeInputValue(timeInp, bloom.time);
+  }
+
+  function collectBloom(): BrewPour | null {
+    const ml = readPourMl(document.getElementById('p_bloom_ml') as HTMLInputElement);
+    const time = readBrewTimeInput(document.getElementById('p_bloom') as HTMLInputElement);
+    if (!ml && !time) return null;
+    return { ml, time };
+  }
+
+  function appendPourRow(pour?: BrewPour) {
     const list = document.getElementById('pourList')!;
     const n = list.querySelectorAll('.pour-row').length + 1;
     const row = document.createElement('div');
     row.className = 'pour-row';
-    row.innerHTML = `<span class="pour-lbl">${pourLabel(n)}</span><input type="text" class="pour-inp brew-time-inp" inputmode="numeric" placeholder="0:45"/><button type="button" class="pour-rm" title="Убрать пролив">×</button>`;
-    bindBrewTimeInput(row.querySelector('.pour-inp') as HTMLInputElement);
-    row.querySelector('.pour-rm')!.addEventListener('click', () => { row.remove(); renumberPours(); });
+    row.innerHTML = pourRowHtml(pourLabel(n));
+    bindPourRow(row);
+    if (pour) setPourRow(row, pour);
     list.appendChild(row);
   }
 
-  function setPourRows(values: string[]) {
+  function setPourRows(pours: BrewPour[]) {
     const list = document.getElementById('pourList')!;
     list.innerHTML = '';
-    const count = Math.max(values.length, 1);
-    for (let i = 0; i < count; i++) appendPourRow();
-    document.querySelectorAll('#pourList .pour-inp').forEach((inp, i) => {
-      if (values[i]) setBrewTimeInputValue(inp as HTMLInputElement, values[i]);
-    });
+    const count = Math.max(pours.length, 1);
+    for (let i = 0; i < count; i++) appendPourRow(pours[i]);
+    renumberPours();
   }
 
   function initPours() {
@@ -424,10 +497,10 @@ import { DB, countryOrder } from '../data/countries';
     document.getElementById('addPourBtn')!.addEventListener('click', () => appendPourRow());
   }
 
-  function collectPours(): string[] {
-    return [...document.querySelectorAll('#pourList .pour-inp')]
-      .map(inp => readBrewTimeInput(inp as HTMLInputElement))
-      .filter((t): t is string => Boolean(t));
+  function collectPours(): BrewPour[] {
+    return [...document.querySelectorAll('#pourList .pour-row')]
+      .map(readPourRow)
+      .filter((p): p is BrewPour => pourHasData(p));
   }
 
   function setGrinderValue(name: string | null | undefined) {
@@ -470,11 +543,8 @@ import { DB, countryOrder } from '../data/countries';
     setGrinderValue(r.grinder);
     (document.getElementById('r_temp') as HTMLInputElement).value = r.temp || '';
     setBrewTimeInputValue(document.getElementById('r_time') as HTMLInputElement, r.time);
-    setBrewTimeInputValue(document.getElementById('p_bloom') as HTMLInputElement, r.blooming);
-    const pours = r.pours || [];
-    if (pours.length) {
-      setPourRows(pours);
-    }
+    setBloomOnForm(r.blooming);
+    if (r.pours?.length) setPourRows(r.pours);
     (document.getElementById('recipeHint') as HTMLElement).style.display = 'block';
   }
 
@@ -585,11 +655,11 @@ import { DB, countryOrder } from '../data/countries';
       grinder: (document.getElementById('r_grinder') as HTMLSelectElement).value.trim() || null,
       temp: rv('r_temp') || null,
       time: readBrewTimeInput(document.getElementById('r_time') as HTMLInputElement),
-      blooming: readBrewTimeInput(document.getElementById('p_bloom') as HTMLInputElement),
-      pours: collectPours(),
     };
-    const pours = recipe.pours as string[];
-    if (!pours.length) delete recipe.pours;
+    const bloom = collectBloom();
+    if (bloom) recipe.blooming = bloom;
+    const pours = collectPours();
+    if (pours.length) recipe.pours = pours;
     return recipe;
   }
 
@@ -875,12 +945,26 @@ import { DB, countryOrder } from '../data/countries';
     setGrinderValue(g('grinder') || null);
     (document.getElementById('r_temp') as HTMLInputElement).value = g('temp');
     setBrewTimeInputValue(document.getElementById('r_time') as HTMLInputElement, g('time'));
-    setBrewTimeInputValue(document.getElementById('p_bloom') as HTMLInputElement, g('blooming'));
-    const pourTimes = g('pours')
-      ? g('pours').split(',').map(s => s.trim()).filter(Boolean)
-      : [g('pour1'), g('pour2'), g('pour3')].map(s => s.trim()).filter(Boolean);
-    if (pourTimes.length) setPourRows(pourTimes);
-    if (g('coffee_g') || g('water_g') || g('ratio') || g('grind') || g('temp') || g('time') || g('blooming') || pourTimes.length) {
+    const bloomMl = g('blooming_ml');
+    const bloomTime = g('blooming');
+    if (bloomMl || bloomTime) {
+      setBloomOnForm({
+        ml: bloomMl ? parseFloat(bloomMl.replace(',', '.')) : null,
+        time: bloomTime || null,
+      });
+    }
+    if (g('pours')) {
+      setPourRows(decodePoursParam(g('pours')));
+    } else {
+      const legacyPours = [g('pour1'), g('pour2'), g('pour3')]
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .map((token) => normalizePour(token))
+        .filter((p): p is BrewPour => pourHasData(p));
+      if (legacyPours.length) setPourRows(legacyPours);
+    }
+    const hasPours = Boolean(g('pours') || g('pour1') || g('pour2') || g('pour3'));
+    if (g('coffee_g') || g('water_g') || g('ratio') || g('grind') || g('temp') || g('time') || bloomMl || bloomTime || hasPours) {
       (document.getElementById('recipeHint') as HTMLElement).style.display = 'block';
     }
     if (g('notes')) prefillNotesFromParam(g('notes'));

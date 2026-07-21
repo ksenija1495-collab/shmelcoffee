@@ -1,3 +1,14 @@
+import {
+  decodePoursParam,
+  encodePourToken,
+  formatPourValue,
+  normalizePour,
+  pourHasData,
+  type BrewPour,
+} from './brewPour';
+
+export type { BrewPour };
+
 export type BrewRecipe = {
   coffee_g?: number | null;
   water_g?: number | null;
@@ -6,8 +17,8 @@ export type BrewRecipe = {
   ratio?: string | null;
   temp?: string | null;
   time?: string | null;
-  blooming?: string | null;
-  pours?: string[];
+  blooming?: BrewPour | null;
+  pours?: BrewPour[];
 };
 
 const RECIPE_KEYS = ['coffee_g', 'water_g', 'grind', 'grinder', 'temp', 'time', 'blooming', 'pours'] as const;
@@ -28,6 +39,7 @@ export function recipeHasData(recipe: Record<string, unknown>): boolean {
   return Object.entries(recipe).some(([, v]) => {
     if (v == null || v === '') return false;
     if (Array.isArray(v)) return v.length > 0;
+    if (typeof v === 'object') return pourHasData(v as BrewPour);
     return true;
   });
 }
@@ -47,8 +59,12 @@ export function normalizeRecipe(raw: unknown): BrewRecipe | null {
   if (r.grinder) out.grinder = String(r.grinder);
   if (r.temp) out.temp = String(r.temp);
   if (r.time) out.time = String(r.time);
-  if (r.blooming) out.blooming = String(r.blooming);
-  if (Array.isArray(r.pours)) out.pours = r.pours.map(String).filter(Boolean);
+  const bloom = normalizePour(r.blooming);
+  if (bloom) out.blooming = bloom;
+  if (Array.isArray(r.pours)) {
+    const pours = r.pours.map(normalizePour).filter((p): p is BrewPour => pourHasData(p));
+    if (pours.length) out.pours = pours;
+  }
   return recipeHasData(out as Record<string, unknown>) ? out : null;
 }
 
@@ -62,8 +78,12 @@ export function formatCupRecipe(recipe: unknown): string {
   else if (r.grinder) parts.push(r.grinder);
   if (r.temp) parts.push(`${r.temp}°C`);
   if (r.time) parts.push(`∑ ${r.time}`);
-  if (r.blooming) parts.push(`предсмачивание ${r.blooming}`);
-  (r.pours || []).forEach((t, i) => { if (t) parts.push(`${i + 1}-й ${t}`); });
+  const bloomStr = formatPourValue(r.blooming);
+  if (bloomStr) parts.push(`предсмачивание ${bloomStr}`);
+  (r.pours || []).forEach((p, i) => {
+    const v = formatPourValue(p);
+    if (v) parts.push(`${i + 1}-й ${v}`);
+  });
   return parts.join(' · ');
 }
 
@@ -75,8 +95,9 @@ export function formatCupRecipeShort(recipe: unknown, brewMethod?: string | null
   if (r?.coffee_g && r?.water_g) bits.push(`${r.coffee_g} г · ${r.water_g} г`);
   else if (r?.coffee_g) bits.push(`${r.coffee_g} г зерна`);
   else if (r?.water_g) bits.push(`${r.water_g} г воды`);
-  if (r?.blooming) bits.push(`предсмач. ${r.blooming}`);
-  const pours = r?.pours?.filter(Boolean) || [];
+  const bloomStr = formatPourValue(r?.blooming);
+  if (bloomStr) bits.push(`блум ${bloomStr}`);
+  const pours = r?.pours?.filter(pourHasData) || [];
   if (pours.length) bits.push(`${pours.length} пролива`);
   return bits.join(' · ') || formatCupRecipe(recipe) || '';
 }
@@ -96,9 +117,11 @@ export function cupRecipeLines(recipe: unknown): CupRecipeLine[] {
   }
   if (r.temp) lines.push({ label: 'Температура', value: `${r.temp}°C` });
   if (r.time) lines.push({ label: 'Общее время', value: r.time });
-  if (r.blooming) lines.push({ label: 'Предсмачивание (блум)', value: r.blooming });
-  (r.pours || []).forEach((t, i) => {
-    if (t) lines.push({ label: `${i + 1}-й пролив`, value: t });
+  const bloomStr = formatPourValue(r.blooming);
+  if (bloomStr) lines.push({ label: 'Предсмачивание (блум)', value: bloomStr });
+  (r.pours || []).forEach((p, i) => {
+    const v = formatPourValue(p);
+    if (v) lines.push({ label: `${i + 1}-й пролив`, value: v });
   });
   return lines;
 }
@@ -124,7 +147,15 @@ export function applyRecipeToParams(recipe: BrewRecipe, brewMethod?: string | nu
   if (recipe.grinder) q.set('grinder', recipe.grinder);
   if (recipe.temp) q.set('temp', recipe.temp);
   if (recipe.time) q.set('time', recipe.time);
-  if (recipe.blooming) q.set('blooming', recipe.blooming);
-  if (recipe.pours?.length) q.set('pours', recipe.pours.join(','));
+  if (recipe.blooming?.ml) q.set('blooming_ml', String(recipe.blooming.ml));
+  if (recipe.blooming?.time) q.set('blooming', recipe.blooming.time);
+  if (recipe.pours?.length) {
+    q.set(
+      'pours',
+      recipe.pours.map(encodePourToken).filter(Boolean).join(','),
+    );
+  }
   return q;
 }
+
+export { decodePoursParam, encodePourToken, formatPourValue };

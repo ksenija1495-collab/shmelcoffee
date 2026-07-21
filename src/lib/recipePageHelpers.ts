@@ -1,4 +1,5 @@
 import { decodeBrewTerms } from './decodeBrewTerms';
+import { encodePourToken } from './brewPour';
 import type { RecipeEntry } from '../data/recipes';
 
 export const paramLabels: Record<string, string> = {
@@ -45,6 +46,14 @@ export function recipeQuery(
     } else {
       q.set(qk, raw.replace(/\s*°C.*/, '').trim());
     }
+  }
+  if (r.blooming?.ml) q.set('blooming_ml', String(r.blooming.ml));
+  if (r.blooming?.time) q.set('blooming', r.blooming.time);
+  if (r.pours?.length) {
+    q.set(
+      'pours',
+      r.pours.map((p) => encodePourToken({ ml: p.ml ?? null, time: p.time ?? null })).filter(Boolean).join(','),
+    );
   }
   return `/add-cup?${q.toString()}`;
 }

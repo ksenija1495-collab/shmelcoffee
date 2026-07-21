@@ -21,6 +21,18 @@ function entryToRecipe(r: RecipeEntry): BrewRecipe {
   if (r.params.grind) parsed.grind = r.params.grind;
   if (r.params.temp) parsed.temp = r.params.temp.replace(/\s*°C.*/, '').trim() + (r.params.temp.includes('°') ? '' : '');
   if (r.params.time) parsed.time = r.params.time;
+  if (r.blooming) {
+    parsed.blooming = {
+      ml: r.blooming.ml ?? null,
+      time: r.blooming.time ?? null,
+    };
+  }
+  if (r.pours?.length) {
+    parsed.pours = r.pours.map((p) => ({
+      ml: p.ml ?? null,
+      time: p.time ?? null,
+    }));
+  }
   return parsed;
 }
 
