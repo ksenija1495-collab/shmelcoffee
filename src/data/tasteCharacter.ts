@@ -13,6 +13,7 @@ export const TASTE_CHARACTER: Record<TasteCharacterDim, TasteCharacterDimConfig>
     label: 'Кислотность',
     hint: 'Не «кисло», а яркость. Какой тип чувствуешь?',
     options: [
+      { id: 'none', label: 'Не чувствую', desc: 'пропустить' },
       { id: 'citric', label: 'Цитрусовая', desc: 'лимон, лайм, грейпфрут' },
       { id: 'malic', label: 'Яблочная', desc: 'зелёное яблоко, виноград' },
       { id: 'phosphoric', label: 'Ягодная / винная', desc: 'черника, игристое' },
@@ -24,10 +25,11 @@ export const TASTE_CHARACTER: Record<TasteCharacterDim, TasteCharacterDimConfig>
     label: 'Сладость',
     hint: 'Кофе сладкий по-разному. Какой тип?',
     options: [
+      { id: 'none', label: 'Не чувствую', desc: 'пропустить' },
       { id: 'fruit', label: 'Фруктовая', desc: 'ягоды, персик, сок' },
       { id: 'honey', label: 'Медовая', desc: 'мёд, патока' },
-      { id: 'caramel', label: 'Карамельная', desc: 'ириска, сахар' },
-      { id: 'cocoa', label: 'Шоколадная', desc: 'какао, какао-порошок' },
+      { id: 'caramel', label: 'Карамельная', desc: 'ириска, светлый сахар' },
+      { id: 'brown_sugar', label: 'Тростниковая', desc: 'bourn, мусковадо, тёмный сироп' },
       { id: 'dry', label: 'Сухая, ореховая', desc: 'миндаль, сухой финиш' },
     ],
   },
@@ -35,6 +37,7 @@ export const TASTE_CHARACTER: Record<TasteCharacterDim, TasteCharacterDimConfig>
     label: 'Горечь',
     hint: 'Горечь бывает разная — не только «пережарили».',
     options: [
+      { id: 'none', label: 'Не чувствую', desc: 'пропустить' },
       { id: 'cocoa', label: 'Какао / шоколад', desc: 'горький шоколад' },
       { id: 'roast', label: 'Обжарочная', desc: 'орех, зерно, жар' },
       { id: 'herbal', label: 'Травянистая', desc: 'сено, зелень' },

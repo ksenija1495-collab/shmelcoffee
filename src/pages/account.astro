@@ -62,6 +62,7 @@ import Nav from '../components/Nav.astro';
   .tm-sub:last-child { border-bottom: 0; }
   .tm-sub b { color: var(--text); }
   .tm-sub .org { color: var(--text-muted); font-size: .78rem; }
+  .tm-info-hint { font-size: .72rem; color: var(--text-muted); margin: 0 0 10px; line-height: 1.45; }
   .disco-top { display: flex; align-items: center; gap: 16px; margin-bottom: 8px; }
   .disco-ring { width: 84px; height: 84px; flex-shrink: 0; }
   .disco-count { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.5rem; font-weight: 600; }
@@ -97,6 +98,21 @@ import Nav from '../components/Nav.astro';
     font-size: .82rem; background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif;
   }
   @media (max-width: 560px) { .diary-filters { grid-template-columns: 1fr; } }
+  .recipe-item {
+    padding: 14px 0; border-bottom: 1px solid var(--border); display: flex; flex-wrap: wrap;
+    gap: 10px; align-items: flex-start; justify-content: space-between;
+  }
+  .recipe-item:last-child { border-bottom: 0; }
+  .recipe-item-h { font-weight: 700; font-size: .9rem; color: var(--text); }
+  .recipe-item-sub { font-size: .76rem; color: var(--text-muted); margin-top: 4px; line-height: 1.4; }
+  .recipe-item-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+  .recipe-act-link {
+    font-size: .72rem; font-weight: 600; padding: 6px 10px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--bg); color: var(--text-dim);
+    text-decoration: none; cursor: pointer; font-family: 'Inter', sans-serif;
+  }
+  .recipe-act-link:hover { border-color: var(--accent); color: var(--accent); }
+  .recipe-act-link.danger:hover { border-color: var(--accent-warm); color: var(--accent-warm); }
   .cup-head { font-weight: 700; font-size: .9rem; color: var(--text); }
   .cup-star { color: #E0B81E; font-size: .82rem; }
   .add-cup-btn { font-size: .76rem; padding: 7px 14px; border-radius: 6px; background: var(--text); color: var(--bg); border: 1px solid var(--text); cursor: pointer; text-decoration: none; transition: all .2s; }
@@ -224,6 +240,7 @@ import Nav from '../components/Nav.astro';
   import { beanOutUrl } from '../lib/beanOutUrl';
   import { formatCupRecipe, recipeFingerprint } from '../lib/cupRecipe';
   import { formatTasteCharacterLine, normalizeTasteCharacter } from '../lib/tasteCharacter';
+  import { savedRecipeSummary } from '../lib/savedRecipesUi';
   import { resolveCountryKey } from '../lib/countryResolve';
 
   const supabase = createClient(
@@ -327,32 +344,45 @@ import Nav from '../components/Nav.astro';
 
   function showFamily(idx: number) {
     const cat: any = wheelData[idx]; const el = document.getElementById('tmInfo'); if (!el || !cat) return;
-    el.innerHTML = `<h4 style="color:${cat.color}">${cat.name}</h4>` + cat.subs.map((s: any) => `<div class="tm-sub"><b>${s.name}</b> <span class="org">— ${s.org}</span></div>`).join('');
+    el.innerHTML = `<h4 style="color:${cat.color}">${cat.name}</h4><p class="tm-info-hint">Справочник — ноты добавляются при записи чашки, не здесь.</p>` + cat.subs.map((s: any) => `<div class="tm-sub"><b>${s.name}</b> <span class="org">— ${s.org}</span></div>`).join('');
     el.classList.add('show');
-  }
-  function showCountry(k: string) {
-    const c: any = DB[k]; const el = document.getElementById('discoInfo'); if (!el || !c) return;
-    el.innerHTML = `<h4 style="margin:0 0 6px">${c.flag} ${c.name}</h4><div class="profile-label" style="min-width:0;margin-bottom:6px">${c.region || ''}</div><div class="profile-tags" style="margin-bottom:10px">${(c.flavors || []).map((f: string) => `<span class="profile-tag">${f}</span>`).join('')}</div><a href="/countries?c=${k}" style="color:var(--accent);font-weight:600;font-size:.82rem">Подробнее о стране →</a>`;
-    el.classList.add('show');
+    const svg = document.getElementById('tasteWheel');
+    svg?.querySelectorAll('path[data-type="cat"]').forEach((p) => {
+      const i = parseInt((p as SVGPathElement).getAttribute('data-cat') || '-1', 10);
+      const on = i === idx;
+      (p as SVGPathElement).setAttribute('opacity', on ? '1' : '0.22');
+      (p as SVGPathElement).setAttribute('stroke-width', on ? '2' : '1');
+    });
   }
 
   function renderTasteWheel(prefFams: Set<string>) {
     const svg = document.getElementById('tasteWheel'); if (!svg) return;
-    const cx = 180, cy = 180, ir1 = 44, ir2 = 96, or1 = 100, or2 = 152, gap = 1.2;
+    const cx = 180, cy = 180, ir1 = 46, ir2 = 162, gap = 1.4;
     const n = wheelData.length, catAng = 360 / n;
     const p2 = (r: number, deg: number) => { const rad = (deg - 90) * Math.PI / 180; return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) }; };
     const sector = (ri: number, ro: number, a1: number, a2: number) => { const A = p2(ro, a1), B = p2(ro, a2), C = p2(ri, a2), D = p2(ri, a1); const lg = (a2 - a1) > 180 ? 1 : 0; return `M${A.x},${A.y} A${ro},${ro},0,${lg},1,${B.x},${B.y} L${C.x},${C.y} A${ri},${ri},0,${lg},0,${D.x},${D.y}Z`; };
-    let html = `<circle cx="${cx}" cy="${cy}" r="${ir1 - 4}" fill="var(--surface-2)"/><text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="middle" font-family="'Cormorant Garamond',serif" font-size="13" font-weight="600" fill="var(--text)" style="pointer-events:none">ВКУС</text>`;
+    let html = `<circle cx="${cx}" cy="${cy}" r="${ir1 - 6}" fill="var(--surface-2)"/><text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="middle" font-family="'Cormorant Garamond',serif" font-size="14" font-weight="600" fill="var(--text)" style="pointer-events:none">ВКУС</text>`;
     wheelData.forEach((cat: any, i: number) => {
-      const a1 = i * catAng + gap, a2 = (i + 1) * catAng - gap; const on = prefFams.has(cat.name);
-      html += `<path d="${sector(ir1, ir2, a1, a2)}" fill="${cat.color}" opacity="${on ? 1 : 0.16}" stroke="#fff" stroke-width="1" data-cat="${i}"><title>${cat.name}</title></path>`;
-      const mid = (a1 + a2) / 2, pos = p2((ir1 + ir2) / 2, mid); let rot = mid; if (rot > 90 && rot < 270) rot += 180;
-      html += `<text x="${pos.x}" y="${pos.y}" text-anchor="middle" dominant-baseline="middle" transform="rotate(${rot},${pos.x},${pos.y})" font-family="'Inter',sans-serif" font-size="8" font-weight="600" fill="#3b2a1c" opacity="${on ? 1 : 0.4}" style="pointer-events:none">${cat.name}</text>`;
-      const subAng = (a2 - a1) / cat.subs.length;
-      cat.subs.forEach((_s: any, j: number) => { const sa1 = a1 + j * subAng + gap * .4, sa2 = a1 + (j + 1) * subAng - gap * .4; html += `<path d="${sector(or1, or2, sa1, sa2)}" fill="${cat.color}" opacity="${on ? 0.7 : 0.1}" stroke="#fff" stroke-width=".6" data-cat="${i}"></path>`; });
+      const a1 = i * catAng + gap, a2 = (i + 1) * catAng - gap;
+      const on = prefFams.has(cat.name);
+      html += `<path d="${sector(ir1, ir2, a1, a2)}" fill="${cat.color}" opacity="${on ? 1 : 0.2}" stroke="#fff" stroke-width="1" data-cat="${i}" data-type="cat" style="cursor:pointer"><title>${cat.name}</title></path>`;
+      const mid = (a1 + a2) / 2, pos = p2((ir1 + ir2) / 2, mid);
+      let rot = mid; if (rot > 90 && rot < 270) rot += 180;
+      html += `<text x="${pos.x}" y="${pos.y}" text-anchor="middle" dominant-baseline="middle" transform="rotate(${rot},${pos.x},${pos.y})" font-family="'Inter',sans-serif" font-size="9.5" font-weight="600" fill="#3b2a1c" opacity="${on ? 1 : 0.55}" style="pointer-events:none">${cat.name}</text>`;
     });
     svg.innerHTML = html;
-    svg.querySelectorAll('path[data-cat]').forEach(p => { p.addEventListener('click', () => showFamily(parseInt((p as HTMLElement).getAttribute('data-cat')!))); });
+    svg.querySelectorAll('path[data-type="cat"]').forEach((p) => {
+      p.addEventListener('click', (e) => {
+        e.stopPropagation();
+        showFamily(parseInt((p as SVGPathElement).getAttribute('data-cat')!, 10));
+      });
+    });
+  }
+
+  function showCountry(k: string) {
+    const c: any = DB[k]; const el = document.getElementById('discoInfo'); if (!el || !c) return;
+    el.innerHTML = `<h4 style="margin:0 0 6px">${c.flag} ${c.name}</h4><div class="profile-label" style="min-width:0;margin-bottom:6px">${c.region || ''}</div><div class="profile-tags" style="margin-bottom:10px">${(c.flavors || []).map((f: string) => `<span class="profile-tag">${f}</span>`).join('')}</div><a href="/countries?c=${k}" style="color:var(--accent);font-weight:600;font-size:.82rem">Подробнее о стране →</a>`;
+    el.classList.add('show');
   }
 
   async function loadCommunity() {
@@ -501,7 +531,7 @@ import Nav from '../components/Nav.astro';
       : `<div class="empty-state">Вы ещё не проходили диагностику вкуса. <a href="/quiz">Пройти →</a></div>`;
 
     const tasteCard = answers
-      ? `<div class="profile-card tastemap-card"><svg id="tasteWheel" class="tastemap-wheel" viewBox="0 0 360 360"></svg><div class="tastemap-side"><div class="tm-row"><span class="profile-label">Кислотность</span><span class="profile-value">${ACID[answers.acidity] || '—'}</span></div><div class="tm-row"><span class="profile-label">Тело</span><span class="profile-value">${BODY[answers.body] || '—'}</span></div><div class="tm-row"><span class="profile-label">Сладость</span><span class="profile-value">${SWEET[answers.sweetness] || '—'}</span></div><div class="tm-fams">${[...prefFams].map(f => `<span class="tm-fam" style="background:${famColor[f] || 'var(--accent)'}">${f}</span>`).join('') || '<span class="profile-tag">—</span>'}</div><div class="tm-hint">Нажмите на сегмент колеса — увидите ноты и в кофе каких стран они встречаются.</div></div></div><div id="tmInfo" class="info-panel"></div>`
+      ? `<div class="profile-card tastemap-card"><svg id="tasteWheel" class="tastemap-wheel" viewBox="0 0 360 360"></svg><div class="tastemap-side"><div class="tm-row"><span class="profile-label">Кислотность</span><span class="profile-value">${ACID[answers.acidity] || '—'}</span></div><div class="tm-row"><span class="profile-label">Тело</span><span class="profile-value">${BODY[answers.body] || '—'}</span></div><div class="tm-row"><span class="profile-label">Сладость</span><span class="profile-value">${SWEET[answers.sweetness] || '—'}</span></div><div class="tm-fams">${[...prefFams].map(f => `<span class="tm-fam" style="background:${famColor[f] || 'var(--accent)'}">${f}</span>`).join('') || '<span class="profile-tag">—</span>'}</div><div class="tm-hint">Нажми на сектор — ниже откроется список нот этой группы (справочник).</div></div></div><div id="tmInfo" class="info-panel"></div>`
       : '';
     const profilePanel = `${profileCard}${tasteCard ? `<div class="sub-h">🗺️ Карта вкуса</div>${tasteCard}` : ''}`;
 
@@ -536,6 +566,24 @@ import Nav from '../components/Nav.astro';
       ? `<div class="shelf-grid">${shelf.map((s: any) => `<div class="shelf-card">${s.photo_url ? `<img src="${esc(s.photo_url)}" class="shelf-photo" alt=""/>` : `<div class="shelf-noimg">${s.kind === 'bean' ? '🫘' : '⚙️'}</div>`}<div class="shelf-body"><div class="shelf-name">${esc(s.name)}</div><div class="shelf-meta">${s.kind === 'bean' ? ([s.roaster, s.country, s.process].filter(Boolean).map(esc).join(' · ') || 'зерно') : esc(s.category || 'оборудование')}</div>${s.kind === 'bean' ? `<a class="shelf-guide-btn" href="/generate?shelf=${s.id}" style="display:block;text-align:center;text-decoration:none">🤖 Сгенерировать гид</a>` : ''}</div><button class="shelf-del" data-shelf-del="${s.id}" title="удалить">×</button></div>`).join('')}</div>`
       : `<div class="empty-state">Полка пуста. <a href="/add-shelf?kind=bean">+ Зерно</a> · <a href="/add-shelf?kind=equipment">+ Оборудование</a></div>`;
 
+    const recipesPanel = recipesRes.error
+      ? `<div class="empty-state">Раздел «Мои рецепты» недоступен — выполни migration-saved-brew-recipes.sql в Supabase.</div>`
+      : savedRecipes.length
+      ? `<div class="profile-card">${savedRecipes.map((r: any) =>
+          `<div class="recipe-item" data-recipe-id="${r.id}">
+            <div>
+              <div class="recipe-item-h">${esc(r.name)}${r.brew_method ? ` · ${esc(r.brew_method)}` : ''}</div>
+              <div class="recipe-item-sub">${esc(savedRecipeSummary(r))}</div>
+            </div>
+            <div class="recipe-item-actions">
+              <a class="recipe-act-link" href="/add-cup?template=${r.id}">Заварить →</a>
+              <button type="button" class="recipe-act-link" data-recipe-use="${r.id}">В форму</button>
+              <button type="button" class="recipe-act-link danger" data-recipe-del="${r.id}">Удалить</button>
+            </div>
+          </div>`
+        ).join('')}</div>`
+      : `<div class="empty-state">Пока нет сохранённых рецептов.<br><a href="/add-cup">Добавить чашку и сохранить рецепт →</a><br><span style="font-size:.76rem;color:var(--text-muted)">или выбери чемпионский в форме и сохрани под своим именем</span></div>`;
+
     const selectionsPanel = selections.length
       ? selections.map((sel: any) => { const coffees = sel.coffees || []; const total = coffees.reduce((s: number, c: any) => s + (c.price || 0), 0); return `<div class="selection-card" data-sel-id="${sel.id}"><div class="selection-header"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="selection-date">${new Date(sel.created_at).toLocaleDateString('ru-RU')}</span><span class="selection-format">${formatLabels[sel.format] || sel.format || 'Микс'}</span><span class="status-badge status-${sel.status}">${statusIcons[sel.status] || ''} ${statusLabels[sel.status] || sel.status}</span></div></div><div class="coffee-list">${coffees.map((c: any, ci: number) => { const why = c.why || (c.origin && topNamesSet.has(c.origin) ? ('Под ваш профиль — ' + c.origin) : 'Для сравнения и расширения вкуса'); return `<div class="coffee-item"><div><div class="coffee-name">${esc(c.name || 'Кофе')}</div><div class="coffee-detail">${[c.roaster, c.origin, c.process, c.notes].filter(Boolean).map(esc).join(' · ')}</div><div class="coffee-why">${esc(why)}</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">${c.price ? `<span class="coffee-price">${c.price} ₽</span>` : ''}<div style="display:flex;gap:6px">${c.url ? `<a href="${beanOutUrl({ url: c.url, name: c.name || 'Кофе', roaster: c.roaster || '', source: 'account-selection' })}" target="_blank" rel="noopener" class="coffee-buy">Купить →</a>` : ''}<button class="coffee-shelf-one" data-sid="${sel.id}" data-ci="${ci}">+ Полка</button></div></div></div>`; }).join('')}</div>${total > 0 ? `<div class="selection-total">Итого: <strong>${total.toLocaleString('ru-RU')} ₽</strong></div>` : ''}<div class="selection-actions">${sel.status === 'selected' ? `<button class="sel-action-btn primary" data-action="ordered" data-id="${sel.id}">📦 Отметить «Заказано»</button>` : ''}${sel.status === 'ordered' ? `<button class="sel-action-btn primary" data-action="received" data-id="${sel.id}">✅ Получил!</button>` : ''}${sel.status === 'received' ? `${credits > 0 ? `<button class="sel-action-btn primary" data-action="generate" data-id="${sel.id}">🤖 Сгенерировать гид</button>` : `<button class="sel-action-btn" data-buy="1">🔒 Купить гид · 99 ₽</button>`}<button class="sel-action-btn" data-action="tasted" data-id="${sel.id}">Продегустировал</button>` : ''}<button class="sel-action-btn" data-shelf-all="${sel.id}">📥 Всё на полку</button><button class="sel-action-btn sel-del" data-sel-del="${sel.id}">🗑 Удалить</button></div></div>`; }).join('')
       : `<div class="empty-state">Пока нет подборок. <a href="/quiz">Пройдите тест</a> — мы подберём кофе под ваш вкус.</div>`;
@@ -559,6 +607,7 @@ import Nav from '../components/Nav.astro';
         <button class="acc-tab" data-tab="profile">🎯 Профиль</button>
         <button class="acc-tab" data-tab="disco">🧭 Открытия</button>
         <button class="acc-tab" data-tab="diary">📔 Дневник</button>
+        <button class="acc-tab" data-tab="recipes">📝 Рецепты</button>
         <button class="acc-tab" data-tab="shelf">🪵 Полка</button>
         <button class="acc-tab" data-tab="selections">☕ Подборки</button>
         <button class="acc-tab" data-tab="guides">📖 Гиды</button>
@@ -568,6 +617,7 @@ import Nav from '../components/Nav.astro';
       <section class="acc-panel" data-panel="profile"><div class="panel-h">🎯 Профиль и вкус</div>${profilePanel}</section>
       <section class="acc-panel" data-panel="disco"><div class="panel-h">🧭 Карта открытий</div>${discoPanel}</section>
       <section class="acc-panel" data-panel="diary"><div class="panel-h"><span>📔 Моё кофе</span><a href="/add-cup" class="add-cup-btn">+ Добавить чашку</a></div>${diaryPanel}</section>
+      <section class="acc-panel" data-panel="recipes"><div class="panel-h"><span>📝 Мои рецепты</span><a href="/add-cup" class="add-cup-btn">+ Новая чашка</a></div>${recipesPanel}</section>
       <section class="acc-panel" data-panel="shelf"><div class="panel-h"><span>🪵 Моя полка</span><span style="display:flex;gap:6px"><a href="/add-shelf?kind=bean" class="add-cup-btn">+ Зерно</a><a href="/add-shelf?kind=equipment" class="add-cup-btn">+ Оборудование</a></span></div>${shelfPanel}</section>
       <section class="acc-panel" data-panel="selections"><div class="panel-h">☕ Мои подборки</div>${selectionsPanel}</section>
       <section class="acc-panel" data-panel="guides"><div class="panel-h">📖 Гиды</div>${paidBanner}${guidesPanel}</section>
@@ -639,16 +689,45 @@ import Nav from '../components/Nav.astro';
       });
     });
 
+    function syncAccountNav(name: string) {
+      document.querySelectorAll('.mobile-acc-nav a[data-acc-tab]').forEach((a) => {
+        a.classList.toggle('active', a.getAttribute('data-acc-tab') === name);
+      });
+    }
+
+    page.querySelectorAll('[data-recipe-del]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const id = (btn as HTMLElement).dataset.recipeDel!;
+        if (!confirm('Удалить этот рецепт?')) return;
+        await supabase.from('saved_brew_recipes').delete().eq('id', id).eq('user_id', user.id);
+        init();
+      });
+    });
+    page.querySelectorAll('[data-recipe-use]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        window.location.href = `/add-cup?template=${(btn as HTMLElement).dataset.recipeUse}`;
+      });
+    });
+
     const tabs = Array.from(page.querySelectorAll('.acc-tab')) as HTMLElement[];
     const panels = Array.from(page.querySelectorAll('.acc-panel')) as HTMLElement[];
     function activateTab(name: string) {
       tabs.forEach(t => t.classList.toggle('active', t.getAttribute('data-tab') === name));
       panels.forEach(p => p.classList.toggle('active', p.getAttribute('data-panel') === name));
+      syncAccountNav(name);
       try { localStorage.setItem('acc_tab', name); } catch (e) {}
+      const url = new URL(location.href);
+      if (name === 'profile') url.searchParams.delete('tab');
+      else url.searchParams.set('tab', name);
+      history.replaceState({}, '', url.pathname + url.search);
     }
     tabs.forEach(t => t.addEventListener('click', () => activateTab(t.getAttribute('data-tab')!)));
     let startTab = 'profile';
-    try { const sv = localStorage.getItem('acc_tab'); if (sv && page.querySelector('.acc-tab[data-tab="' + sv + '"]')) startTab = sv; } catch (e) {}
+    const urlTab = new URL(location.href).searchParams.get('tab');
+    if (urlTab && page.querySelector('.acc-tab[data-tab="' + urlTab + '"]')) startTab = urlTab;
+    else {
+      try { const sv = localStorage.getItem('acc_tab'); if (sv && page.querySelector('.acc-tab[data-tab="' + sv + '"]')) startTab = sv; } catch (e) {}
+    }
     activateTab(startTab);
     } catch (e: any) {
       console.error(e);

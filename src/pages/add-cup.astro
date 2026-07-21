@@ -30,10 +30,14 @@ import { DB, countryOrder } from '../data/countries';
         </div>
         <label class="fl">Способ заваривания</label>
         <select id="f_brew"></select>
-        <div id="templateRow" class="template-row" style="display:none">
-          <label class="fl">Базовый рецепт</label>
-          <select id="f_template"></select>
-          <div class="template-hint">Подставит граммовку, проливы и параметры — подправь под эту чашку</div>
+        <div id="recipePicker" class="recipe-picker">
+          <label class="fl">Выбрать рецепт</label>
+          <p class="field-hint recipe-picker-hint">Приоритет — твои сохранённые. Чемпионские — по кнопке ниже.</p>
+          <div id="myRecipesPanel" class="my-recipes-panel"></div>
+          <button type="button" class="champ-recipes-toggle" id="toggleChampRecipes" aria-expanded="false">
+            🏆 Чемпионские рецепты
+          </button>
+          <div id="champRecipesPanel" class="champ-recipes-panel" hidden></div>
         </div>
         <label class="fl">Рецепт — как ты заваривал</label>
         <div class="recipe-grid">
@@ -42,28 +46,28 @@ import { DB, countryOrder } from '../data/countries';
           <input type="text" id="r_grind" placeholder="Помол (напр. средний)"/>
           <select id="r_grinder"><option value="">— молка с полки —</option></select>
           <input type="text" id="r_temp" placeholder="Вода °C (напр. 94)"/>
-          <input type="text" id="r_time" class="brew-time-inp" inputmode="numeric" placeholder="230"/>
+          <input type="text" id="r_time" class="brew-time-inp" inputmode="numeric" placeholder="2:30"/>
         </div>
+        <p class="field-hint brew-time-hint">Время в формате м:сс — набираешь 150, получаешь 1:50</p>
         <div id="grinderHint" class="recipe-hint" style="display:none;margin-top:4px">Добавь кофемолку на <a href="/add-shelf?kind=equipment">полку</a> — она появится в списке.</div>
         <label class="fl">Время проливов</label>
         <p class="pour-block-hint">Пролив — порция воды через кофе. Первый этап — предсмачивание (блум): маленький залив, чтобы зерно «распустилось».</p>
         <div class="pour-block">
           <div class="pour-row">
             <span class="pour-lbl">Предсмачивание<span class="pour-lbl-sub">блум</span></span>
-            <input type="text" id="p_bloom" class="pour-inp brew-time-inp" inputmode="numeric" placeholder="30"/>
+            <input type="text" id="p_bloom" class="pour-inp brew-time-inp" inputmode="numeric" placeholder="0:30"/>
           </div>
           <div id="pourList"></div>
           <button type="button" class="pour-add" id="addPourBtn">+ Пролив</button>
         </div>
-        <div id="recipeHint" class="recipe-hint" style="display:none">Подставлен рецепт из гида — поправь под то, как заварил на самом деле.</div>
-        <div id="recipeActions" class="recipe-actions" style="display:none">
-          <button type="button" class="recipe-act-btn" id="saveBaseRecipeBtn">⭐ Сохранить как базовый рецепт</button>
+        <div id="recipeHint" class="recipe-hint" style="display:none">Подставлен рецепт — поправь под то, как заварил на самом деле.</div>
+        <div id="recipeActions" class="recipe-actions">
+          <button type="button" class="recipe-act-btn" id="saveBaseRecipeBtn">⭐ Сохранить в мои рецепты</button>
           <button type="button" class="recipe-act-btn" id="brewAgainBtn">+ Заварить так же</button>
         </div>
         <label class="fl">Баланс вкуса</label>
-        <p class="balance-hint">Ползунок — насколько. Ниже — характер (тренировка палитры)</p>
-        <div id="sliders"></div>
-        <div id="tasteChars"></div>
+        <p class="balance-hint">Слайдер — насколько сильно. Под ним — характер: выбери тип из вариантов.</p>
+        <div id="tasteSection"></div>
         <label class="fl">Вкус и ароматы — что чувствуешь в чашке</label>
         <p class="note-cat-hint">Колесо вкусов — нажми сектор или выбери подсказку в списке ниже</p>
         <div id="selectedNotes" class="note-selected"></div>
@@ -166,6 +170,39 @@ import { DB, countryOrder } from '../data/countries';
   .note-custom-add:hover { border-color: var(--accent); background: rgba(168,124,79,.06); }
   .template-row { margin-bottom: 4px; }
   .template-hint { font-size: .72rem; color: var(--text-muted); margin-top: 4px; line-height: 1.4; }
+  .recipe-picker { margin: 4px 0 12px; }
+  .recipe-picker-hint { margin: -2px 0 10px; }
+  .my-recipes-panel { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+  .my-recipes-empty {
+    padding: 12px 14px; border-radius: 10px; border: 1px dashed var(--border);
+    font-size: .76rem; color: var(--text-muted); line-height: 1.45;
+  }
+  .my-recipe-card {
+    display: block; width: 100%; text-align: left; padding: 11px 12px; border-radius: 10px;
+    border: 1px solid var(--border); background: var(--bg); cursor: pointer; transition: .12s;
+    font-family: 'Inter', sans-serif;
+  }
+  .my-recipe-card:hover { border-color: var(--accent); }
+  .my-recipe-card.on { border-color: var(--text); background: rgba(168,124,79,.08); box-shadow: inset 0 0 0 1px var(--text); }
+  .my-recipe-card-h { font-size: .82rem; font-weight: 700; color: var(--text); }
+  .my-recipe-card-sub { font-size: .7rem; color: var(--text-muted); margin-top: 3px; line-height: 1.35; }
+  .champ-recipes-toggle {
+    width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px dashed var(--border);
+    background: none; color: var(--text-dim); font-size: .78rem; font-weight: 600; cursor: pointer;
+    font-family: 'Inter', sans-serif; text-align: left;
+  }
+  .champ-recipes-toggle:hover { border-color: var(--accent); color: var(--accent); }
+  .champ-recipes-toggle[aria-expanded="true"] { border-style: solid; border-color: var(--border); background: var(--surface-2); }
+  .champ-recipes-panel { margin-top: 8px; display: flex; flex-direction: column; gap: 8px; }
+  .champ-pick-card {
+    display: block; width: 100%; text-align: left; padding: 10px 12px; border-radius: 10px;
+    border: 1px solid var(--border); background: var(--surface); cursor: pointer; transition: .12s;
+    font-family: 'Inter', sans-serif;
+  }
+  .champ-pick-card:hover { border-color: var(--accent); }
+  .champ-pick-badge { font-size: .62rem; font-weight: 800; letter-spacing: .06em; color: var(--accent); }
+  .champ-pick-title { font-size: .8rem; font-weight: 700; color: var(--text); margin-top: 2px; }
+  .champ-pick-sub { font-size: .68rem; color: var(--text-muted); margin-top: 2px; }
   .variety-custom { margin-top: 8px; }
   .variety-custom input {
     width: 100%; padding: 11px 12px; border: 1px solid var(--border); border-radius: 10px;
@@ -186,9 +223,19 @@ import { DB, countryOrder } from '../data/countries';
   .sliderrow input[type=range] { width: 100%; accent-color: var(--accent); }
   .balance-hint { font-size: .72rem; color: var(--text-muted); margin: -4px 0 10px; line-height: 1.45; }
   .field-hint { font-size: .68rem; color: var(--text-muted); margin: 4px 0 0; line-height: 1.4; }
+  .brew-time-inp, .pour-inp.brew-time-inp { font-variant-numeric: tabular-nums; letter-spacing: .02em; }
+  .brew-time-hint { margin-top: 6px; }
+  .taste-dim-block {
+    margin: 16px 0 0; padding: 14px 12px 12px; border: 1px solid var(--border); border-radius: 12px;
+    background: var(--bg);
+  }
+  .taste-dim-block--body { margin-top: 12px; }
+  .taste-dim-top { display: flex; justify-content: space-between; font-size: .82rem; margin-bottom: 6px; font-weight: 600; }
+  .taste-dim-top .val { color: var(--accent); font-weight: 700; }
+  .taste-dim-block input[type=range] { width: 100%; accent-color: var(--accent); margin-bottom: 10px; }
   .char-block {
-    margin: 14px 0 0; padding: 12px 12px 10px; border: 1px dashed var(--border); border-radius: 12px;
-    background: rgba(168,124,79,.03);
+    margin: 0; padding: 10px 0 0; border: none; border-top: 1px dashed var(--border); border-radius: 0;
+    background: transparent;
   }
   .char-block-h { font-size: .78rem; font-weight: 700; color: var(--text); margin-bottom: 2px; }
   .char-block-sub { font-size: .7rem; color: var(--text-muted); margin-bottom: 8px; line-height: 1.4; }
@@ -267,6 +314,8 @@ import { DB, countryOrder } from '../data/countries';
   import { normalizeTasteCharacter, type TasteCharacter } from '../lib/tasteCharacter';
   import { countryNameForKey, resolveCountryKey } from '../lib/countryResolve';
   import { initNoteWheelPicker, syncNoteWheelSelection } from '../lib/flavorWheelPicker';
+  import { CHAMPION_PICKER_ITEMS } from '../data/championRecipePicker';
+  import { defaultSavedRecipeName, savedRecipeSummary } from '../lib/savedRecipesUi';
 
   const supabase = createClient(
     import.meta.env.PUBLIC_SUPABASE_URL,
@@ -286,6 +335,8 @@ import { DB, countryOrder } from '../data/countries';
   const params = new URLSearchParams(location.search);
   const editCupId = params.get('edit');
   let selectedTemplateId: string | null = params.get('template') || null;
+  let savedRecipesCache: { id: string; name: string; brew_method?: string | null; recipe: unknown }[] = [];
+  let recipesTableOk = false;
   const flagByName: Record<string,string> = {};
   for (const k of Object.keys(DB)) flagByName[(DB as any)[k].name] = (DB as any)[k].flag;
 
@@ -352,7 +403,7 @@ import { DB, countryOrder } from '../data/countries';
     const n = list.querySelectorAll('.pour-row').length + 1;
     const row = document.createElement('div');
     row.className = 'pour-row';
-    row.innerHTML = `<span class="pour-lbl">${pourLabel(n)}</span><input type="text" class="pour-inp brew-time-inp" inputmode="numeric" placeholder="45"/><button type="button" class="pour-rm" title="Убрать пролив">×</button>`;
+    row.innerHTML = `<span class="pour-lbl">${pourLabel(n)}</span><input type="text" class="pour-inp brew-time-inp" inputmode="numeric" placeholder="0:45"/><button type="button" class="pour-rm" title="Убрать пролив">×</button>`;
     bindBrewTimeInput(row.querySelector('.pour-inp') as HTMLInputElement);
     row.querySelector('.pour-rm')!.addEventListener('click', () => { row.remove(); renumberPours(); });
     list.appendChild(row);
@@ -427,29 +478,92 @@ import { DB, countryOrder } from '../data/countries';
     (document.getElementById('recipeHint') as HTMLElement).style.display = 'block';
   }
 
+  function syncMyRecipeSelection() {
+    document.querySelectorAll('.my-recipe-card').forEach((el) => {
+      el.classList.toggle('on', (el as HTMLElement).dataset.id === selectedTemplateId);
+    });
+  }
+
+  function selectMyRecipe(id: string | null) {
+    selectedTemplateId = id;
+    syncMyRecipeSelection();
+  }
+
+  function renderMyRecipesPanel() {
+    const panel = document.getElementById('myRecipesPanel')!;
+    if (!recipesTableOk) {
+      panel.innerHTML = '<div class="my-recipes-empty">Мои рецепты недоступны — попроси админа выполнить migration-saved-brew-recipes.sql в Supabase.</div>';
+      return;
+    }
+    if (!savedRecipesCache.length) {
+      panel.innerHTML = '<div class="my-recipes-empty">Пока пусто. Заполни рецепт ниже и нажми «Сохранить в мои рецепты» — потом выбирай одним кликом.</div>';
+      return;
+    }
+    panel.innerHTML = savedRecipesCache.map((t) =>
+      `<button type="button" class="my-recipe-card${t.id === selectedTemplateId ? ' on' : ''}" data-id="${escNote(t.id)}">
+        <div class="my-recipe-card-h">${escNote(t.name)}${t.brew_method ? ` · ${escNote(t.brew_method)}` : ''}</div>
+        <div class="my-recipe-card-sub">${escNote(savedRecipeSummary(t))}</div>
+      </button>`
+    ).join('');
+    panel.querySelectorAll('.my-recipe-card').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const id = (btn as HTMLElement).dataset.id!;
+        const t = savedRecipesCache.find((x) => x.id === id);
+        if (!t) return;
+        if (selectedTemplateId === id) {
+          selectMyRecipe(null);
+          return;
+        }
+        selectMyRecipe(id);
+        applyRecipeToForm(t.recipe, t.brew_method);
+      });
+    });
+  }
+
+  function renderChampRecipesPanel() {
+    const panel = document.getElementById('champRecipesPanel')!;
+    panel.innerHTML = CHAMPION_PICKER_ITEMS.map((item) =>
+      `<button type="button" class="champ-pick-card" data-champ-id="${escNote(item.id)}">
+        <div class="champ-pick-badge">${escNote(item.methodIcon)} ${escNote(item.badgeText)} · ${escNote(item.methodName)}</div>
+        <div class="champ-pick-title">${escNote(item.title)}</div>
+      </button>`
+    ).join('');
+    panel.querySelectorAll('.champ-pick-card').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const item = CHAMPION_PICKER_ITEMS.find((x) => x.id === (btn as HTMLElement).dataset.champId);
+        if (!item) return;
+        selectMyRecipe(null);
+        applyRecipeToForm(item.recipe, item.brewMethod);
+        const toggle = document.getElementById('toggleChampRecipes') as HTMLButtonElement;
+        const champPanel = document.getElementById('champRecipesPanel') as HTMLElement;
+        if (toggle && champPanel) {
+          toggle.setAttribute('aria-expanded', 'false');
+          champPanel.hidden = true;
+        }
+      });
+    });
+  }
+
   async function loadSavedRecipes() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     const { error: tableErr } = await supabase.from('saved_brew_recipes').select('id').limit(0);
-    if (tableErr) return;
-    const { data } = await supabase.from('saved_brew_recipes').select('id,name,brew_method,recipe').order('created_at', { ascending: false });
-    const row = document.getElementById('templateRow')!;
-    const tpl = document.getElementById('f_template') as HTMLSelectElement;
-    if (!data?.length) { row.style.display = 'none'; return; }
-    row.style.display = 'block';
-    tpl.innerHTML = '<option value="">— выбрать базовый рецепт —</option>' + data.map((t) =>
-      `<option value="${t.id}">${escNote(t.name)}${t.brew_method ? ' · ' + escNote(t.brew_method) : ''}</option>`
-    ).join('');
-    if (!editCupId && selectedTemplateId && data.some((t) => t.id === selectedTemplateId)) {
-      tpl.value = selectedTemplateId;
-      const t = data.find((x) => x.id === selectedTemplateId);
+    recipesTableOk = !tableErr;
+    if (tableErr) {
+      renderMyRecipesPanel();
+      return;
+    }
+    const { data } = await supabase
+      .from('saved_brew_recipes')
+      .select('id,name,brew_method,recipe')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+    savedRecipesCache = data || [];
+    renderMyRecipesPanel();
+    if (!editCupId && selectedTemplateId && savedRecipesCache.some((t) => t.id === selectedTemplateId)) {
+      const t = savedRecipesCache.find((x) => x.id === selectedTemplateId);
       if (t) applyRecipeToForm(t.recipe, t.brew_method);
     }
-    tpl.addEventListener('change', () => {
-      selectedTemplateId = tpl.value || null;
-      const t = data.find((x) => x.id === tpl.value);
-      if (t) applyRecipeToForm(t.recipe, t.brew_method);
-    });
   }
 
   function rv(id: string) {
@@ -485,23 +599,37 @@ import { DB, countryOrder } from '../data/countries';
       alert('Сначала заполните рецепт — граммы, проливы или параметры');
       return;
     }
+    if (!recipesTableOk) {
+      alert('Таблица «мои рецепты» ещё не создана в базе. Нужен migration-saved-brew-recipes.sql в Supabase.');
+      return;
+    }
     const brew = (document.getElementById('f_brew') as HTMLSelectElement).value;
-    const defaultName = [brew, recipe.coffee_g && recipe.water_g ? `${recipe.coffee_g}/${recipe.water_g}` : '']
-      .filter(Boolean).join(' · ') || 'Мой рецепт';
-    const name = prompt('Название базового рецепта', defaultName);
+    const defaultName = defaultSavedRecipeName(brew, recipe as Record<string, unknown>);
+    const selected = selectedTemplateId ? savedRecipesCache.find((r) => r.id === selectedTemplateId) : null;
+    const nameDefault = selected?.name || defaultName;
+    const name = prompt('Название рецепта', nameDefault);
     if (!name?.trim()) return;
     const user = await guard();
     if (!user) return;
     const msg = document.getElementById('msg')!;
-    const { error } = await supabase.from('saved_brew_recipes').insert({
-      user_id: user.id,
+    const payload = {
       name: name.trim(),
       brew_method: brew || null,
       recipe,
-    });
-    if (error) { msg.className = 'addcup-msg error'; msg.textContent = 'Ошибка: ' + error.message; return; }
-    msg.className = 'addcup-msg';
-    msg.textContent = 'Базовый рецепт сохранён — можно выбрать в новых чашках';
+    };
+
+    if (selectedTemplateId && selected && confirm(`Обновить рецепт «${selected.name}»? (Отмена — сохранить как новый)`)) {
+      const { error } = await supabase.from('saved_brew_recipes').update(payload).eq('id', selectedTemplateId).eq('user_id', user.id);
+      if (error) { msg.className = 'addcup-msg error'; msg.textContent = 'Ошибка: ' + error.message; return; }
+      msg.className = 'addcup-msg';
+      msg.textContent = 'Рецепт обновлён';
+    } else {
+      const { data, error } = await supabase.from('saved_brew_recipes').insert({ ...payload, user_id: user.id }).select('id').single();
+      if (error) { msg.className = 'addcup-msg error'; msg.textContent = 'Ошибка: ' + error.message; return; }
+      selectMyRecipe(data.id);
+      msg.className = 'addcup-msg';
+      msg.textContent = 'Сохранено в «Мои рецепты»';
+    }
     await loadSavedRecipes();
   }
 
@@ -517,11 +645,16 @@ import { DB, countryOrder } from '../data/countries';
   }
 
   function bindRecipeActions() {
-    if (!editCupId) return;
-    const row = document.getElementById('recipeActions')!;
-    row.style.display = 'flex';
     document.getElementById('saveBaseRecipeBtn')!.addEventListener('click', saveBaseRecipeFromForm);
     document.getElementById('brewAgainBtn')!.addEventListener('click', brewAgainFromForm);
+    document.getElementById('toggleChampRecipes')!.addEventListener('click', () => {
+      const btn = document.getElementById('toggleChampRecipes') as HTMLButtonElement;
+      const panel = document.getElementById('champRecipesPanel') as HTMLElement;
+      const open = btn.getAttribute('aria-expanded') !== 'true';
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      panel.hidden = !open;
+    });
+    renderChampRecipesPanel();
   }
 
   function setEditModeUI() {
@@ -545,7 +678,7 @@ import { DB, countryOrder } from '../data/countries';
     sel.bitterness = cup.bitterness ?? 2;
     sel.body = cup.body ?? 3;
     SLIDERS.forEach(([k]) => {
-      const inp = document.querySelector(`#sliders input[data-k="${k}"]`) as HTMLInputElement;
+      const inp = document.querySelector(`#tasteSection input[data-k="${k}"]`) as HTMLInputElement;
       const lbl = document.getElementById('v_' + k);
       if (inp) inp.value = String(sel[k]);
       if (lbl) lbl.textContent = String(sel[k]);
@@ -562,9 +695,9 @@ import { DB, countryOrder } from '../data/countries';
     refreshNotesUI();
     (document.getElementById('f_comment') as HTMLTextAreaElement).value = cup.comment || '';
     selectedTemplateId = cup.brew_recipe_id || null;
-    const tpl = document.getElementById('f_template') as HTMLSelectElement;
-    if (tpl && selectedTemplateId) tpl.value = selectedTemplateId;
     applyRecipeToForm(cup.recipe, cup.brew_method);
+    syncMyRecipeSelection();
+    renderMyRecipesPanel();
   }
 
   async function loadCupForEdit() {
@@ -642,24 +775,42 @@ import { DB, countryOrder } from '../data/countries';
     const out: TasteCharacter = {};
     TASTE_CHARACTER_DIMS.forEach((dim) => {
       const preset = sel.tasteChar[dim]?.preset || null;
-      if (preset) out[dim] = { preset, custom: null };
+      if (preset && preset !== 'none') out[dim] = { preset, custom: null };
     });
     return Object.keys(out).length ? out : null;
   }
 
-  function buildTasteChars() {
-    const box = document.getElementById('tasteChars')!;
-    box.innerHTML = TASTE_CHARACTER_DIMS.map((dim) => {
+  function buildTasteSection() {
+    const box = document.getElementById('tasteSection')!;
+    const charDimsHtml = TASTE_CHARACTER_DIMS.map((dim) => {
       const cfg = TASTE_CHARACTER[dim];
       const chips = cfg.options.map((o) =>
         `<button type="button" class="char-chip" data-dim="${dim}" data-id="${escNote(o.id)}"><span>${escNote(o.label)}</span><small>${escNote(o.desc)}</small></button>`
       ).join('');
-      return `<div class="char-block" data-dim-block="${dim}">
-        <div class="char-block-h">${escNote(cfg.label)} — характер</div>
-        <div class="char-block-sub">${escNote(cfg.hint)}</div>
-        <div class="char-chips">${chips}</div>
+      return `<div class="taste-dim-block" data-dim-block="${dim}">
+        <div class="taste-dim-top"><span>${escNote(cfg.label)}</span><span class="val" id="v_${dim}">${sel[dim]}</span></div>
+        <input type="range" min="0" max="5" value="${sel[dim]}" data-k="${dim}" aria-label="${escNote(cfg.label)}">
+        <div class="char-block">
+          <div class="char-block-h">Характер — ${escNote(cfg.label.toLowerCase())}</div>
+          <div class="char-block-sub">${escNote(cfg.hint)}</div>
+          <div class="char-chips">${chips}</div>
+        </div>
       </div>`;
     }).join('');
+
+    box.innerHTML = charDimsHtml + `
+      <div class="taste-dim-block taste-dim-block--body">
+        <div class="taste-dim-top"><span>Тело</span><span class="val" id="v_body">${sel.body}</span></div>
+        <input type="range" min="0" max="5" value="${sel.body}" data-k="body" aria-label="Тело">
+      </div>`;
+
+    box.querySelectorAll('input[type=range]').forEach((inp) => {
+      inp.addEventListener('input', (e: Event) => {
+        const k = (e.target as HTMLInputElement).dataset.k!;
+        sel[k] = +(e.target as HTMLInputElement).value;
+        document.getElementById('v_' + k)!.textContent = String(sel[k]);
+      });
+    });
 
     box.addEventListener('click', (e) => {
       const chip = (e.target as HTMLElement).closest('.char-chip') as HTMLElement | null;
@@ -669,8 +820,9 @@ import { DB, countryOrder } from '../data/countries';
       const id = chip.dataset.id!;
       const cur = sel.tasteChar[dim]?.preset;
       if (cur === id) {
-        if (sel.tasteChar[dim]) sel.tasteChar[dim]!.preset = null;
         delete sel.tasteChar[dim];
+      } else if (id === 'none') {
+        sel.tasteChar[dim] = { preset: 'none', custom: null };
       } else {
         sel.tasteChar[dim] = { preset: id, custom: null };
       }
@@ -754,13 +906,7 @@ import { DB, countryOrder } from '../data/countries';
     initPours();
     bindBrewTimeInput(document.getElementById('p_bloom') as HTMLInputElement);
     bindBrewTimeInput(document.getElementById('r_time') as HTMLInputElement);
-    document.getElementById('sliders')!.innerHTML = SLIDERS.map(([k,n])=>`
-      <div class="sliderrow"><div class="top"><span>${n}</span><span class="val" id="v_${k}">${sel[k]}</span></div>
-      <input type="range" min="0" max="5" value="${sel[k]}" data-k="${k}"></div>`).join('');
-    document.querySelectorAll('#sliders input[type=range]').forEach(inp=>{
-      inp.addEventListener('input', (e:any)=>{ const k=e.target.dataset.k; sel[k]=+e.target.value; document.getElementById('v_'+k)!.textContent=e.target.value; });
-    });
-    buildTasteChars();
+    buildTasteSection();
     buildNotes();
     document.getElementById('f_name')!.addEventListener('blur', guessCountryFromName);
     document.getElementById('rating')!.innerHTML = [1,2,3,4,5].map(i=>`<span class="star" data-i="${i}">★</span>`).join('');
@@ -816,11 +962,11 @@ import { DB, countryOrder } from '../data/countries';
   (async ()=>{
     if(await guard()){
       build();
+      bindRecipeActions();
       await loadGrinders();
       await loadSavedRecipes();
       if (editCupId) {
         await loadCupForEdit();
-        bindRecipeActions();
       }
       document.getElementById('saveBtn')!.addEventListener('click', save);
     }

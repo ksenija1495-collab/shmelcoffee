@@ -38,18 +38,39 @@ import Layout from '../layouts/Layout.astro';
     background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   }
   .cupcard-top {
-    padding: 22px 22px 0; text-align: center; position: relative; z-index: 1;
+    padding: 18px 18px 0; text-align: center; position: relative; z-index: 1;
   }
   .cupcard-brand {
-    font-size: .58rem; letter-spacing: .32em; text-transform: uppercase; color: var(--text-muted);
-    font-weight: 600; margin-bottom: 14px;
+    font-size: .52rem; letter-spacing: .28em; text-transform: uppercase; color: var(--text-muted);
+    font-weight: 600; margin-bottom: 8px;
   }
   .cupcard-name {
-    font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.85rem; font-weight: 600;
-    line-height: 1.15; color: var(--text); margin-bottom: 6px;
+    font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.75rem; font-weight: 600;
+    line-height: 1.12; color: var(--text); margin-bottom: 8px;
   }
-  .cupcard-meta { font-size: .8rem; color: var(--text-dim); line-height: 1.5; }
-  .cupcard-stars { color: #E0B81E; font-size: 1rem; letter-spacing: 2px; margin-top: 8px; }
+  .cupcard-meta { font-size: .72rem; color: var(--text-dim); line-height: 1.4; margin-top: 4px; }
+  .cupcard-stars { color: #E0B81E; font-size: .88rem; letter-spacing: 1px; margin-top: 4px; }
+
+  .cupcard-origin-compact {
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px 14px;
+    margin: 0 auto 6px; max-width: 100%;
+  }
+  .cupcard-origin-item {
+    display: inline-flex; align-items: center; gap: 6px; font-size: .74rem; font-weight: 600;
+    color: var(--text); text-decoration: none; line-height: 1.2;
+  }
+  a.cupcard-origin-item:hover { color: var(--accent); }
+  .cupcard-origin-sep { color: var(--border); font-weight: 400; user-select: none; }
+  .cupcard-roaster-logo-sm {
+    width: 22px; height: 22px; border-radius: 50%; object-fit: contain;
+    background: #fff; border: 1px solid rgba(228,208,185,.9); padding: 2px; flex-shrink: 0;
+  }
+  .cupcard-roaster-init-sm {
+    width: 22px; height: 22px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+    font-size: .52rem; font-weight: 800; flex-shrink: 0;
+    background: rgba(168,124,79,.12); border: 1px solid rgba(168,124,79,.22); color: var(--text);
+  }
+  .cupcard-country-flag-sm { font-size: 1.05rem; line-height: 1; flex-shrink: 0; }
 
   .cupcard-origin {
     display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
@@ -107,69 +128,53 @@ import Layout from '../layouts/Layout.astro';
   }
 
   .cupcard-wheel {
-    display: flex; justify-content: center; padding: 4px 12px 0; position: relative; z-index: 1;
-    overflow: visible;
+    display: flex; justify-content: center; padding: 0 8px; margin-top: -2px;
+    position: relative; z-index: 1; overflow: visible;
   }
+  .cupcard-wheel svg { display: block; max-width: 100%; height: auto; }
   .cupcard-notes-block {
-    padding: 12px 22px 18px; position: relative; z-index: 1;
-    border-top: 1px solid rgba(228,208,185,.45);
+    padding: 8px 14px 10px; position: relative; z-index: 1;
+    border-top: 1px solid rgba(228,208,185,.4);
   }
   .cupcard-notes-h {
-    font-size: .62rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
-    color: var(--accent); margin-bottom: 12px; text-align: center;
+    font-size: .56rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--text-muted); margin-bottom: 5px; text-align: center;
   }
-  .cupcard-notes-group { margin-bottom: 10px; }
-  .cupcard-notes-group:last-child { margin-bottom: 0; }
-  .cupcard-notes-cat {
-    font-size: .58rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
-    margin-bottom: 6px;
-  }
-  .cupcard-notes-row { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
-  .cupcard-notes {
-    padding: 0 22px 16px; display: flex; flex-wrap: wrap; gap: 6px; justify-content: center;
-    position: relative; z-index: 1;
-  }
+  .cupcard-notes-row { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; }
   .cupcard-note {
-    font-size: .72rem; font-weight: 600; padding: 5px 12px; border-radius: 20px;
+    font-size: .66rem; font-weight: 600; padding: 3px 8px; border-radius: 14px;
     background: color-mix(in srgb, var(--note-color, #a87c4f) 14%, #fff);
     border: 1px solid color-mix(in srgb, var(--note-color, #a87c4f) 32%, transparent);
     color: var(--text);
   }
   .cupcard-recipe {
-    margin: 0 16px 16px; padding: 14px 16px; border-radius: 14px;
-    background: rgba(70,41,24,.04); border: 1px solid rgba(228,208,185,.8);
+    margin: 0 12px 10px; padding: 10px 12px; border-radius: 12px;
+    background: rgba(70,41,24,.04); border: 1px solid rgba(228,208,185,.75);
     position: relative; z-index: 1;
   }
   .cupcard-recipe-h {
-    font-size: .62rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
-    color: var(--accent); margin-bottom: 6px;
+    font-size: .56rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--accent); margin-bottom: 3px;
   }
   .cupcard-brew {
-    font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.15rem; font-weight: 600;
-    color: var(--text); margin-bottom: 4px;
+    font-family: 'Inter', sans-serif; font-size: .76rem; font-weight: 700;
+    color: var(--text); margin-bottom: 2px;
   }
-  .cupcard-recipe-t { font-size: .82rem; color: var(--text-dim); line-height: 1.55; }
-  .cupcard-recipe-rows { display: flex; flex-direction: column; gap: 7px; margin-top: 8px; }
-  .cupcard-recipe-row {
-    display: flex; justify-content: space-between; align-items: baseline; gap: 14px;
-    font-size: .82rem; line-height: 1.45;
-  }
-  .cupcard-recipe-row > span:first-child {
-    color: var(--text-dim); font-weight: 500; flex-shrink: 0;
-  }
-  .cupcard-recipe-row > b {
-    font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.02rem; font-weight: 600;
-    color: var(--text); text-align: right;
-  }
+  .cupcard-recipe-t { font-size: .72rem; color: var(--text-dim); line-height: 1.4; }
+  .cupcard-recipe-rows { display: none; }
   .cupcard-chars {
-    margin: 0 16px 12px; padding: 10px 14px; border-radius: 12px;
-    background: rgba(168,124,79,.06); border: 1px solid rgba(168,124,79,.15);
-    font-size: .76rem; color: var(--text-dim); line-height: 1.55; position: relative; z-index: 1;
+    margin: 0 12px 6px; padding: 6px 10px; border-radius: 10px;
+    background: rgba(168,124,79,.06); border: 1px solid rgba(168,124,79,.12);
+    font-size: .66rem; color: var(--text-dim); line-height: 1.35; position: relative; z-index: 1;
+  }
+  .cupcard-comment {
+    margin: 0 12px 8px; font-size: .7rem; color: var(--text-dim); font-style: italic;
+    line-height: 1.35; text-align: center;
   }
   .cupcard-foot {
-    padding: 14px 22px 18px; border-top: 1px solid rgba(228,208,185,.6);
-    display: flex; justify-content: space-between; align-items: center; gap: 10px;
-    font-size: .72rem; color: var(--text-muted); position: relative; z-index: 1;
+    padding: 8px 14px 11px; border-top: 1px solid rgba(228,208,185,.5);
+    display: flex; justify-content: space-between; align-items: center; gap: 8px;
+    font-size: .62rem; color: var(--text-muted); position: relative; z-index: 1;
   }
 
   .cupcard-actions {
@@ -190,17 +195,30 @@ import Layout from '../layouts/Layout.astro';
   }
 
   @media (max-width: 480px) {
-    .cupcard-page { padding-top: 64px; }
-    .cupcard-name { font-size: 1.55rem; }
+    .cupcard-page { padding: 56px 12px 32px; }
+    .cupcard-top { padding: 12px 12px 0; }
+    .cupcard-brand { margin-bottom: 4px; font-size: .48rem; }
+    .cupcard-name { font-size: 1.35rem; margin-bottom: 6px; }
+    .cupcard-meta { font-size: .66rem; }
+    .cupcard-stars { font-size: .78rem; margin-top: 2px; }
+    .cupcard-origin-compact { gap: 4px 10px; margin-bottom: 4px; }
+    .cupcard-origin-item { font-size: .68rem; }
+    .cupcard-wheel { transform: scale(.92); transform-origin: center top; margin-bottom: -8px; }
+    .cupcard-chars { display: none; }
+    .cupcard-notes-block { padding: 6px 10px 8px; }
+    .cupcard-recipe { margin: 0 8px 8px; padding: 8px 10px; }
+    .cupcard-foot { padding: 6px 10px 9px; }
+    .cupcard-comment { font-size: .66rem; margin-bottom: 6px; }
   }
 </style>
 
 <script>
   import { createClient } from '@supabase/supabase-js';
   import { balanceWheelSvg } from '../lib/cupBalanceWheel';
-  import { cupRecipeLines, formatCupRecipeShort } from '../lib/cupRecipe';
-  import { buildCupNoteTags, groupCupNotesByCategory } from '../lib/cupNoteDisplay';
-  import { countryCardData, regionMapAccent } from '../lib/cupCountryCard';
+  import { cupRecipeLines, formatCupRecipeShort, normalizeRecipe, recipeHasData } from '../lib/cupRecipe';
+  import { defaultSavedRecipeName } from '../lib/savedRecipesUi';
+  import { buildCupNoteTags } from '../lib/cupNoteDisplay';
+  import { countryCardData } from '../lib/cupCountryCard';
   import { resolveRoaster } from '../lib/roasterResolve';
   import { formatTasteCharacterLine, normalizeTasteCharacter } from '../lib/tasteCharacter';
 
@@ -236,73 +254,77 @@ import Layout from '../layouts/Layout.astro';
     if (msg) { msg.textContent = 'Ссылка скопирована'; setTimeout(() => { msg.textContent = ''; }, 2500); }
   }
 
+  async function saveCupToMyRecipes(cup: any) {
+    const recipe = normalizeRecipe(cup.recipe);
+    if (!recipe || !recipeHasData(recipe as Record<string, unknown>)) {
+      alert('В карточке нет параметров заваривания для сохранения');
+      return;
+    }
+    const name = prompt('Название рецепта', defaultSavedRecipeName(cup.brew_method || '', recipe as Record<string, unknown>));
+    if (!name?.trim()) return;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const msg = document.getElementById('cupMsg');
+    const { error } = await supabase.from('saved_brew_recipes').insert({
+      user_id: user.id,
+      name: name.trim(),
+      brew_method: cup.brew_method || null,
+      recipe,
+    });
+    if (error) {
+      if (msg) msg.textContent = error.message.includes('saved_brew_recipes') ? 'Нужна миграция saved_brew_recipes в Supabase' : error.message;
+      return;
+    }
+    if (msg) msg.textContent = 'Сохранено в «Мои рецепты»';
+    setTimeout(() => { if (msg) msg.textContent = ''; }, 3000);
+  }
+
   function renderCup(cup: any, isOwner = false) {
     const notes = asNotes(cup.notes);
-    const noteGroups = groupCupNotesByCategory(buildCupNoteTags(notes));
+    const noteTags = buildCupNoteTags(notes);
     const recipeLines = cupRecipeLines(cup.recipe);
     const recipeShort = formatCupRecipeShort(cup.recipe, cup.brew_method);
     const roaster = resolveRoaster(cup.roaster);
     const country = countryCardData(cup.country, cup.name);
-    const meta = [cup.process, cup.variety]
-      .filter(Boolean)
-      .concat(!roaster && cup.roaster ? [cup.roaster] : [])
-      .concat(!country && cup.country ? [cup.country] : [])
-      .map(esc)
-      .join(' · ');
+    const meta = [cup.process, cup.variety].filter(Boolean).map(esc).join(' · ');
     const tasteCharLine = formatTasteCharacterLine(normalizeTasteCharacter(cup.taste_character));
-    const dateStr = cup.created_at ? new Date(cup.created_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+    const dateStr = cup.created_at
+      ? new Date(cup.created_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' })
+      : '';
+    const wheelSize = window.matchMedia('(max-width: 480px)').matches ? 200 : 240;
     const wheel = balanceWheelSvg({
       acidity: cup.acidity ?? 0,
       sweetness: cup.sweetness ?? 0,
       bitterness: cup.bitterness ?? 0,
       body: cup.body ?? 0,
-    }, 260);
+    }, wheelSize);
 
-    const roasterLogoHtml = roaster?.logoUrl
-      ? `<img src="${esc(roaster.logoUrl)}" alt="" class="cupcard-roaster-logo" referrerpolicy="no-referrer" onerror="this.outerHTML='<span class=&quot;cupcard-roaster-init&quot;>${esc(roaster.initials)}</span>'"/>`
+    const roasterLogoSm = roaster?.logoUrl
+      ? `<img src="${esc(roaster.logoUrl)}" alt="" class="cupcard-roaster-logo-sm" referrerpolicy="no-referrer" onerror="this.outerHTML='<span class=&quot;cupcard-roaster-init-sm&quot;>${esc(roaster.initials)}</span>'"/>`
       : roaster
-        ? `<span class="cupcard-roaster-init">${esc(roaster.initials)}</span>`
+        ? `<span class="cupcard-roaster-init-sm">${esc(roaster.initials)}</span>`
         : '';
 
     const originParts: string[] = [];
     if (roaster) {
-      originParts.push(`<div class="cupcard-origin-card">
-        <span class="cupcard-origin-lbl">Обжарщик</span>
-        ${roasterLogoHtml}
-        <span class="cupcard-origin-name">${esc(roaster.displayName)}</span>
-      </div>`);
+      originParts.push(`<span class="cupcard-origin-item">${roasterLogoSm}<span>${esc(roaster.displayName)}</span></span>`);
     }
     if (country) {
-      const accent = regionMapAccent(country.region);
-      originParts.push(`<a class="cupcard-origin-card cupcard-country-card" href="${esc(country.href)}" style="--map-accent:${esc(accent)}">
-        <span class="cupcard-origin-lbl">Страна</span>
-        <span class="cupcard-country-flag">${country.flag}</span>
-        <span class="cupcard-origin-name">${esc(country.name)}</span>
-        <span class="cupcard-country-region">${esc(country.region)}</span>
-        ${country.flavors.length ? `<div class="cupcard-country-flavors">${country.flavors.map((f) => `<span class="cupcard-country-flavor">${esc(f)}</span>`).join('')}</div>` : ''}
-      </a>`);
+      originParts.push(`<a class="cupcard-origin-item" href="${esc(country.href)}"><span class="cupcard-country-flag-sm">${country.flag}</span><span>${esc(country.name)}</span></a>`);
     }
     const originHtml = originParts.length
-      ? `<div class="cupcard-origin ${originParts.length === 1 ? 'single' : ''}">${originParts.join('')}</div>`
+      ? `<div class="cupcard-origin-compact">${originParts.join('<span class="cupcard-origin-sep">·</span>')}</div>`
       : '';
 
-    const notesHtml = noteGroups.length ? `
+    const notesHtml = noteTags.length ? `
       <div class="cupcard-notes-block">
-        <div class="cupcard-notes-h">Ноты в чашке</div>
-        ${noteGroups.map((g) => `
-          <div class="cupcard-notes-group">
-            <div class="cupcard-notes-cat" style="color:${esc(g.color)}">${esc(g.category)}</div>
-            <div class="cupcard-notes-row">
-              ${g.notes.map((n) => `<span class="cupcard-note" style="--note-color:${esc(g.color)}">${esc(n)}</span>`).join('')}
-            </div>
-          </div>`).join('')}
+        <div class="cupcard-notes-h">Ноты</div>
+        <div class="cupcard-notes-row">
+          ${noteTags.map((t) => `<span class="cupcard-note" style="--note-color:${esc(t.color)}">${esc(t.note)}</span>`).join('')}
+        </div>
       </div>` : '';
 
-    const recipeRowsHtml = recipeLines.length
-      ? `<div class="cupcard-recipe-rows">${recipeLines.map((l) =>
-          `<div class="cupcard-recipe-row"><span>${esc(l.label)}</span><b>${esc(l.value)}</b></div>`
-        ).join('')}</div>`
-      : '';
+    const brewLine = [cup.brew_method ? `☕ ${cup.brew_method}` : '', recipeShort].filter(Boolean).join(' · ');
 
     page.innerHTML = `
       <div class="cupcard-wrap">
@@ -318,14 +340,12 @@ import Layout from '../layouts/Layout.astro';
           <div class="cupcard-wheel">${wheel}</div>
           ${tasteCharLine ? `<div class="cupcard-chars">${esc(tasteCharLine)}</div>` : ''}
           ${notesHtml}
-          ${recipeShort || recipeLines.length || cup.brew_method ? `
+          ${brewLine || recipeLines.length ? `
             <div class="cupcard-recipe">
               <div class="cupcard-recipe-h">Заваривание</div>
-              ${cup.brew_method ? `<div class="cupcard-brew">☕ ${esc(cup.brew_method)}</div>` : ''}
-              ${recipeShort ? `<div class="cupcard-recipe-t">${esc(recipeShort)}</div>` : ''}
-              ${recipeRowsHtml}
+              ${brewLine ? `<div class="cupcard-recipe-t">${esc(brewLine)}</div>` : ''}
             </div>` : ''}
-          ${cup.comment ? `<div class="cupcard-recipe" style="margin-top:-8px"><div class="cupcard-recipe-t" style="font-style:italic">«${esc(cup.comment)}»</div></div>` : ''}
+          ${cup.comment ? `<div class="cupcard-comment">«${esc(cup.comment)}»</div>` : ''}
           <div class="cupcard-foot">
             <span>${dateStr}</span>
             <span>shmelcoffee.com</span>
@@ -334,6 +354,7 @@ import Layout from '../layouts/Layout.astro';
 
         <div class="cupcard-actions">
           ${isOwner ? `<a class="btn btn-primary" href="/add-cup?edit=${cup.id}" style="display:block;text-align:center;text-decoration:none">✏️ Редактировать</a>` : ''}
+          ${isOwner && (recipeShort || recipeLines.length) ? `<button type="button" class="btn btn-ghost" id="saveRecipeBtn" style="width:100%">⭐ В мои рецепты</button>` : ''}
           <button type="button" class="btn ${isOwner ? 'btn-ghost' : 'btn-primary'}" id="shareBtn">Поделиться карточкой</button>
           <a href="/account" class="btn btn-ghost" style="display:block;text-align:center;text-decoration:none;padding:11px">← В дневник</a>
           <div class="cupcard-msg" id="cupMsg"></div>
@@ -341,6 +362,7 @@ import Layout from '../layouts/Layout.astro';
       </div>`;
 
     document.getElementById('shareBtn')!.addEventListener('click', shareCard);
+    document.getElementById('saveRecipeBtn')?.addEventListener('click', () => saveCupToMyRecipes(cup));
   }
 
   async function waitForAuthUser() {

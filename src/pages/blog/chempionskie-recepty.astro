@@ -3,6 +3,15 @@ export const prerender = true;
 import Layout from '../../layouts/Layout.astro';
 import Nav from '../../components/Nav.astro';
 import { recipesData } from '../../data/recipes';
+import {
+  champParamOrder,
+  paramLabels,
+  recipeDisplayText,
+  recipeQuery,
+  resolveRecipeTab,
+} from '../../lib/recipePageHelpers';
+
+const activeTab = resolveRecipeTab(recipesData, Astro.url.searchParams);
 ---
 
 <Layout
@@ -20,13 +29,121 @@ import { recipesData } from '../../data/recipes';
       <h1>Банк чемпионских рецептов</h1>
       <p class="champ-hero-sub">Проверенные схемы чемпионов и классика — по методам заваривания. Сохраняй в дневник и повторяй.</p>
     </div>
-    <div class="recipe-tabs" id="recipeTabs"></div>
-    <div id="champCards"></div>
-    <div id="classicRecipes"></div>
-    <div class="champ-foot-cta">
-      <p>Запиши чашку по этому рецепту — откроется в твоём дневнике.</p>
-      <a href="/add-cup" class="btn btn-primary">Добавить чашку →</a>
+
+    <div class="recipe-tabs" id="recipeTabs" role="tablist" aria-label="Метод заваривания">
+      {Object.entries(recipesData).map(([key, method]) => (
+        <button
+          type="button"
+          class:list={['recipe-tab', { active: key === activeTab }]}
+          data-tab={key}
+          role="tab"
+          aria-selected={key === activeTab}
+        >
+          {method.icon} {method.name}
+        </button>
+      ))}
     </div>
+
+    {Object.entries(recipesData).map(([methodKey, method]) => {
+      const champions = method.recipes.filter((r) => r.badge === 'champion');
+      const others = method.recipes.filter((r) => r.badge !== 'champion');
+      return (
+        <div
+          class="champ-method-panel"
+          data-panel={methodKey}
+          hidden={methodKey !== activeTab}
+          role="tabpanel"
+        >
+          <div class="champ-cards">
+            {champions.map((r) => (
+              <article class={`champ-card champ-card--${methodKey}`}>
+                <div class="champ-card-bg" />
+                <div class="champ-card-inner">
+                  <span class="champ-method">{recipeDisplayText(method.methodLabel)}: ЧЕМПИОН</span>
+                  <h2 class="champ-title">{recipeDisplayText(r.title)}</h2>
+                  <p class="champ-tagline">{recipeDisplayText(r.tagline || r.sub)}</p>
+                  {(r.highlights?.length ?? 0) > 0 && (
+                    <ul class="champ-highlights">
+                      {r.highlights!.map((h) => (
+                        <li>{recipeDisplayText(h)}</li>
+                      ))}
+                    </ul>
+                  )}
+                  <div class="champ-params recipe-params">
+                    {champParamOrder.filter((k) => r.params[k]).map((k) => (
+                      <div class:list={['recipe-param', { 'recipe-param--grind': k === 'grind' }]}>
+                        <div class="recipe-param-label">{paramLabels[k] || k}</div>
+                        <div class="recipe-param-value">{recipeDisplayText(r.params[k])}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <ol class="champ-steps">
+                    {r.steps.map((s) => (
+                      <li>{recipeDisplayText(s)}</li>
+                    ))}
+                  </ol>
+                  {r.profile && (
+                    <div class="champ-profile">
+                      <b>Профиль:</b> {recipeDisplayText(r.profile)}
+                      {(r.profileTags?.length ?? 0) > 0 && (
+                        <div class="champ-profile-tags">
+                          {r.profileTags!.map((t) => (
+                            <span class="champ-profile-tag">{t.emoji} {recipeDisplayText(t.label)}</span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  <a class="champ-use-btn" href={recipeQuery(methodKey, r, recipesData)}>
+                    Записать чашку по рецепту →
+                  </a>
+                </div>
+                <div class="champ-watermark">@shmelcoffee</div>
+              </article>
+            ))}
+          </div>
+
+          {others.length > 0 && (
+            <div class="champ-classic-block">
+              <div class="classic-block-h">Классика и простые рецепты</div>
+              {others.map((r, idx) => (
+                <div class="recipe-card" id={`rc-${methodKey}-${idx}`}>
+                  <button type="button" class="recipe-card-header" data-method={methodKey} data-idx={idx}>
+                    <div class="recipe-card-left">
+                      <span class={`recipe-badge ${r.badge}`}>{recipeDisplayText(r.badgeText)}</span>
+                      <div>
+                        <div class="recipe-card-title">{recipeDisplayText(r.title)}</div>
+                        <div class="recipe-card-sub">{recipeDisplayText(r.sub)}</div>
+                      </div>
+                    </div>
+                    <span class="recipe-chevron">▼</span>
+                  </button>
+                  <div class="recipe-card-body">
+                    <div class="recipe-params">
+                      {Object.entries(r.params).map(([pk, pv]) => (
+                        <div class="recipe-param">
+                          <div class="recipe-param-label">{paramLabels[pk] || pk}</div>
+                          <div class="recipe-param-value">{recipeDisplayText(pv)}</div>
+                        </div>
+                      ))}
+                    </div>
+                    <div class="recipe-steps">
+                      {r.steps.map((s) => (
+                        <div class="recipe-step">{recipeDisplayText(s)}</div>
+                      ))}
+                    </div>
+                    <div class="recipe-tip"><strong>Совет:</strong> {recipeDisplayText(r.tip)}</div>
+                    <a class="champ-use-btn" href={recipeQuery(methodKey, r, recipesData)} style="margin-top:14px">
+                      Записать чашку →
+                    </a>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    })}
   </div>
 </Layout>
 
@@ -47,6 +164,11 @@ import { recipesData } from '../../data/recipes';
     font-size: 2rem; font-weight: 600; line-height: 1.15; margin-bottom: 8px;
   }
   .champ-hero-sub { font-size: .88rem; color: var(--text-dim); line-height: 1.55; max-width: 560px; }
+
+  .recipe-tabs .recipe-tab {
+    cursor: pointer;
+    font: inherit;
+  }
 
   .champ-cards { display: flex; flex-direction: column; gap: 18px; margin-bottom: 28px; }
   .champ-card {
@@ -138,11 +260,13 @@ import { recipesData } from '../../data/recipes';
   .classic-block-h {
     font-size: .82rem; font-weight: 700; color: var(--text); margin: 8px 0 12px;
   }
-  .champ-foot-cta {
-    margin-top: 32px; padding: 22px; text-align: center; border-radius: var(--radius-lg);
-    border: 1px solid var(--border); background: var(--surface);
+  .recipe-card-header {
+    width: 100%;
+    border: none;
+    background: transparent;
+    text-align: left;
+    cursor: pointer;
   }
-  .champ-foot-cta p { font-size: .84rem; color: var(--text-dim); margin-bottom: 12px; }
 
   @media (max-width: 600px) {
     .champ-page { padding-top: 72px; }
@@ -151,132 +275,32 @@ import { recipesData } from '../../data/recipes';
   }
 </style>
 
-<script define:vars={{ recipesData }}>
-  import { decodeBrewTerms } from '../../lib/decodeBrewTerms';
+<script>
+  document.getElementById('recipeTabs')?.addEventListener('click', (e) => {
+    const tab = (e.target as HTMLElement).closest<HTMLButtonElement>('.recipe-tab[data-tab]');
+    if (!tab) return;
+    const id = tab.dataset.tab;
+    if (!id) return;
 
-  const paramLabels = { dose:'Зерно', water:'Вода', ratio:'Пропорция', grind:'Помол', temp:'Температура', time:'Время', yield:'Выход в чашку', milk:'Молоко' };
-  let activeTab = 'aeropress';
-
-  const params = new URLSearchParams(location.search);
-  const tabParam = params.get('tab') || params.get('method');
-  if (tabParam && recipesData[tabParam]) activeTab = tabParam;
-
-  function esc(s) {
-    const raw = String(s ?? '');
-    return decodeBrewTerms(raw).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
-  }
-
-  function recipeQuery(method, r) {
-    const q = new URLSearchParams();
-    q.set('brew', recipesData[method].name === 'V60' ? 'V60' : recipesData[method].name);
-    const map = { dose:'coffee_g', water:'water_g', grind:'grind', temp:'temp', time:'time' };
-    for (const [pk, qk] of Object.entries(map)) {
-      const raw = r.params[pk];
-      if (!raw) continue;
-      const num = raw.match(/[\d]+(?:[.,]\d+)?/);
-      if (qk === 'coffee_g' || qk === 'water_g') {
-        if (num) q.set(qk, num[0].replace(',', '.'));
-      } else if (qk === 'temp') {
-        const t = raw.match(/\d+/);
-        if (t) q.set('temp', t[0]);
-      } else {
-        q.set(qk, raw.replace(/\s*°C.*/, '').trim());
-      }
-    }
-    return '/add-cup?' + q.toString();
-  }
-
-  function renderChampParams(r) {
-    const order = ['dose', 'water', 'grind', 'ratio', 'temp', 'time', 'yield', 'milk'];
-    const cells = order
-      .filter((k) => r.params[k])
-      .map((k) => {
-        const cls = k === 'grind' ? ' recipe-param--grind' : '';
-        return `<div class="recipe-param${cls}"><div class="recipe-param-label">${paramLabels[k] || k}</div><div class="recipe-param-value">${esc(r.params[k])}</div></div>`;
-      });
-    return cells.length ? `<div class="champ-params recipe-params">${cells.join('')}</div>` : '';
-  }
-
-  function renderChampionCard(method, r) {
-    const m = recipesData[method];
-    const highlights = r.highlights || [];
-    const profileTags = r.profileTags || [];
-    return `<article class="champ-card champ-card--${method}">
-      <div class="champ-card-bg"></div>
-      <div class="champ-card-inner">
-        <span class="champ-method">${esc(m.methodLabel)}: ЧЕМПИОН</span>
-        <h2 class="champ-title">${esc(r.title)}</h2>
-        <p class="champ-tagline">${esc(r.tagline || r.sub)}</p>
-        ${highlights.length ? `<ul class="champ-highlights">${highlights.map(h => `<li>${esc(h)}</li>`).join('')}</ul>` : ''}
-        ${renderChampParams(r)}
-        <ol class="champ-steps">${r.steps.map(s => `<li>${esc(s)}</li>`).join('')}</ol>
-        ${r.profile ? `<div class="champ-profile"><b>Профиль:</b> ${esc(r.profile)}${
-          profileTags.length ? `<div class="champ-profile-tags">${profileTags.map(t =>
-            `<span class="champ-profile-tag">${t.emoji} ${esc(t.label)}</span>`).join('')}</div>` : ''
-        }</div>` : ''}
-        <a class="champ-use-btn" href="${recipeQuery(method, r)}">Записать чашку по рецепту →</a>
-      </div>
-      <div class="champ-watermark">@shmelcoffee</div>
-    </article>`;
-  }
-
-  function renderClassicCard(method, r, idx) {
-    return `<div class="recipe-card" id="rc-${method}-${idx}">
-      <div class="recipe-card-header" data-method="${method}" data-idx="${idx}">
-        <div class="recipe-card-left">
-          <span class="recipe-badge ${r.badge}">${esc(r.badgeText)}</span>
-          <div>
-            <div class="recipe-card-title">${esc(r.title)}</div>
-            <div class="recipe-card-sub">${esc(r.sub)}</div>
-          </div>
-        </div>
-        <span class="recipe-chevron">▼</span>
-      </div>
-      <div class="recipe-card-body">
-        <div class="recipe-params">${Object.entries(r.params).map(([pk,pv]) =>
-          `<div class="recipe-param"><div class="recipe-param-label">${paramLabels[pk]||pk}</div><div class="recipe-param-value">${esc(pv)}</div></div>`
-        ).join('')}</div>
-        <div class="recipe-steps">${r.steps.map(s => `<div class="recipe-step">${esc(s)}</div>`).join('')}</div>
-        <div class="recipe-tip"><strong>Совет:</strong> ${esc(r.tip)}</div>
-        <a class="champ-use-btn" href="${recipeQuery(method, r)}" style="margin-top:14px">Записать чашку →</a>
-      </div>
-    </div>`;
-  }
-
-  function render() {
-    const tabs = document.getElementById('recipeTabs');
-    const champEl = document.getElementById('champCards');
-    const classicEl = document.getElementById('classicRecipes');
-    const m = recipesData[activeTab];
-    if (!m) return;
-
-    tabs.innerHTML = Object.entries(recipesData).map(([k,v]) =>
-      `<div class="recipe-tab ${k===activeTab?'active':''}" data-tab="${k}">${v.icon} ${v.name}</div>`
-    ).join('');
-
-    const champions = m.recipes.filter(r => r.badge === 'champion');
-    const others = m.recipes.filter(r => r.badge !== 'champion');
-
-    champEl.innerHTML = `<div class="champ-cards">${champions.map(r => renderChampionCard(activeTab, r)).join('')}</div>`;
-    classicEl.innerHTML = others.length
-      ? `<div class="classic-block-h">Классика и простые рецепты</div>${others.map((r,i) => renderClassicCard(activeTab, r, i)).join('')}`
-      : '';
-
-    tabs.querySelectorAll('.recipe-tab').forEach(t => {
-      t.addEventListener('click', () => {
-        activeTab = t.dataset.tab;
-        const url = new URL(location.href);
-        url.searchParams.set('tab', activeTab);
-        history.replaceState({}, '', url);
-        render();
-      });
+    document.querySelectorAll('.recipe-tab').forEach((t) => {
+      const active = t === tab;
+      t.classList.toggle('active', active);
+      t.setAttribute('aria-selected', active ? 'true' : 'false');
     });
-    classicEl.querySelectorAll('.recipe-card-header').forEach(h => {
-      h.addEventListener('click', () => {
-        document.getElementById('rc-' + h.dataset.method + '-' + h.dataset.idx)?.classList.toggle('open');
-      });
+    document.querySelectorAll('.champ-method-panel').forEach((panel) => {
+      (panel as HTMLElement).hidden = panel.getAttribute('data-panel') !== id;
     });
-  }
 
-  render();
+    const url = new URL(location.href);
+    url.searchParams.set('tab', id);
+    history.replaceState({}, '', url);
+  });
+
+  document.querySelectorAll('.recipe-card-header').forEach((header) => {
+    header.addEventListener('click', () => {
+      const method = header.getAttribute('data-method');
+      const idx = header.getAttribute('data-idx');
+      document.getElementById(`rc-${method}-${idx}`)?.classList.toggle('open');
+    });
+  });
 </script>

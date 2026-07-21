@@ -8,7 +8,7 @@ export function labelForTasteCharacter(dim: TasteCharacterDim, value: TasteChara
   const custom = value.custom?.trim();
   if (custom) return custom;
   const preset = value.preset;
-  if (!preset) return null;
+  if (!preset || preset === 'none') return null;
   const opt = TASTE_CHARACTER[dim].options.find((o) => o.id === preset);
   return opt?.label || preset;
 }
@@ -23,7 +23,8 @@ export function normalizeTasteCharacter(raw: unknown): TasteCharacter | null {
     const row = v as Record<string, unknown>;
     const preset = row.preset ? String(row.preset) : null;
     const custom = row.custom ? String(row.custom).trim() : null;
-    if (preset || custom) out[dim] = { preset, custom: custom || null };
+    if (preset === 'none' && !custom) return;
+    if (preset || custom) out[dim] = { preset: preset === 'none' ? null : preset, custom: custom || null };
   });
   return Object.keys(out).length ? out : null;
 }

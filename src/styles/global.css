@@ -68,6 +68,10 @@ nav {
 }
 .mobile-nav a .mn-icon { font-size: 1.15rem; }
 .mobile-nav a.active, .mobile-nav a:hover { color: var(--text); }
+.mobile-acc-nav a.active { color: var(--accent); font-weight: 700; }
+.mobile-acc-nav a[data-acc-tab="add-cup"] .mn-icon {
+  font-size: 1.35rem; font-weight: 700; line-height: 1;
+}
 
 /* Hero */
 .hero {
