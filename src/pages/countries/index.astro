@@ -14,8 +14,6 @@ import { DB, countryOrder } from '../../data/countries';
       <div class="country-detail" id="countryDetail"></div>
     </div>
   </div>
-</Layout>
-
 <script define:vars={{ DB, countryOrder }}>
 function renderCountryGrid(){
   document.getElementById('countryGrid').innerHTML = countryOrder.map(k=>{
@@ -79,3 +77,5 @@ if (preselect && DB[preselect]) {
   openCountry(preselect);
 }
 </script>
+
+</Layout>

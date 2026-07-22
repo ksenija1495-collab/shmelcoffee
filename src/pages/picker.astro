@@ -12,8 +12,6 @@ import { COFFEE_DB, PICKER_TASTE_MAP, PICKER_NOTES_MAP, PICKER_BREW_OPTIONS } fr
       <div id="pickerCard" class="picker-card"></div>
     </div>
   </div>
-</Layout>
-
 <script define:vars={{ COFFEE_DB, PICKER_TASTE_MAP, PICKER_NOTES_MAP, PICKER_BREW_OPTIONS }}>
 let pickerState = { step:0, brew:null, tastes:[], notes:[] };
 
@@ -329,3 +327,5 @@ function renderPickerResults() {
 
 renderPickerStep();
 </script>
+
+</Layout>

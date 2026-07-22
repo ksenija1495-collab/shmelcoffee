@@ -91,8 +91,6 @@ import { DB, countryOrder } from '../data/countries';
       </div>
     </div>
   </div>
-</Layout>
-
 <style is:global>
   .addcup-page { padding-top: 88px; max-width: 600px; margin: 0 auto; padding-bottom: 100px; }
   .addcup-back { font-size: .8rem; color: var(--text-muted); text-decoration: none; }
@@ -455,8 +453,9 @@ import { DB, countryOrder } from '../data/countries';
   }
 
   function setBloomOnForm(bloom: BrewPour | null | undefined) {
-    const mlInp = document.getElementById('p_bloom_ml') as HTMLInputElement;
-    const timeInp = document.getElementById('p_bloom') as HTMLInputElement;
+    const mlInp = document.getElementById('p_bloom_ml') as HTMLInputElement | null;
+    const timeInp = document.getElementById('p_bloom') as HTMLInputElement | null;
+    if (!mlInp || !timeInp) return;
     if (!bloom) {
       mlInp.value = '';
       timeInp.value = '';
@@ -1044,15 +1043,26 @@ import { DB, countryOrder } from '../data/countries';
   }
 
   (async ()=>{
-    if(await guard()){
-      build();
-      bindRecipeActions();
-      await loadGrinders();
-      await loadSavedRecipes();
-      if (editCupId) {
-        await loadCupForEdit();
+    try {
+      if(await guard()){
+        build();
+        bindRecipeActions();
+        await loadGrinders();
+        await loadSavedRecipes();
+        if (editCupId) {
+          await loadCupForEdit();
+        }
+        document.getElementById('saveBtn')!.addEventListener('click', save);
       }
-      document.getElementById('saveBtn')!.addEventListener('click', save);
+    } catch (e) {
+      console.error(e);
+      const msg = document.getElementById('msg');
+      if (msg) {
+        msg.className = 'addcup-msg error';
+        msg.textContent = 'Не удалось загрузить форму. Обнови страницу или напиши @ksenijashmel.';
+      }
     }
   })();
 </script>
+
+</Layout>
