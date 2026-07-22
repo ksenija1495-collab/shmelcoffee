@@ -18,5 +18,8 @@
     "@vercel/analytics": "^2.0.1",
     "astro": "^6.3.7",
     "openai": "^6.39.0"
+  },
+  "devDependencies": {
+    "playwright": "^1.61.1"
   }
 }

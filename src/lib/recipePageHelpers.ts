@@ -1,4 +1,5 @@
 import { decodeBrewTerms } from './decodeBrewTerms';
+import { brewMethodForForm } from './brewMethodMap';
 import { encodePourToken } from './brewPour';
 import type { RecipeEntry } from '../data/recipes';
 
@@ -26,7 +27,7 @@ export function recipeQuery(
 ): string {
   const q = new URLSearchParams();
   const brewName = recipesData[method]?.name;
-  q.set('brew', brewName === 'V60' ? 'V60' : brewName || method);
+  q.set('brew', brewMethodForForm(brewName) || method);
   const map: Record<string, string> = {
     dose: 'coffee_g',
     water: 'water_g',

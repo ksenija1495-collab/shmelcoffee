@@ -687,9 +687,11 @@ import Nav from '../components/Nav.astro';
       });
     });
 
+    const MOBILE_ACC_TABS = new Set(['profile', 'diary', 'recipes', 'shelf', 'add-cup']);
     function syncAccountNav(name: string) {
       document.querySelectorAll('.mobile-acc-nav a[data-acc-tab]').forEach((a) => {
-        a.classList.toggle('active', a.getAttribute('data-acc-tab') === name);
+        const tab = a.getAttribute('data-acc-tab');
+        a.classList.toggle('active', MOBILE_ACC_TABS.has(name) && tab === name);
       });
     }
 
@@ -697,7 +699,8 @@ import Nav from '../components/Nav.astro';
       btn.addEventListener('click', async () => {
         const id = (btn as HTMLElement).dataset.recipeDel!;
         if (!confirm('Удалить этот рецепт?')) return;
-        await supabase.from('saved_brew_recipes').delete().eq('id', id).eq('user_id', user.id);
+        const { error } = await supabase.from('saved_brew_recipes').delete().eq('id', id).eq('user_id', user.id);
+        if (error) { alert('Не удалось удалить: ' + error.message); return; }
         init();
       });
     });
@@ -727,6 +730,17 @@ import Nav from '../components/Nav.astro';
       try { const sv = localStorage.getItem('acc_tab'); if (sv && page.querySelector('.acc-tab[data-tab="' + sv + '"]')) startTab = sv; } catch (e) {}
     }
     activateTab(startTab);
+
+    if (!(window as any).__accPopBound) {
+      (window as any).__accPopBound = true;
+      window.addEventListener('popstate', () => {
+        const root = document.getElementById('accountPage');
+        if (!root?.querySelector('.acc-tab')) return;
+        const tabName = new URL(location.href).searchParams.get('tab') || 'profile';
+        const btn = root.querySelector('.acc-tab[data-tab="' + tabName + '"]') as HTMLElement | null;
+        if (btn) btn.click();
+      });
+    }
     } catch (e: any) {
       console.error(e);
       showLoadError('Не удалось загрузить кабинет. Обновите страницу или напишите @ksenijashmel.');

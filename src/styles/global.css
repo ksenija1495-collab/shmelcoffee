@@ -405,6 +405,19 @@ nav {
 .recipe-tabs {
   display: flex; gap: 6px; margin-bottom: 24px; flex-wrap: wrap;
 }
+@media (max-width: 768px) {
+  .recipe-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    margin-left: -4px;
+    margin-right: -4px;
+    padding-bottom: 4px;
+  }
+  .recipe-tabs::-webkit-scrollbar { display: none; }
+  .recipe-tab { flex-shrink: 0; white-space: nowrap; }
+}
 .recipe-tab {
   display: flex; align-items: center; gap: 5px;
   padding: 7px 14px; border-radius: 7px; border: 1px solid var(--border);
@@ -735,4 +748,5 @@ nav {
   .picker-result-top { flex-direction: column; }
   .picker-result-right { align-items: flex-start; flex-direction: row; gap: 12px; }
   .footer { padding-bottom: 72px; }
+  .quiz-page-wrap { padding-bottom: 88px; }
 }

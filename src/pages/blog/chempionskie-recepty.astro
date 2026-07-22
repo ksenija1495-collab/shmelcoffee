@@ -278,25 +278,38 @@ const activeTab = resolveRecipeTab(recipesData, Astro.url.searchParams);
 </style>
 
 <script>
-  document.getElementById('recipeTabs')?.addEventListener('click', (e) => {
-    const tab = (e.target as HTMLElement).closest<HTMLButtonElement>('.recipe-tab[data-tab]');
-    if (!tab) return;
-    const id = tab.dataset.tab;
-    if (!id) return;
-
-    document.querySelectorAll('.recipe-tab').forEach((t) => {
-      const active = t === tab;
+  function activateRecipeTab(id: string, push = false) {
+    document.querySelectorAll('.recipe-tab[data-tab]').forEach((t) => {
+      const active = t.getAttribute('data-tab') === id;
       t.classList.toggle('active', active);
       t.setAttribute('aria-selected', active ? 'true' : 'false');
     });
     document.querySelectorAll('.champ-method-panel').forEach((panel) => {
       (panel as HTMLElement).hidden = panel.getAttribute('data-panel') !== id;
     });
-
     const url = new URL(location.href);
     url.searchParams.set('tab', id);
-    history.replaceState({}, '', url);
+    if (push) history.pushState({ tab: id }, '', url);
+    else history.replaceState({ tab: id }, '', url);
+  }
+
+  document.getElementById('recipeTabs')?.addEventListener('click', (e) => {
+    const tab = (e.target as HTMLElement).closest<HTMLButtonElement>('.recipe-tab[data-tab]');
+    if (!tab?.dataset.tab) return;
+    activateRecipeTab(tab.dataset.tab, true);
   });
+
+  if (!(window as any).__recipeTabsPopBound) {
+    (window as any).__recipeTabsPopBound = true;
+    window.addEventListener('popstate', () => {
+      const id = new URL(location.href).searchParams.get('tab');
+      const fallback = document.querySelector('.recipe-tab.active')?.getAttribute('data-tab');
+      const target = id && document.querySelector('.recipe-tab[data-tab="' + id + '"]')
+        ? id
+        : fallback;
+      if (target) activateRecipeTab(target);
+    });
+  }
 
   document.querySelectorAll('.recipe-card-header').forEach((header) => {
     header.addEventListener('click', () => {

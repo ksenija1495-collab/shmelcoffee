@@ -1,9 +1,11 @@
 ---
 export const prerender = true;
 import Layout from '../layouts/Layout.astro';
+import Nav from '../components/Nav.astro';
 ---
 
 <Layout title="Моя чашка — Shmelco" description="Карточка дегустации кофe">
+  <Nav />
   <div class="cupcard-page" id="cupPage">
     <div class="cupcard-loading" id="cupLoading">
       <div class="loader-spinner"></div>
@@ -159,7 +161,12 @@ import Layout from '../layouts/Layout.astro';
     color: var(--text); margin-bottom: 2px;
   }
   .cupcard-recipe-t { font-size: .72rem; color: var(--text-dim); line-height: 1.4; }
-  .cupcard-recipe-rows { display: none; }
+  .cupcard-recipe-rows { display: grid; gap: 4px; margin-top: 6px; }
+  .cupcard-recipe-row {
+    display: flex; justify-content: space-between; gap: 10px; font-size: .68rem; line-height: 1.35;
+  }
+  .cupcard-recipe-row span:first-child { color: var(--text-muted); flex-shrink: 0; }
+  .cupcard-recipe-row span:last-child { text-align: right; font-weight: 600; color: var(--text); }
   .cupcard-chars {
     margin: 0 12px 6px; padding: 6px 10px; border-radius: 10px;
     background: rgba(168,124,79,.06); border: 1px solid rgba(168,124,79,.12);
@@ -202,7 +209,7 @@ import Layout from '../layouts/Layout.astro';
     .cupcard-origin-compact { gap: 4px 10px; margin-bottom: 4px; }
     .cupcard-origin-item { font-size: .68rem; }
     .cupcard-wheel { transform: scale(.92); transform-origin: center top; margin-bottom: -8px; }
-    .cupcard-chars { display: none; }
+    .cupcard-chars { font-size: .6rem; padding: 4px 8px; margin: 0 8px 4px; }
     .cupcard-notes-block { padding: 6px 10px 8px; }
     .cupcard-recipe { margin: 0 8px 8px; padding: 8px 10px; }
     .cupcard-foot { padding: 6px 10px 9px; }
@@ -246,10 +253,15 @@ import Layout from '../layouts/Layout.astro';
         await navigator.share({ title: title + ' — Shmelco', text: 'Моя дегустация кофe', url });
         return;
       }
-    } catch (e) { /* cancelled */ }
-    await navigator.clipboard.writeText(url);
-    const msg = document.getElementById('cupMsg');
-    if (msg) { msg.textContent = 'Ссылка скопирована'; setTimeout(() => { msg.textContent = ''; }, 2500); }
+    } catch (e) { /* cancelled or unsupported */ }
+    try {
+      await navigator.clipboard.writeText(url);
+      const msg = document.getElementById('cupMsg');
+      if (msg) { msg.textContent = 'Ссылка скопирована'; setTimeout(() => { msg.textContent = ''; }, 2500); }
+    } catch (e) {
+      const msg = document.getElementById('cupMsg');
+      if (msg) msg.textContent = 'Не удалось скопировать — скопируй URL из адресной строки';
+    }
   }
 
   async function saveCupToMyRecipes(cup: any) {
@@ -323,6 +335,11 @@ import Layout from '../layouts/Layout.astro';
       </div>` : '';
 
     const brewLine = [cup.brew_method ? `☕ ${cup.brew_method}` : '', recipeShort].filter(Boolean).join(' · ');
+    const recipeRowsHtml = recipeLines.length
+      ? `<div class="cupcard-recipe-rows">${recipeLines.map((l) =>
+          `<div class="cupcard-recipe-row"><span>${esc(l.label)}</span><span>${esc(l.value)}</span></div>`
+        ).join('')}</div>`
+      : '';
 
     page.innerHTML = `
       <div class="cupcard-wrap">
@@ -342,6 +359,7 @@ import Layout from '../layouts/Layout.astro';
             <div class="cupcard-recipe">
               <div class="cupcard-recipe-h">Заваривание</div>
               ${brewLine ? `<div class="cupcard-recipe-t">${esc(brewLine)}</div>` : ''}
+              ${recipeRowsHtml}
             </div>` : ''}
           ${cup.comment ? `<div class="cupcard-comment">«${esc(cup.comment)}»</div>` : ''}
           <div class="cupcard-foot">

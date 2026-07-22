@@ -12,7 +12,7 @@ const PRODAMUS_URL = import.meta.env.PUBLIC_PRODAMUS_URL || '';
 <Layout title="Диагностика вкуса — Shmelco">
   <Nav />
   <div class="container">
-    <div class="section-anchor" style="padding-top:72px">
+    <div class="section-anchor quiz-page-wrap" style="padding-top:72px">
       <div class="quiz-progress" id="quizProgress"></div>
       <div class="quiz-card" id="quizCard"></div>
     </div>
@@ -75,6 +75,9 @@ const PRODAMUS_URL = import.meta.env.PUBLIC_PRODAMUS_URL || '';
   .offramp-link:hover { border-color: var(--border-hover); color: var(--text); box-shadow: var(--shadow-hover); }
   .offramp-back { margin-top: 18px; font-size: .78rem; color: var(--text-muted); }
   .offramp-back a { color: var(--accent); text-decoration: none; font-weight: 600; cursor: pointer; }
+  .quiz-step-hint {
+    margin-top: 12px; font-size: .78rem; color: var(--accent-warm); text-align: center;
+  }
 
   .set-pref { display: grid; gap: 14px; margin: 16px 0; }
   .set-pref-group label {
@@ -353,10 +356,22 @@ function renderQuiz(card) {
   const prevBtn = document.getElementById('prevBtn');
   if (prevBtn) prevBtn.addEventListener('click', () => { state.step--; renderStep(); });
   document.getElementById('nextBtn').addEventListener('click', () => {
-    if (state.step===0 && state.answers.flavors.length===0) return;
-    if (state.step===1 && !state.answers.acidity) return;
-    if (state.step===2 && !state.answers.body) return;
-    if (state.step===3 && !state.answers.sweetness) return;
+    const hintEl = document.getElementById('quizStepHint');
+    const needHint = (msg) => {
+      let el = hintEl;
+      if (!el) {
+        el = document.createElement('p');
+        el.id = 'quizStepHint';
+        el.className = 'quiz-step-hint';
+        card.querySelector('.quiz-nav')?.before(el);
+      }
+      el.textContent = msg;
+    };
+    if (state.step===0 && state.answers.flavors.length===0) { needHint('Выберите от 1 до 3 вкусов'); return; }
+    if (state.step===1 && !state.answers.acidity) { needHint('Выберите уровень кислотности'); return; }
+    if (state.step===2 && !state.answers.body) { needHint('Выберите тело чашки'); return; }
+    if (state.step===3 && !state.answers.sweetness) { needHint('Выберите сладость'); return; }
+    document.getElementById('quizStepHint')?.replaceChildren();
     if (state.step < 3) { state.step++; renderStep(); }
     else { calcResults(); state.phase = 'results'; renderStep(); autoSaveProfileSilent(); }
   });
@@ -695,7 +710,7 @@ function renderSetOffer(card) {
   card.innerHTML = `
     <h3 class="quiz-question">Дегустационный сет под ваш профиль</h3>
     <p class="quiz-hint">Мы подберём зерно от российских обжарщиков, чтобы вы могли изучить вкусы ${state.topCountries.slice(0,3).map(k => DB[k].name).join(', ')} и сравнить их между собой</p>
-    <div class="benefits" style="margin: 18px 0; grid-template-columns: repeat(3, 1fr);">
+    <div class="benefits" style="margin: 18px 0;">
       <div class="benefit" style="cursor:default">
         <div class="benefit-icon">☕</div>
         <div class="benefit-title">Зерно под ваш вкус</div>

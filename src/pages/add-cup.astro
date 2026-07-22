@@ -327,6 +327,7 @@ import { DB, countryOrder } from '../data/countries';
   import { BEAN_VARIETIES } from '../data/varieties';
   import { applyRecipeToParams, decodePoursParam, normalizeRecipe, recipeHasData, parseGramsFromRatioText, type BrewPour } from '../lib/cupRecipe';
   import { normalizePour, pourHasData } from '../lib/brewPour';
+  import { brewMethodForForm } from '../lib/brewMethodMap';
   import { bindVarietyOther, readVarietyValue, setVarietyValue } from '../lib/beanVarietyField';
   import { tableHasColumn } from '../lib/supabaseSchema';
   import { bindBrewTimeInput, readBrewTimeInput, setBrewTimeInputValue } from '../lib/brewTime';
@@ -532,18 +533,34 @@ import { DB, countryOrder } from '../data/countries';
     if (hint) hint.style.display = data?.length ? 'none' : 'block';
   }
 
+  function clearRecipeForm() {
+    (document.getElementById('r_coffee_g') as HTMLInputElement).value = '';
+    (document.getElementById('r_water_g') as HTMLInputElement).value = '';
+    (document.getElementById('r_grind') as HTMLInputElement).value = '';
+    setGrinderValue(null);
+    (document.getElementById('r_temp') as HTMLInputElement).value = '';
+    setBrewTimeInputValue(document.getElementById('r_time') as HTMLInputElement, null);
+    setBloomOnForm(null);
+    setPourRows([]);
+    const hint = document.getElementById('recipeHint') as HTMLElement | null;
+    if (hint) hint.style.display = 'none';
+  }
+
   function applyRecipeToForm(recipeRaw: unknown, brewMethod?: string | null) {
-    if (brewMethod) setSelect('f_brew', brewMethod);
+    if (brewMethod) setSelect('f_brew', brewMethodForForm(brewMethod));
     const r = normalizeRecipe(recipeRaw);
-    if (!r) return;
+    if (!r) {
+      clearRecipeForm();
+      return;
+    }
     (document.getElementById('r_coffee_g') as HTMLInputElement).value = r.coffee_g ? String(r.coffee_g) : '';
     (document.getElementById('r_water_g') as HTMLInputElement).value = r.water_g ? String(r.water_g) : '';
     (document.getElementById('r_grind') as HTMLInputElement).value = r.grind || '';
     setGrinderValue(r.grinder);
     (document.getElementById('r_temp') as HTMLInputElement).value = r.temp || '';
     setBrewTimeInputValue(document.getElementById('r_time') as HTMLInputElement, r.time);
-    setBloomOnForm(r.blooming);
-    if (r.pours?.length) setPourRows(r.pours);
+    setBloomOnForm(r.blooming ?? null);
+    setPourRows(r.pours ?? []);
     (document.getElementById('recipeHint') as HTMLElement).style.display = 'block';
   }
 
@@ -556,6 +573,7 @@ import { DB, countryOrder } from '../data/countries';
   function selectMyRecipe(id: string | null) {
     selectedTemplateId = id;
     syncMyRecipeSelection();
+    if (!id) clearRecipeForm();
   }
 
   function renderMyRecipesPanel() {
@@ -772,7 +790,14 @@ import { DB, countryOrder } from '../data/countries';
   async function loadCupForEdit() {
     if (!editCupId) return;
     setEditModeUI();
-    const { data: cup, error } = await supabase.from('cups').select('*').eq('id', editCupId).maybeSingle();
+    const user = await guard();
+    if (!user) return;
+    const { data: cup, error } = await supabase
+      .from('cups')
+      .select('*')
+      .eq('id', editCupId)
+      .eq('user_id', user.id)
+      .maybeSingle();
     if (error || !cup) {
       alert('Чашка не найдена');
       window.location.href = '/account';

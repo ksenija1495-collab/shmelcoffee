@@ -1,5 +1,6 @@
 import { recipesData, type RecipeEntry } from './recipes';
 import type { BrewRecipe } from '../lib/cupRecipe';
+import { brewMethodForForm } from '../lib/brewMethodMap';
 
 export type ChampionPickerItem = {
   id: string;
@@ -45,7 +46,7 @@ export const CHAMPION_PICKER_ITEMS: ChampionPickerItem[] = Object.entries(recipe
       methodIcon: method.icon,
       title: r.title,
       badgeText: r.badgeText,
-      brewMethod: method.name === 'V60' ? 'V60' : method.name,
+      brewMethod: brewMethodForForm(method.name),
       recipe: entryToRecipe(r),
     })),
 );
