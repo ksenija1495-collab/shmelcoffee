@@ -77,4 +77,30 @@ if (errors.length) {
   console.error('QA FAILED:\n' + errors.map((e) => ' - ' + e).join('\n'));
   process.exit(1);
 }
+
+// Account zone: bottom nav must not use <nav> (conflicts with top nav CSS) and stay short
+{
+  const browser = await chromium.launch();
+  const ctx = await browser.newContext({ ...(viewports.find((v) => v.name === 'mobile')?.context || devices['iPhone 13']), javaScriptEnabled: false });
+  const page = await ctx.newPage();
+  await page.goto(base + '/account/', { waitUntil: 'load', timeout: 20000 });
+  const navBox = await page.evaluate(() => {
+    const el = document.querySelector('.mobile-acc-nav');
+    if (!el) return { missing: true };
+    const r = el.getBoundingClientRect();
+    return { tag: el.tagName, height: r.height, bottom: r.bottom, vh: window.innerHeight };
+  });
+  if (navBox.missing) errors.push('[mobile] /account/ missing .mobile-acc-nav (no-js)');
+  else {
+    if (navBox.tag === 'NAV') errors.push('[mobile] /account/ mobile-acc-nav must not be <nav>');
+    if (navBox.height > 120) errors.push(`[mobile] /account/ mobile nav too tall (${Math.round(navBox.height)}px)`);
+    if (navBox.bottom < navBox.vh - 4) errors.push('[mobile] /account/ mobile nav not pinned to bottom');
+  }
+  await browser.close();
+}
+
+if (errors.length) {
+  console.error('QA FAILED:\n' + errors.map((e) => ' - ' + e).join('\n'));
+  process.exit(1);
+}
 console.log('QA OK:', viewports.map((v) => v.name).join(', '), paths.length, 'pages each');

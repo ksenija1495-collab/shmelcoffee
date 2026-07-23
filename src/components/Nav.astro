@@ -3,7 +3,7 @@ const currentPath = Astro.url.pathname;
 const isActive = (path: string) => currentPath === path || currentPath.startsWith(path + '/');
 ---
 
-<nav>
+<nav class="site-nav">
   <div class="nav-inner">
     <a href="/" class="nav-logo">Shmelco · coffee guide</a>
     <ul class="nav-links">

@@ -28,8 +28,8 @@ body {
 }
 .container { max-width: 1000px; margin: 0 auto; padding: 0 24px; }
 
-/* Nav */
-nav {
+/* Nav — только верхняя шапка (.site-nav), не breadcrumb и не mobile-nav */
+.site-nav {
   position: fixed; top: 0; left: 0; right: 0; z-index: 100;
   background: rgba(248,247,237,.88); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
   border-bottom: 1px solid var(--border);
@@ -56,9 +56,12 @@ nav {
 .nav-links a.nav-cta:hover { background: var(--accent); color: #fff; }
 
 .mobile-nav {
-  display: none; position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+  display: none; position: fixed; top: auto; bottom: 0; left: 0; right: 0;
+  height: auto; min-height: 0; z-index: 100;
+  flex-direction: row; flex-wrap: nowrap;
   background: rgba(248,247,237,.95); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-  border-top: 1px solid var(--border); padding: 6px 8px 10px; gap: 4px;
+  border-top: 1px solid var(--border); border-bottom: none;
+  padding: 6px 8px calc(10px + env(safe-area-inset-bottom, 0px)); gap: 4px;
   justify-content: space-around; align-items: center;
 }
 .mobile-nav a {
