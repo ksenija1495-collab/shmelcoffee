@@ -222,6 +222,7 @@ import Nav from '../components/Nav.astro';
   import { balanceWheelSvg } from '../lib/cupBalanceWheel';
   import { cupRecipeLines, formatCupRecipeShort, normalizeRecipe, recipeHasData } from '../lib/cupRecipe';
   import { defaultSavedRecipeName } from '../lib/savedRecipesUi';
+  import { upsertSavedBrewRecipe } from '../lib/savedBrewRecipeApi';
   import { buildCupNoteTags } from '../lib/cupNoteDisplay';
   import { countryCardData } from '../lib/cupCountryCard';
   import { resolveRoaster } from '../lib/roasterResolve';
@@ -240,6 +241,17 @@ import Nav from '../components/Nav.astro';
 
   const esc = (s: unknown) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
   const asNotes = (n: unknown): string[] => Array.isArray(n) ? n.map(String) : n ? [String(n)] : [];
+
+  function anotherCupHref(cup: any) {
+    const q = new URLSearchParams();
+    if (cup.name) q.set('name', cup.name);
+    if (cup.roaster) q.set('roaster', cup.roaster);
+    if (cup.variety) q.set('variety', cup.variety);
+    if (cup.country) q.set('country', cup.country);
+    if (cup.process) q.set('process', cup.process);
+    if (cup.brew_method) q.set('brew', cup.brew_method);
+    return '/add-cup?' + q.toString();
+  }
 
   function showError(msg: string) {
     page.innerHTML = `<div class="cupcard-wrap"><div class="cupcard-loading"><p style="color:var(--accent-warm)">${esc(msg)}</p><a href="/account" class="btn btn-primary" style="display:inline-block;margin-top:16px;text-decoration:none">← В дневник</a></div></div>`;
@@ -275,17 +287,24 @@ import Nav from '../components/Nav.astro';
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     const msg = document.getElementById('cupMsg');
-    const { error } = await supabase.from('saved_brew_recipes').insert({
-      user_id: user.id,
+    const apiResult = await upsertSavedBrewRecipe(supabase, {
       name: name.trim(),
       brew_method: cup.brew_method || null,
       recipe,
     });
-    if (error) {
-      if (msg) msg.textContent = error.message.includes('saved_brew_recipes') ? 'Нужна миграция saved_brew_recipes в Supabase' : error.message;
+    if (!apiResult.ok) {
+      if (msg) {
+        msg.className = 'cupcard-msg error';
+        msg.textContent = apiResult.error?.includes('FIX-RUN-NOW') || apiResult.error?.includes('saved_brew_recipes')
+          ? 'Нужна миграция: supabase/FIX-RUN-NOW.sql в Supabase'
+          : apiResult.error || 'Не удалось сохранить';
+      }
       return;
     }
-    if (msg) msg.textContent = 'Сохранено в «Мои рецепты»';
+    if (msg) {
+      msg.className = 'cupcard-msg';
+      msg.textContent = 'Сохранено в «Мои рецепты»';
+    }
     setTimeout(() => { if (msg) msg.textContent = ''; }, 3000);
   }
 
@@ -369,7 +388,8 @@ import Nav from '../components/Nav.astro';
         </article>
 
         <div class="cupcard-actions">
-          ${isOwner ? `<a class="btn btn-primary" href="/add-cup?edit=${cup.id}" style="display:block;text-align:center;text-decoration:none">✏️ Редактировать</a>` : ''}
+          ${isOwner && isNew ? `<a class="btn btn-primary" href="${esc(anotherCupHref(cup))}" style="display:block;text-align:center;text-decoration:none">☕ Записать ещё одну чашку</a>` : ''}
+          ${isOwner ? `<a class="btn ${isNew ? 'btn-ghost' : 'btn-primary'}" href="/add-cup?edit=${cup.id}" style="display:block;text-align:center;text-decoration:none">✏️ Редактировать</a>` : ''}
           ${isOwner && (recipeShort || recipeLines.length) ? `<button type="button" class="btn btn-ghost" id="saveRecipeBtn" style="width:100%">⭐ В мои рецепты</button>` : ''}
           <button type="button" class="btn ${isOwner ? 'btn-ghost' : 'btn-primary'}" id="shareBtn">Поделиться карточкой</button>
           <a href="/account" class="btn btn-ghost" style="display:block;text-align:center;text-decoration:none;padding:11px">← В дневник</a>

@@ -60,8 +60,27 @@ create policy "Users see own guides" on guides
 create policy "Users see own notes" on tasting_notes
   for all using (auth.uid() = user_id);
 
--- Indexes
-create index idx_profiles_user on taste_profiles(user_id);
+-- Saved brew recipes (user's reusable templates)
+create table if not exists saved_brew_recipes (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  name text not null,
+  brew_method text,
+  recipe jsonb not null,
+  created_at timestamptz default now()
+);
+
+create index if not exists idx_saved_brew_recipes_user on saved_brew_recipes(user_id, created_at desc);
+
+alter table saved_brew_recipes enable row level security;
+
+create policy "sbr_select" on saved_brew_recipes for select using (auth.uid() = user_id);
+create policy "sbr_insert" on saved_brew_recipes for insert with check (auth.uid() = user_id);
+create policy "sbr_update" on saved_brew_recipes for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "sbr_delete" on saved_brew_recipes for delete using (auth.uid() = user_id);
+
+-- See also: supabase/FIX-RUN-NOW.sql for cups.brew_recipe_id, taste_character, RLS
+
 create index idx_selections_user on coffee_selections(user_id);
 create index idx_guides_user on guides(user_id);
 create index idx_guides_selection on guides(selection_id);

@@ -30,15 +30,20 @@ import { DB, countryOrder } from '../data/countries';
         </div>
         <label class="fl">Способ заваривания</label>
         <select id="f_brew"></select>
-        <div id="recipePicker" class="recipe-picker">
-          <label class="fl">Выбрать рецепт</label>
-          <p class="field-hint recipe-picker-hint">Приоритет — твои сохранённые. Чемпионские — по кнопке ниже.</p>
-          <div id="myRecipesPanel" class="my-recipes-panel"></div>
-          <button type="button" class="champ-recipes-toggle" id="toggleChampRecipes" aria-expanded="false">
-            🏆 Чемпионские рецепты
-          </button>
-          <div id="champRecipesPanel" class="champ-recipes-panel" hidden></div>
-        </div>
+        <details class="recipe-picker" id="recipePicker">
+          <summary class="recipe-picker-summary">Выбрать рецепт</summary>
+          <div class="recipe-picker-body">
+            <p class="field-hint recipe-picker-hint">Сначала свои сохранённые — чемпионские раскрываются отдельно.</p>
+            <details class="my-recipes-details" id="myRecipesDetails">
+              <summary class="my-recipes-summary"><span id="myRecipesSummaryLabel">📋 Мои рецепты</span></summary>
+              <div id="myRecipesPanel" class="my-recipes-panel"></div>
+            </details>
+            <details class="champ-recipes-details" id="champRecipesDetails">
+              <summary class="champ-recipes-summary"><span class="champ-recipes-toggle-label">🏆 Чемпионские рецепты</span></summary>
+              <div id="champRecipesPanel" class="champ-recipes-panel"></div>
+            </details>
+          </div>
+        </details>
         <label class="fl">Рецепт — как ты заваривал</label>
         <div class="recipe-grid">
           <input type="number" id="r_coffee_g" inputmode="decimal" min="0" step="0.1" placeholder="Зерно, г (напр. 15)"/>
@@ -73,7 +78,7 @@ import { DB, countryOrder } from '../data/countries';
           <button type="button" class="recipe-act-btn" id="brewAgainBtn">+ Заварить так же</button>
         </div>
         <label class="fl">Баланс вкуса</label>
-        <p class="balance-hint">Слайдер — насколько сильно. Под ним — характер: выбери тип из вариантов.</p>
+        <p class="balance-hint">Слайдер — насколько сильно. Под ним — характер: можно выбрать несколько типов.</p>
         <div id="tasteSection"></div>
         <label class="fl">Вкус и ароматы — что чувствуешь в чашке</label>
         <p class="note-cat-hint">Колесо вкусов — нажми сектор или выбери подсказку в списке ниже</p>
@@ -182,9 +187,23 @@ import { DB, countryOrder } from '../data/countries';
   .note-custom-add:hover { border-color: var(--accent); background: rgba(168,124,79,.06); }
   .template-row { margin-bottom: 4px; }
   .template-hint { font-size: .72rem; color: var(--text-muted); margin-top: 4px; line-height: 1.4; }
-  .recipe-picker { margin: 4px 0 12px; }
-  .recipe-picker-hint { margin: -2px 0 10px; }
-  .my-recipes-panel { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+  .recipe-picker { margin: 4px 0 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg); overflow: hidden; }
+  .recipe-picker-summary, .my-recipes-summary, .champ-recipes-summary {
+    padding: 11px 14px; font-size: .82rem; font-weight: 700; color: var(--text); cursor: pointer;
+    list-style: none; user-select: none; display: flex; align-items: center; justify-content: space-between;
+  }
+  .recipe-picker-summary::-webkit-details-marker, .my-recipes-summary::-webkit-details-marker, .champ-recipes-summary::-webkit-details-marker { display: none; }
+  .recipe-picker-summary::after, .my-recipes-summary::after, .champ-recipes-summary::after {
+    content: '▼'; font-size: .62rem; opacity: .55; transition: transform .2s;
+  }
+  .recipe-picker[open] > .recipe-picker-summary::after,
+  .my-recipes-details[open] > .my-recipes-summary::after,
+  .champ-recipes-details[open] > .champ-recipes-summary::after { transform: rotate(180deg); }
+  .recipe-picker-body { padding: 0 14px 14px; }
+  .recipe-picker-hint { margin: 0 0 10px; }
+  .my-recipes-details, .champ-recipes-details { margin-bottom: 10px; border: 1px dashed var(--border); border-radius: 10px; overflow: hidden; }
+  .my-recipes-summary, .champ-recipes-summary { font-size: .78rem; font-weight: 600; color: var(--text-dim); padding: 9px 12px; background: var(--surface); }
+  .my-recipes-panel, .champ-recipes-panel { display: flex; flex-direction: column; gap: 8px; padding: 0 10px 10px; }
   .my-recipes-empty {
     padding: 12px 14px; border-radius: 10px; border: 1px dashed var(--border);
     font-size: .76rem; color: var(--text-muted); line-height: 1.45;
@@ -198,14 +217,8 @@ import { DB, countryOrder } from '../data/countries';
   .my-recipe-card.on { border-color: var(--text); background: rgba(168,124,79,.08); box-shadow: inset 0 0 0 1px var(--text); }
   .my-recipe-card-h { font-size: .82rem; font-weight: 700; color: var(--text); }
   .my-recipe-card-sub { font-size: .7rem; color: var(--text-muted); margin-top: 3px; line-height: 1.35; }
-  .champ-recipes-toggle {
-    width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px dashed var(--border);
-    background: none; color: var(--text-dim); font-size: .78rem; font-weight: 600; cursor: pointer;
-    font-family: 'Inter', sans-serif; text-align: left;
-  }
-  .champ-recipes-toggle:hover { border-color: var(--accent); color: var(--accent); }
-  .champ-recipes-toggle[aria-expanded="true"] { border-style: solid; border-color: var(--border); background: var(--surface-2); }
-  .champ-recipes-panel { margin-top: 8px; display: flex; flex-direction: column; gap: 8px; }
+  .champ-recipes-empty { font-size: .76rem; color: var(--text-muted); line-height: 1.45; padding: 8px 2px; }
+  .champ-recipes-empty a { color: var(--accent); font-weight: 600; }
   .champ-pick-card {
     display: block; width: 100%; text-align: left; padding: 10px 12px; border-radius: 10px;
     border: 1px solid var(--border); background: var(--surface); cursor: pointer; transition: .12s;
@@ -332,9 +345,11 @@ import { DB, countryOrder } from '../data/countries';
   import { tableHasColumn } from '../lib/supabaseSchema';
   import { bindBrewTimeInput, readBrewTimeInput, setBrewTimeInputValue } from '../lib/brewTime';
   import { TASTE_CHARACTER, TASTE_CHARACTER_DIMS } from '../data/tasteCharacter';
-  import { normalizeTasteCharacter, type TasteCharacter } from '../lib/tasteCharacter';
+  import { normalizeTasteCharacter, tasteCharPresets, type TasteCharacter } from '../lib/tasteCharacter';
+  import { fetchSavedBrewRecipes, upsertSavedBrewRecipe } from '../lib/savedBrewRecipeApi';
   import { countryNameForKey, resolveCountryKey } from '../lib/countryResolve';
   import { initNoteWheelPicker, syncNoteWheelSelection } from '../lib/flavorWheelPicker';
+  import { PROCESS_OPTIONS } from '../data/processing';
   import { CHAMPION_PICKER_ITEMS } from '../data/championRecipePicker';
   import { defaultSavedRecipeName, savedRecipeSummary } from '../lib/savedRecipesUi';
 
@@ -344,7 +359,7 @@ import { DB, countryOrder } from '../data/countries';
     { auth: { flowType: 'implicit' } }
   );
 
-  const PROCESSES = ['Мытая (Washed)','Натуральная (Natural)','Хани (Honey)','Анаэробная','Carbonic maceration','Wet-hulled','Другая'];
+  const PROCESSES = PROCESS_OPTIONS;
   const BREWS = ['V60','Hario Switch','Kalita','Chemex','Aeropress','Френч-пресс','Гейзерная','Турка','Эспрессо','Капсулы','Cold Brew','Другое'];
   const SLIDERS = [['acidity','Кислотность'],['sweetness','Сладость'],['bitterness','Горечь'],['body','Тело']];
 
@@ -548,6 +563,7 @@ import { DB, countryOrder } from '../data/countries';
 
   function applyRecipeToForm(recipeRaw: unknown, brewMethod?: string | null) {
     if (brewMethod) setSelect('f_brew', brewMethodForForm(brewMethod));
+    updateChampToggleLabel();
     const r = normalizeRecipe(recipeRaw);
     if (!r) {
       clearRecipeForm();
@@ -576,10 +592,23 @@ import { DB, countryOrder } from '../data/countries';
     if (!id) clearRecipeForm();
   }
 
+  function updateMyRecipesSummaryLabel() {
+    const label = document.getElementById('myRecipesSummaryLabel');
+    if (!label) return;
+    if (!recipesTableOk) {
+      label.textContent = '📋 Мои рецепты — нужна миграция';
+      return;
+    }
+    label.textContent = savedRecipesCache.length
+      ? `📋 Мои рецепты (${savedRecipesCache.length})`
+      : '📋 Мои рецепты — пока пусто';
+  }
+
   function renderMyRecipesPanel() {
     const panel = document.getElementById('myRecipesPanel')!;
+    updateMyRecipesSummaryLabel();
     if (!recipesTableOk) {
-      panel.innerHTML = '<div class="my-recipes-empty">Мои рецепты недоступны — попроси админа выполнить migration-saved-brew-recipes.sql в Supabase.</div>';
+      panel.innerHTML = '<div class="my-recipes-empty">Мои рецепты недоступны — выполни supabase/FIX-RUN-NOW.sql в Supabase SQL Editor.</div>';
       return;
     }
     if (!savedRecipesCache.length) {
@@ -607,9 +636,35 @@ import { DB, countryOrder } from '../data/countries';
     });
   }
 
+  function getChampItemsForBrew() {
+    const brew = (document.getElementById('f_brew') as HTMLSelectElement)?.value || '';
+    if (!brew) return CHAMPION_PICKER_ITEMS;
+    return CHAMPION_PICKER_ITEMS.filter((item) => item.brewMethod === brew);
+  }
+
+  function updateChampToggleLabel() {
+    const label = document.querySelector('.champ-recipes-toggle-label');
+    const brew = (document.getElementById('f_brew') as HTMLSelectElement)?.value || '';
+    const count = getChampItemsForBrew().length;
+    if (!label) return;
+    label.textContent = brew
+      ? `🏆 Чемпионские · ${brew} (${count})`
+      : `🏆 Чемпионские рецепты (${count})`;
+  }
+
+  function closeChampRecipes() {
+    const d = document.getElementById('champRecipesDetails') as HTMLDetailsElement | null;
+    if (d) d.open = false;
+  }
+
   function renderChampRecipesPanel() {
     const panel = document.getElementById('champRecipesPanel')!;
-    panel.innerHTML = CHAMPION_PICKER_ITEMS.map((item) =>
+    const items = getChampItemsForBrew();
+    if (!items.length) {
+      panel.innerHTML = `<p class="champ-recipes-empty">Для этого способа пока нет готовых схем — выбери другой метод или открой <a href="/blog/chempionskie-recepty">банк рецептов</a>.</p>`;
+      return;
+    }
+    panel.innerHTML = items.map((item) =>
       `<button type="button" class="champ-pick-card" data-champ-id="${escNote(item.id)}">
         <div class="champ-pick-badge">${escNote(item.methodIcon)} ${escNote(item.badgeText)} · ${escNote(item.methodName)}</div>
         <div class="champ-pick-title">${escNote(item.title)}</div>
@@ -617,16 +672,11 @@ import { DB, countryOrder } from '../data/countries';
     ).join('');
     panel.querySelectorAll('.champ-pick-card').forEach((btn) => {
       btn.addEventListener('click', () => {
-        const item = CHAMPION_PICKER_ITEMS.find((x) => x.id === (btn as HTMLElement).dataset.champId);
+        const item = items.find((x) => x.id === (btn as HTMLElement).dataset.champId);
         if (!item) return;
         selectMyRecipe(null);
         applyRecipeToForm(item.recipe, item.brewMethod);
-        const toggle = document.getElementById('toggleChampRecipes') as HTMLButtonElement;
-        const champPanel = document.getElementById('champRecipesPanel') as HTMLElement;
-        if (toggle && champPanel) {
-          toggle.setAttribute('aria-expanded', 'false');
-          champPanel.hidden = true;
-        }
+        closeChampRecipes();
       });
     });
   }
@@ -634,18 +684,13 @@ import { DB, countryOrder } from '../data/countries';
   async function loadSavedRecipes() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
-    const { error: tableErr } = await supabase.from('saved_brew_recipes').select('id').limit(0);
-    recipesTableOk = !tableErr;
-    if (tableErr) {
+    const result = await fetchSavedBrewRecipes(supabase);
+    recipesTableOk = result.error !== 'migration_required';
+    if (!result.ok) {
       renderMyRecipesPanel();
       return;
     }
-    const { data } = await supabase
-      .from('saved_brew_recipes')
-      .select('id,name,brew_method,recipe')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
-    savedRecipesCache = data || [];
+    savedRecipesCache = result.recipes;
     renderMyRecipesPanel();
     if (!editCupId && selectedTemplateId && savedRecipesCache.some((t) => t.id === selectedTemplateId)) {
       const t = savedRecipesCache.find((x) => x.id === selectedTemplateId);
@@ -687,7 +732,7 @@ import { DB, countryOrder } from '../data/countries';
       return;
     }
     if (!recipesTableOk) {
-      alert('Таблица «мои рецепты» ещё не создана в базе. Нужен migration-saved-brew-recipes.sql в Supabase.');
+      alert('Таблица «мои рецепты» ещё не создана. Выполни supabase/FIX-RUN-NOW.sql в Supabase SQL Editor.');
       return;
     }
     const brew = (document.getElementById('f_brew') as HTMLSelectElement).value;
@@ -705,17 +750,24 @@ import { DB, countryOrder } from '../data/countries';
       recipe,
     };
 
-    if (selectedTemplateId && selected && confirm(`Обновить рецепт «${selected.name}»? (Отмена — сохранить как новый)`)) {
-      const { error } = await supabase.from('saved_brew_recipes').update(payload).eq('id', selectedTemplateId).eq('user_id', user.id);
-      if (error) { msg.className = 'addcup-msg error'; msg.textContent = 'Ошибка: ' + error.message; return; }
+    const doUpdate = selectedTemplateId && selected && confirm(`Обновить рецепт «${selected.name}»? (Отмена — сохранить как новый)`);
+    const apiResult = await upsertSavedBrewRecipe(supabase, payload, doUpdate ? selectedTemplateId : null);
+    if (!apiResult.ok) {
+      msg.className = 'addcup-msg error';
+      msg.textContent = apiResult.error?.includes('saved_brew_recipes') || apiResult.error?.includes('FIX-RUN-NOW')
+        ? 'Нужна миграция: supabase/FIX-RUN-NOW.sql в Supabase'
+        : 'Ошибка: ' + (apiResult.error || 'не удалось сохранить');
+      return;
+    }
+    if (doUpdate) {
       msg.className = 'addcup-msg';
       msg.textContent = 'Рецепт обновлён';
     } else {
-      const { data, error } = await supabase.from('saved_brew_recipes').insert({ ...payload, user_id: user.id }).select('id').single();
-      if (error) { msg.className = 'addcup-msg error'; msg.textContent = 'Ошибка: ' + error.message; return; }
-      selectMyRecipe(data.id);
+      selectMyRecipe(apiResult.id!);
       msg.className = 'addcup-msg';
       msg.textContent = 'Сохранено в «Мои рецепты»';
+      const myDetails = document.getElementById('myRecipesDetails') as HTMLDetailsElement | null;
+      if (myDetails) myDetails.open = true;
     }
     await loadSavedRecipes();
   }
@@ -734,14 +786,15 @@ import { DB, countryOrder } from '../data/countries';
   function bindRecipeActions() {
     document.getElementById('saveBaseRecipeBtn')!.addEventListener('click', saveBaseRecipeFromForm);
     document.getElementById('brewAgainBtn')!.addEventListener('click', brewAgainFromForm);
-    document.getElementById('toggleChampRecipes')!.addEventListener('click', () => {
-      const btn = document.getElementById('toggleChampRecipes') as HTMLButtonElement;
-      const panel = document.getElementById('champRecipesPanel') as HTMLElement;
-      const open = btn.getAttribute('aria-expanded') !== 'true';
-      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
-      panel.hidden = !open;
+    const champDetails = document.getElementById('champRecipesDetails') as HTMLDetailsElement;
+    champDetails.addEventListener('toggle', () => {
+      if (champDetails.open) renderChampRecipesPanel();
     });
-    renderChampRecipesPanel();
+    updateChampToggleLabel();
+    document.getElementById('f_brew')!.addEventListener('change', () => {
+      updateChampToggleLabel();
+      if (champDetails.open) renderChampRecipesPanel();
+    });
   }
 
   function setEditModeUI() {
@@ -853,9 +906,9 @@ import { DB, countryOrder } from '../data/countries';
 
   function syncTasteCharChips() {
     TASTE_CHARACTER_DIMS.forEach((dim) => {
-      const preset = sel.tasteChar[dim]?.preset;
+      const active = tasteCharPresets(sel.tasteChar[dim]);
       document.querySelectorAll(`.char-chip[data-dim="${dim}"]`).forEach((ch) => {
-        ch.classList.toggle('on', preset === (ch as HTMLElement).dataset.id);
+        ch.classList.toggle('on', active.includes((ch as HTMLElement).dataset.id!));
       });
     });
   }
@@ -868,8 +921,8 @@ import { DB, countryOrder } from '../data/countries';
   function readTasteCharacterFromForm(): TasteCharacter | null {
     const out: TasteCharacter = {};
     TASTE_CHARACTER_DIMS.forEach((dim) => {
-      const preset = sel.tasteChar[dim]?.preset || null;
-      if (preset && preset !== 'none') out[dim] = { preset, custom: null };
+      const presets = tasteCharPresets(sel.tasteChar[dim]);
+      if (presets.length) out[dim] = { presets, custom: null };
     });
     return Object.keys(out).length ? out : null;
   }
@@ -886,7 +939,7 @@ import { DB, countryOrder } from '../data/countries';
         <input type="range" min="0" max="5" value="${sel[dim]}" data-k="${dim}" aria-label="${escNote(cfg.label)}">
         <div class="char-block">
           <div class="char-block-h">Характер — ${escNote(cfg.label.toLowerCase())}</div>
-          <div class="char-block-sub">${escNote(cfg.hint)}</div>
+          <div class="char-block-sub">${escNote(cfg.hint)} Можно несколько.</div>
           <div class="char-chips">${chips}</div>
         </div>
       </div>`;
@@ -912,13 +965,13 @@ import { DB, countryOrder } from '../data/countries';
       e.preventDefault();
       const dim = chip.dataset.dim as keyof TasteCharacter;
       const id = chip.dataset.id!;
-      const cur = sel.tasteChar[dim]?.preset;
-      if (cur === id) {
+      if (id === 'none') {
         delete sel.tasteChar[dim];
-      } else if (id === 'none') {
-        sel.tasteChar[dim] = { preset: 'none', custom: null };
       } else {
-        sel.tasteChar[dim] = { preset: id, custom: null };
+        const active = tasteCharPresets(sel.tasteChar[dim]);
+        const next = active.includes(id) ? active.filter((x) => x !== id) : [...active, id];
+        if (next.length) sel.tasteChar[dim] = { presets: next, custom: null };
+        else delete sel.tasteChar[dim];
       }
       syncTasteCharChips();
     });
@@ -948,6 +1001,18 @@ import { DB, countryOrder } from '../data/countries';
       }
       addNote(canonical || note);
     });
+  }
+
+  function maybeOpenRecipePickerFromParams() {
+    const g = (k: string) => params.get(k) || '';
+    const hasRecipe = Boolean(
+      g('coffee_g') || g('water_g') || g('ratio') || g('grind') || g('temp') || g('time')
+      || g('pours') || g('pour1') || g('template'),
+    );
+    if (hasRecipe) {
+      const picker = document.getElementById('recipePicker') as HTMLDetailsElement | null;
+      if (picker) picker.open = true;
+    }
   }
 
   function prefill(){
@@ -992,6 +1057,7 @@ import { DB, countryOrder } from '../data/countries';
       (document.getElementById('recipeHint') as HTMLElement).style.display = 'block';
     }
     if (g('notes')) prefillNotesFromParam(g('notes'));
+    maybeOpenRecipePickerFromParams();
     if (g('from') === 'guide') {
       const country = g('country'), variety = g('variety'), process = g('process'), brew = g('brew'), focus = g('focus'), notes = g('notes');
       const chips: string[] = [];
@@ -1051,9 +1117,8 @@ import { DB, countryOrder } from '../data/countries';
     if (await tableHasColumn(supabase, 'cups', 'brew_recipe_id')) {
       payload.brew_recipe_id = selectedTemplateId || null;
     }
-    const tasteCharacter = readTasteCharacterFromForm();
-    if (tasteCharacter && await tableHasColumn(supabase, 'cups', 'taste_character')) {
-      payload.taste_character = tasteCharacter;
+    if (await tableHasColumn(supabase, 'cups', 'taste_character')) {
+      payload.taste_character = readTasteCharacterFromForm();
     }
     if (editCupId) {
       const { error } = await supabase.from('cups').update(payload).eq('id', editCupId).eq('user_id', user.id);

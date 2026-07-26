@@ -76,6 +76,7 @@ import { DB, countryOrder } from '../data/countries';
   import { DB, countryOrder } from '../data/countries';
   import { BEAN_VARIETIES } from '../data/varieties';
   import { bindVarietyOther, readVarietyValue } from '../lib/beanVarietyField';
+  import { PROCESS_OPTIONS } from '../data/processing';
 
   const supabase = createClient(
     import.meta.env.PUBLIC_SUPABASE_URL,
@@ -83,7 +84,7 @@ import { DB, countryOrder } from '../data/countries';
     { auth: { flowType: 'implicit' } }
   );
 
-  const PROCESSES = ['Мытая (Washed)','Натуральная (Natural)','Хани (Honey)','Анаэробная','Carbonic maceration','Wet-hulled','Другая'];
+  const PROCESSES = PROCESS_OPTIONS;
   const CATEGORIES = ['Воронка','Кофемолка','Весы','Чайник с тонким носиком','Эспрессо-машина','Гейзерная','Френч-пресс','Аэропресс','Кемекс','Турка','Капсульная','Другое'];
   let kind = 'bean';
   let photoFile: File | null = null;
