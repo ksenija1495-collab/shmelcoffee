@@ -1,13 +1,17 @@
 ---
 import Analytics from '@vercel/analytics/astro';
+import { DEFAULT_OG_IMAGE, isNoindexPath, SITE_URL } from '../lib/seo';
 
 interface Props {
   title: string;
   description?: string;
   keywords?: string[];
   ogType?: string;
+  ogImage?: string;
   canonical?: string;
   noindex?: boolean;
+  publishedTime?: string;
+  modifiedTime?: string;
 }
 
 const {
@@ -15,13 +19,18 @@ const {
   description = 'Shmelco Coffee Guide — интерактивный гид по specialty кофе. Диагностика вкуса, подбор зерна, колесо вкусов.',
   keywords = [],
   ogType = 'website',
+  ogImage,
   canonical,
-  noindex = false,
+  noindex: noindexProp = false,
+  publishedTime,
+  modifiedTime,
 } = Astro.props;
 
-const siteUrl = 'https://shmelcoffee.com';
+const siteUrl = SITE_URL;
 const canonicalUrl = canonical || new URL(Astro.url.pathname, siteUrl).href;
+const ogImageUrl = ogImage || DEFAULT_OG_IMAGE;
 const path = Astro.url.pathname;
+const noindex = noindexProp || isNoindexPath(path);
 const isBlog = path === '/blog' || path.startsWith('/blog/');
 const isHome = path === '/';
 const isCountries = path === '/countries' || path.startsWith('/countries/');
@@ -60,11 +69,19 @@ const accountNavTab = (() => {
   <meta property="og:url" content={canonicalUrl}>
   <meta property="og:site_name" content="Shmelco Coffee Guide">
   <meta property="og:locale" content="ru_RU">
+  <meta property="og:image" content={ogImageUrl}>
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  {publishedTime && <meta property="article:published_time" content={publishedTime} />}
+  {modifiedTime && <meta property="article:modified_time" content={modifiedTime} />}
 
   <!-- Twitter -->
-  <meta name="twitter:card" content="summary">
+  <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content={title}>
   <meta name="twitter:description" content={description}>
+  <meta name="twitter:image" content={ogImageUrl}>
+
+  {isBlog && <link rel="alternate" type="application/rss+xml" title="Блог Shmelco Coffee" href={`${siteUrl}/rss.xml`} />}
 
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">

@@ -1,6 +1,7 @@
 ---
 import Layout from './Layout.astro';
 import Nav from '../components/Nav.astro';
+import { CLUSTER_SEO, ORG_SCHEMA, absoluteUrl } from '../lib/seo';
 
 interface Props {
   title: string;
@@ -10,36 +11,41 @@ interface Props {
   cluster: string;
   type: string;
   keywords: string[];
+  slug: string;
   readAlso?: { slug: string; title: string }[];
 }
 
-const { title, description, date, updatedDate, cluster, type, keywords, readAlso = [] } = Astro.props;
+const { title, description, date, updatedDate, cluster, type, keywords, slug, readAlso = [] } = Astro.props;
 const siteUrl = 'https://shmelcoffee.com';
-const canonicalUrl = new URL(Astro.url.pathname, siteUrl).href;
-
-const clusterNames: Record<string, { name: string; pillarSlug: string }> = {
-  C1: { name: 'Основы specialty coffee', pillarSlug: 'specialty-coffee' },
-  C2: { name: 'Методы заваривания', pillarSlug: 'metody-zavarivaniya' },
-  C3: { name: 'Кофейное зерно', pillarSlug: 'kofejnoe-zerno' },
-  C5: { name: 'Дегустация и вкус', pillarSlug: 'degustaciya-kofe' },
-};
-
-const clusterInfo = clusterNames[cluster] || { name: cluster, pillarSlug: '' };
+const canonicalUrl = absoluteUrl(`/blog/${slug}/`);
+const clusterInfo = CLUSTER_SEO[cluster] || { name: cluster, pillarSlug: '', ogImage: absoluteUrl('/og/blog.png') };
+const ogImage = clusterInfo.ogImage;
 const dateISO = date.toISOString();
-const updatedISO = updatedDate ? updatedDate.toISOString() : dateISO;
+const updatedISO = (updatedDate || date).toISOString();
 const dateDisplay = date.toLocaleDateString('ru-RU', { year: 'numeric', month: 'long', day: 'numeric' });
+const isPillar = type === 'pillar';
+const schemaType = isPillar ? 'Article' : 'BlogPosting';
 
 const schemaArticle = JSON.stringify({
   '@context': 'https://schema.org',
-  '@type': 'Article',
+  '@type': schemaType,
   headline: title,
   description,
+  url: canonicalUrl,
+  inLanguage: 'ru-RU',
   datePublished: dateISO,
   dateModified: updatedISO,
-  author: { '@type': 'Organization', name: 'Shmelco Coffee', url: siteUrl },
-  publisher: { '@type': 'Organization', name: 'Shmelco Coffee', url: siteUrl },
+  image: [ogImage],
+  author: ORG_SCHEMA,
+  publisher: ORG_SCHEMA,
   mainEntityOfPage: { '@type': 'WebPage', '@id': canonicalUrl },
   keywords: keywords.join(', '),
+  articleSection: clusterInfo.name,
+  isPartOf: {
+    '@type': 'WebSite',
+    name: 'Shmelco Coffee Guide',
+    url: siteUrl,
+  },
 });
 
 const schemaBreadcrumb = JSON.stringify({
@@ -54,7 +60,16 @@ const schemaBreadcrumb = JSON.stringify({
 });
 ---
 
-<Layout title={`${title} — Shmelco`} description={description} keywords={keywords} ogType="article" canonical={canonicalUrl}>
+<Layout
+  title={`${title} — Shmelco`}
+  description={description}
+  keywords={keywords}
+  ogType="article"
+  ogImage={ogImage}
+  canonical={canonicalUrl}
+  publishedTime={dateISO}
+  modifiedTime={updatedISO}
+>
   <Nav />
   <script type="application/ld+json" set:html={schemaArticle} />
   <script type="application/ld+json" set:html={schemaBreadcrumb} />
@@ -65,12 +80,21 @@ const schemaBreadcrumb = JSON.stringify({
         <a href="/">Главная</a> <span>›</span>
         <a href="/blog">Блог</a> <span>›</span>
         <a href={`/blog/${clusterInfo.pillarSlug}`}>{clusterInfo.name}</a>
+        {!isPillar && (
+          <>
+            <span>›</span>
+            <span class="breadcrumb-current">{title}</span>
+          </>
+        )}
       </nav>
 
       <h1>{title}</h1>
       <div class="blog-meta">
         <time datetime={dateISO}>{dateDisplay}</time>
-        {type === 'pillar' && <span class="blog-badge">Полный гид</span>}
+        {updatedDate && updatedDate.getTime() !== date.getTime() && (
+          <span class="blog-updated">обновлено {updatedDate.toLocaleDateString('ru-RU', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+        )}
+        {isPillar && <span class="blog-badge">Полный гид</span>}
       </div>
     </div>
 
@@ -80,7 +104,7 @@ const schemaBreadcrumb = JSON.stringify({
 
     {readAlso.length > 0 && (
       <aside class="read-also">
-        <h3>Читайте также</h3>
+        <h2 class="read-also-title">Читайте также</h2>
         <div class="read-also-grid">
           {readAlso.map(r => (
             <a href={`/blog/${r.slug}`} class="read-also-card">
@@ -113,21 +137,25 @@ const schemaBreadcrumb = JSON.stringify({
   }
   .breadcrumb a:hover { color: var(--accent); }
   .breadcrumb span { color: var(--border); }
+  .breadcrumb-current { color: var(--text-dim); }
 
   .blog-article h1 {
     font-family: 'Cormorant Garamond', Georgia, serif;
     font-size: 2rem; font-weight: 600; line-height: 1.2; margin-bottom: 10px;
   }
   .blog-meta {
-    display: flex; align-items: center; gap: 10px;
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
     font-size: .78rem; color: var(--text-muted);
   }
+  .blog-updated { color: var(--text-dim); }
   .blog-badge {
     padding: 2px 8px; border-radius: 4px; font-size: .68rem;
     background: var(--accent); color: #fff; font-weight: 600;
   }
 
   .blog-content { line-height: 1.75; font-size: .94rem; }
+  /* pillar posts duplicate H1 in markdown — hide it */
+  .blog-content > h1:first-child { display: none; }
   .blog-content h2 {
     font-family: 'Cormorant Garamond', Georgia, serif;
     font-size: 1.4rem; font-weight: 600; margin: 36px 0 14px;
@@ -196,7 +224,7 @@ const schemaBreadcrumb = JSON.stringify({
   .read-also {
     margin-top: 40px; padding-top: 24px; border-top: 1px solid var(--border);
   }
-  .read-also h3 {
+  .read-also-title {
     font-family: 'Cormorant Garamond', Georgia, serif;
     font-size: 1.15rem; font-weight: 600; margin-bottom: 14px;
   }

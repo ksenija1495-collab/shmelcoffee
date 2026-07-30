@@ -1,5 +1,13 @@
 User-agent: *
 Allow: /
 Disallow: /api/
+Disallow: /account
+Disallow: /add-cup
+Disallow: /add-shelf
+Disallow: /cup
+Disallow: /login
+Disallow: /auth/callback
+Disallow: /generate
+Disallow: /metrics
 
 Sitemap: https://shmelcoffee.com/sitemap-index.xml

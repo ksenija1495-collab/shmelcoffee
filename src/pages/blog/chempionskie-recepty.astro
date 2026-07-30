@@ -11,15 +11,58 @@ import {
   resolveRecipeTab,
 } from '../../lib/recipePageHelpers';
 
+import { absoluteUrl, ORG_SCHEMA } from '../../lib/seo';
+
 const activeTab = resolveRecipeTab(recipesData, Astro.url.searchParams);
+const pageUrl = absoluteUrl('/blog/chempionskie-recepty/');
+const ogImage = absoluteUrl('/og/recipes.png');
+
+const recipeItems = Object.entries(recipesData).flatMap(([methodKey, method]) =>
+  method.recipes.map((recipe, i) => ({
+    '@type': 'ListItem',
+    position: i + 1,
+    name: recipe.name,
+    url: `${pageUrl}?tab=${methodKey}`,
+  })),
+);
+
+const schemaPage = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'CollectionPage',
+  name: 'Банк чемпионских рецептов',
+  description: 'Рецепты чемпионов World Brewers Cup, AeroPress Championship и классика.',
+  url: pageUrl,
+  inLanguage: 'ru-RU',
+  publisher: ORG_SCHEMA,
+  mainEntity: {
+    '@type': 'ItemList',
+    name: 'Чемпионские рецепты кофе',
+    itemListElement: recipeItems.slice(0, 20),
+  },
+});
+
+const schemaBreadcrumb = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Главная', item: absoluteUrl('/') },
+    { '@type': 'ListItem', position: 2, name: 'Блог', item: absoluteUrl('/blog/') },
+    { '@type': 'ListItem', position: 3, name: 'Чемпионские рецепты', item: pageUrl },
+  ],
+});
 ---
 
 <Layout
   title="Банк чемпионских рецептов — Shmelco"
   description="Рецепты чемпионов World Brewers Cup, AeroPress Championship и классика — V60, Hario Switch, аэропресс, кемекс, эспрессо, турка."
-  keywords={['рецепт аэропресса', 'чемпионский рецепт кофе', 'V60 рецепт', 'Hario Switch рецепт', 'world brewers cup']}
+  keywords={['рецепт аэропресса', 'чемпионский рецепт кофе', 'V60 рецепт', 'Hario Switch рецепт', 'world brewers cup', 'рецепты завarивания кофе']}
+  ogType="article"
+  ogImage={ogImage}
+  canonical={pageUrl}
 >
   <Nav />
+  <script type="application/ld+json" set:html={schemaPage} />
+  <script type="application/ld+json" set:html={schemaBreadcrumb} />
   <div class="container champ-page">
     <a href="/blog" class="champ-back">← В блог</a>
     <nav class="champ-breadcrumb" aria-label="Навигация">

@@ -2,6 +2,7 @@
 import Layout from '../../layouts/Layout.astro';
 import Nav from '../../components/Nav.astro';
 import { getCollection } from 'astro:content';
+import { DEFAULT_OG_IMAGE, ORG_SCHEMA, SITE_URL, absoluteUrl } from '../../lib/seo';
 
 const posts = await getCollection('blog');
 
@@ -24,21 +25,37 @@ const clusterPosts = clusters.map(c => ({
 }));
 
 const totalPosts = posts.length;
+const blogUrl = absoluteUrl('/blog/');
 
 const schemaWebPage = JSON.stringify({
   '@context': 'https://schema.org',
   '@type': 'CollectionPage',
   name: 'Блог о кофе — Shmelco',
   description: 'Статьи о specialty кофе: от основ до дегустации. Разбор сортов, методов заваривания, обжарки.',
-  url: 'https://shmelcoffee.com/blog',
-  publisher: { '@type': 'Organization', name: 'Shmelco Coffee' },
+  url: blogUrl,
+  inLanguage: 'ru-RU',
+  publisher: ORG_SCHEMA,
+  mainEntity: {
+    '@type': 'ItemList',
+    numberOfItems: totalPosts,
+    itemListElement: posts
+      .sort((a, b) => b.data.date.getTime() - a.data.date.getTime())
+      .map((post, i) => ({
+        '@type': 'ListItem',
+        position: i + 1,
+        url: absoluteUrl(`/blog/${post.id}/`),
+        name: post.data.title,
+      })),
+  },
 });
 ---
 
 <Layout
   title="Блог о кофе — Shmelco"
-  description="Статьи о specialty кофе: от основ до дегустации. Разбор сортов, методов заваривания, обжарки и вкусовых профилей."
-  keywords={['блог о кофе', 'specialty coffee блог', 'статьи о кофе', 'гид по кофе']}
+  description="Статьи о specialty кофе: от основ до дегустации. Разбор сортов, методов завarивания, обжарки и вкусовых профилей."
+  keywords={['блог о кофе', 'specialty coffee блог', 'статьи о кофе', 'гид по кофе', 'как выбрать specialty кофе']}
+  ogImage={DEFAULT_OG_IMAGE}
+  canonical={blogUrl}
 >
   <Nav />
   <script type="application/ld+json" set:html={schemaWebPage} />
