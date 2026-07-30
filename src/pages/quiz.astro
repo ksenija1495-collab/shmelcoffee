@@ -876,6 +876,7 @@ function renderSetResults(card) {
 
     const countryCount = [...set].filter(s => s.coffee.country === c.country).length;
     if (countryCount >= 2) continue;
+    if (usedRoasters.has(c.roaster)) continue;
 
     set.push(item);
     usedCountries.add(c.country);
@@ -901,7 +902,7 @@ function renderSetResults(card) {
 
   const totalPrice = set.reduce((sum, s) => sum + s.coffee.price, 0);
 
-  const flags = {'Руанда':'🇷🇼','Колумбия':'🇨🇴','Эфиопия':'🇪🇹','Кения':'🇰🇪','Индонезия':'🇮🇩','Коста-Рика':'🇨🇷','Бразилия':'🇧🇷','Перу':'🇵🇪'};
+  const flags = {'Руанда':'🇷🇼','Колумбия':'🇨🇴','Эфиопия':'🇪🇹','Кения':'🇰🇪','Индонезия':'🇮🇩','Коста-Рика':'🇨🇷','Бразилия':'🇧🇷','Перу':'🇵🇪','Мексика':'🇲🇽'};
   const getFlag = (c) => flags[c] || '🌍';
 
   const getWhy = (item) => {

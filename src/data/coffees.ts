@@ -33,6 +33,41 @@ export const COFFEE_DB = [
   {name:'Эфиопия Леми',roaster:'Fauno Coffee',url:'https://fauno.coffee/classico/ethiopia-lemi',country:'Эфиопия',processing:'мытый',roast:'фильтр',format:'зерно',price:1090,notes:['цветы','цитрус','чай'],tags:['цветочный','лёгкий','цитрусовый'],acidity:4,sweetness:3,body:2},
   {name:'Перу Ла Коипа',roaster:'Fauno Coffee',url:'https://fauno.coffee/classico/peru-la-coipa',country:'Перу',processing:'мытый',roast:'фильтр',format:'зерно',price:790,notes:['шоколад','орехи','карамель'],tags:['шоколадный','ореховый','сладкий'],acidity:2,sweetness:4,body:4},
   {name:'Эфиопия Бенса Голба',roaster:'Fauno Coffee',url:'https://fauno.coffee/classico/ethiopia-bensa',country:'Эфиопия',processing:'натуральный',roast:'фильтр',format:'зерно',price:1140,notes:['ягоды','фрукты','цветы'],tags:['ягодный','цветочный','фруктовый'],acidity:4,sweetness:4,body:3},
+
+  // Tasty Coffee · Ижевsk · топ премии 2026
+  {name:'Кения Риакиберу',roaster:'Tasty Coffee',url:'https://shop.tastycoffee.ru/coffee/kenya-riakiberu',country:'Кения',processing:'мытый',roast:'фильтр',format:'зерно',price:749,notes:['грейпфрут','красная смородина','шиповник','какао'],tags:['ягодный','цитрусовый','яркий'],acidity:5,sweetness:3,body:3},
+  {name:'Батч-брю Африка',roaster:'Tasty Coffee',url:'https://shop.tastycoffee.ru/coffee/filter-moyale',country:'Кения',processing:'мытый + натуральный бленд',roast:'фильтр',format:'зерно',price:649,notes:['ягоды','цитрус','сладость','чёрный чай'],tags:['ягодный','сладкий','фруктовый'],acidity:4,sweetness:4,body:3},
+  {name:'Кения Рианьяги',roaster:'Tasty Coffee',url:'https://shop.tastycoffee.ru/coffee/kenya-rianyagi',country:'Кения',processing:'мытый',roast:'фильтр',format:'зерно',price:749,notes:['чёрная смородина','шиповник','лемонграсс','чёрный чай'],tags:['ягодный','цитрусовый','яркий'],acidity:5,sweetness:3,body:3},
+
+  // Submarine · Москва · топ-10 премии
+  {name:'Эфиопия Челбеса',roaster:'Submarine',url:'https://sbmrne.ru/katalog/kofe/filtr/eth-chel-filter/',country:'Эфиопия',processing:'мытый',roast:'фильтр',format:'зерно',price:840,notes:['персик','бергамот','тростниковый сахар'],tags:['фруктовый','цитрусовый','сладкий'],acidity:4,sweetness:4,body:3},
+  {name:'Батч Брю Эфиопия',roaster:'Submarine',url:'https://sbmrne.ru/katalog/kofe/filtr/bb-eth/',country:'Эфиопия',processing:'мытый',roast:'фильтр',format:'зерно',price:750,notes:['цветы','чёрный чай','бергамот'],tags:['цветочный','лёгкий','фруктовый'],acidity:4,sweetness:3,body:2},
+  {name:'Мексика Финка Ла Перла',roaster:'Submarine',url:'https://sbmrne.ru/katalog/kofe/filtr/',country:'Мексика',processing:'мытый',roast:'фильтр',format:'зерно',price:890,notes:['шоколад','орех','карамель','цитрус'],tags:['шоколадный','сладкий','ореховый'],acidity:2,sweetness:4,body:4},
+
+  // TAB · Новосибирsk · топ-5 премии
+  {name:'Эфиопия Гуджи',roaster:'TAB',url:'https://letstab.ru/catalog/kofe/dlya_filtra/monosorta_1/efiopiya_gudzhi/',country:'Эфиопия',processing:'мытый',roast:'фильтр',format:'зерно',price:850,notes:['абрикос','миндаль','мандарин','специи','курага'],tags:['фруктовый','сладкий','пряный'],acidity:4,sweetness:4,body:3},
+  {name:'Кения Тату Перископ',roaster:'TAB',url:'https://letstab.ru/catalog/kofe/dlya_filtra/mikroloty/keniya_tatu_periskop/',country:'Кения',processing:'мытый',roast:'фильтр',format:'зерно',price:950,notes:['черничный джем','брауни','вишня','тёмный виноград'],tags:['ягодный','сладкий','шоколадный'],acidity:3,sweetness:5,body:4},
+  {name:'Эфиопия Киленсо Мокониса',roaster:'TAB',url:'https://letstab.ru/catalog/kofe/dlya_filtra/mikroloty/efiopiya_kilenso_mokonisa/',country:'Эфиопия',processing:'мытый',roast:'фильтр',format:'зерно',price:880,notes:['клюква','красная слива','белый шоколад','апельсин'],tags:['ягодный','сладкий','цитрусовый'],acidity:4,sweetness:4,body:3},
+
+  // Триптих · Тамбov · #1 обязательный обжар
+  {name:'Батч-брю',roaster:'Triptych Coffee',url:'https://triptychcoffee.com/filtr/tproduct/382868022-788244068862-batch-bryu',country:'Колумбия',processing:'мытый бленд',roast:'фильтр',format:'зерно',price:800,notes:['яркий','сбалансированный','фрукты'],tags:['фруктовый','яркий','сладкий'],acidity:4,sweetness:3,body:3},
+  {name:'Эфиопия Амбелла',roaster:'Triptych Coffee',url:'https://triptychcoffee.com/filtr',country:'Эфиопия',processing:'мытый',roast:'фильтр',format:'зерно',price:820,notes:['цветы','бергамот','персик','чай'],tags:['цветочный','лёгкий','фруктовый'],acidity:4,sweetness:3,body:2},
+  {name:'Колумбия Карлос Плаза',roaster:'Triptych Coffee',url:'https://triptychcoffee.com/filtr',country:'Колумбия',processing:'мытый',roast:'фильтр',format:'зерно',price:870,notes:['красные ягоды','карамель','шоколад'],tags:['ягодный','сладкий','шоколадный'],acidity:3,sweetness:4,body:4},
+
+  // СОК Кофе · Тюмень · #1 финалист премии
+  {name:'Эфиопия Урага Эбела',roaster:'СОК Кофе',url:'https://sok.coffee/catalog/kofe/kofe_dlya_filtra/efiopiya_uraga_ebela/',country:'Эфиопия',processing:'мытый',roast:'фильтр',format:'зерно',price:720,notes:['спелые фрукты','цитрус','тёмный шоколад'],tags:['фруктовый','сладкий','шоколадный'],acidity:3,sweetness:4,body:4},
+  {name:'Кения Риара',roaster:'СОК Кофе',url:'https://sok.coffee/catalog/kofe/kofe_dlya_filtra/',country:'Кения',processing:'мытый',roast:'фильтр',format:'зерно',price:780,notes:['смородина','грейпфрут','чёрный чай'],tags:['ягодный','цитрусовый','яркий'],acidity:5,sweetness:3,body:3},
+  {name:'Эфиопия Белоя',roaster:'СОК Кофе',url:'https://sok.coffee/catalog/kofe/filter/prop_22-iz-efiopii/apply/',country:'Эфиопия',processing:'мытый',roast:'фильтр',format:'зерно',price:740,notes:['бергамот','жасмин','абрикос'],tags:['цветочный','фруктовый','лёгкий'],acidity:4,sweetness:3,body:2},
+
+  // Sibaristica · СПb
+  {name:'Эфиопия Beloya',roaster:'Sibaristica',url:'https://sibaristica.com/catalog/kofe/kofe-dlya-filtra/zernovoy-kofe-sibaristica-ethiopia-beloya-myt-efiopiya-myt-100-arabika-200-g_00002976/',country:'Эфиопия',processing:'мытый',roast:'фильтр',format:'зерно',price:740,notes:['курага','апельсин','цветы','сливочная карамель'],tags:['фруктовый','сладкий','цветочный'],acidity:3,sweetness:4,body:3},
+  {name:'Кения Ндуруту',roaster:'Sibaristica',url:'https://sibaristica.com/catalog/kofe/kofe-dlya-filtra/zernovoy-kofe-sibaristica-keniya-ndurutu-keniya-nat-aerob-100-arabika-200-g_00003301/',country:'Кения',processing:'натуральный, анаэробный',roast:'фильтр',format:'зерно',price:920,notes:['шелковица','вермут','крыжовник','меласса'],tags:['ягодный','сладкий','сложный'],acidity:4,sweetness:5,body:4},
+  {name:'Эфиопия Мар Коф Гуджи',roaster:'Sibaristica',url:'https://sibaristica.com/catalog/kofe/kofe-dlya-filtra/zernovoy-kofe-sibaristica-efiopiya-mar-kof-gudzhi-efiopiya-myt-100-arabika-200-g_00003546/',country:'Эфиопия',processing:'мытый',roast:'фильтр',format:'зерно',price:780,notes:['жасмин','апельсин','абрикос','тростниковый сахар'],tags:['цветочный','фруктовый','сладкий'],acidity:4,sweetness:4,body:3},
+
+  // KOF · Новосибирsk · чемпионы обжарки 2024
+  {name:'Эфиопия Банко Готити',roaster:'KOF',url:'https://kof.ru/',country:'Эфиопия',processing:'мытый',roast:'фильтр',format:'зерно',price:909,notes:['абрикос','жасмин','лимонная кислотность'],tags:['цветочный','фруктовый','яркий'],acidity:4,sweetness:3,body:2},
+  {name:'Колумбия Пакамара',roaster:'KOF',url:'https://kof.ru/',country:'Колумбия',processing:'мытый',roast:'фильтр',format:'зерно',price:899,notes:['красное вино','ягоды','шоколад'],tags:['ягодный','сложный','шоколадный'],acidity:3,sweetness:4,body:4},
+  {name:'Эфиопия Хало Хартуме',roaster:'KOF',url:'https://kof.ru/',country:'Эфиопия',processing:'натуральный',roast:'фильтр',format:'зерно',price:909,notes:['черника','манго','цветы','мёд'],tags:['фруктовый','сладкий','цветочный'],acidity:3,sweetness:5,body:3},
 ];
 
 export const PICKER_TASTE_MAP: Record<string, {label: string; tags: string[]}> = {
