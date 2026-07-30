@@ -114,26 +114,3 @@ readAlso: ["kofejnoe-zerno/strany-kofe", "kofejnoe-zerno", "specialty-coffee/s-c
 **Если пробуете specialty впервые** → Submarine Мексика La Perla или Kofeop Dukamo — профиль понятнее, чем агрессивная Кения.
 
 После покупки — [**запишите чашку**](/add-cup): страна откроется на [**карте**](/countries), прогресс — в [**кабинете**](/account?tab=disco).
-
----
-
-## Карусель для Instagram
-
-12 карточек — **PNG 1080×1350**, готовы к публикации:
-
-**Папка в проекте:** `public/roaster-award-carousel/`  
-**На сайте:** [shmelcoffee.com/roaster-award-carousel/](https://shmelcoffee.com/roaster-award-carousel/)
-
-| # | Файл |
-|---|------|
-| 1 | [00-cover.png](https://shmelcoffee.com/roaster-award-carousel/00-cover.png) |
-| 2–11 | `01-tasty-bolivia-caranavi.png` … `10-sok-kenya-riara.png` |
-| 12 | [11-cta.png](https://shmelcoffee.com/roaster-award-carousel/11-cta.png) |
-
-Перегенерация: `node scripts/generate-roaster-award-carousel.mjs` (SVG + PNG).
-
----
-
-## Источник
-
-[stereo.coffee/roaster-award](https://stereo.coffee/roaster-award/) — ТОП-25, фавориты Stereo, финалисты сезона 2025/2026.
