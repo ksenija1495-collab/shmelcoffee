@@ -285,7 +285,7 @@ import Nav from '../components/Nav.astro';
     if (preShelf) { const card = page.querySelector('.bean-card[data-bean="' + preShelf + '"]') as HTMLElement | null; if (card) card.click(); }
     else if (!beans.length) addManualEntry();
 
-    document.getElementById('buyBtn')?.addEventListener('click', () => { if (buyUrl) window.open(buyUrl, '_blank'); else alert('Оплата скоро будет доступна. Напишите в Telegram @ksenijashmel.'); });
+    document.getElementById('buyBtn')?.addEventListener('click', () => { if (buyUrl) window.open(buyUrl, '_blank'); else alert('Оплата не настроена (нет PUBLIC_PRODAMUS_URL). Напишите @ksenijashmel.'); });
 
     genBtn?.addEventListener('click', async () => {
       const beansArr: any[] = [];

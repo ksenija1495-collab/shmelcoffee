@@ -1,10 +1,16 @@
 import type { APIRoute } from 'astro';
 import { createClient } from '@supabase/supabase-js';
+import { prodamusSign, prodamusVerify } from '../../lib/prodamusHmac';
+import {
+  parseProdamusPayload,
+  prodamusPaymentFields,
+  prodamusSubmitPayload,
+} from '../../lib/prodamusParse';
 
 export const prerender = false;
 
 const PAID = ['success', 'paid', 'active', 'succeeded', 'completed'];
-const UNIT_PRICE = 99; // ₽ за 1 гид; пакеты кратны 99 → N кредитов
+const UNIT_PRICE = 99;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export const GET: APIRoute = async () =>
@@ -15,26 +21,13 @@ function str(v: unknown): string {
   return String(v).trim();
 }
 
-function parsePayload(raw: string, contentType: string): Record<string, unknown> {
-  if (contentType.includes('application/json')) {
-    try {
-      return JSON.parse(raw) as Record<string, unknown>;
-    } catch {
-      return {};
-    }
-  }
-  const flat: Record<string, unknown> = {};
-  new URLSearchParams(raw).forEach((v, k) => {
-    flat[k] = v;
-  });
-  return flat;
-}
-
-/** Prodamus: order_id в webhook — их ID; наш UUID — в order_num или customer_extra. */
 function resolveUserId(params: Record<string, unknown>): string {
-  for (const key of ['order_num', 'customer_extra', 'order_id']) {
-    const val = str(params[key]);
-    if (UUID_RE.test(val)) return val;
+  const buckets = [prodamusPaymentFields(params), params];
+  for (const src of buckets) {
+    for (const key of ['customer_extra', 'order_num']) {
+      const val = str(src[key]);
+      if (UUID_RE.test(val)) return val;
+    }
   }
   return '';
 }
@@ -56,22 +49,55 @@ async function findUserByEmail(
   return '';
 }
 
+function verifyProdamusRequest(
+  params: Record<string, unknown>,
+  secret: string,
+  receivedSign: string,
+  querySecret: string | null,
+): boolean {
+  if (receivedSign) {
+    const signPayload = prodamusSubmitPayload(params);
+    delete signPayload.sign;
+    delete signPayload.signature;
+    return prodamusVerify(signPayload, secret, receivedSign);
+  }
+  // Ручной ping / старый URL с ?secret= (Prodamus в notify его не добавляет)
+  return Boolean(querySecret && querySecret === secret);
+}
+
 export const POST: APIRoute = async ({ request, url }) => {
   const secret = import.meta.env.PRODAMUS_SECRET;
-  const provided = url.searchParams.get('secret');
-  if (!secret || provided !== secret) return new Response('forbidden', { status: 403 });
+  if (!secret) {
+    console.error('[prodamus-webhook] PRODAMUS_SECRET missing');
+    return new Response('misconfigured', { status: 500 });
+  }
 
   const contentType = request.headers.get('content-type') || '';
   const raw = await request.text();
-  const params = parsePayload(raw, contentType);
+  const params = parseProdamusPayload(raw, contentType);
+  const payment = prodamusPaymentFields(params);
 
-  const status = str(params.payment_status || params.status).toLowerCase();
+  const receivedSign =
+    request.headers.get('Sign') ||
+    request.headers.get('sign') ||
+    str(params.sign || params.signature);
+
+  if (!verifyProdamusRequest(params, secret, receivedSign, url.searchParams.get('secret'))) {
+    console.warn('[prodamus-webhook] forbidden', {
+      hasSign: Boolean(receivedSign),
+      hasSubmit: Boolean(params.submit),
+      keys: Object.keys(params).slice(0, 8),
+    });
+    return new Response('forbidden', { status: 403 });
+  }
+
+  const status = str(payment.payment_status || payment.status).toLowerCase();
   if (!PAID.includes(status)) return new Response('ignored', { status: 200 });
 
-  const prodamusOrderId = str(params.order_id);
-  const email = str(params.customer_email || params.email);
+  const prodamusOrderId = str(payment.order_id);
+  const email = str(payment.customer_email || payment.email || params.customer_email);
   const sum =
-    parseFloat(str(params.sum || params.order_sum || params.amount) || String(UNIT_PRICE)) ||
+    parseFloat(str(payment.sum || payment.order_sum || payment.amount) || String(UNIT_PRICE)) ||
     UNIT_PRICE;
   const credits = Math.max(1, Math.round(sum / UNIT_PRICE));
 

@@ -1,4 +1,4 @@
-/** Ссылка на оплату Prodamus с привязкой к пользователю (webhook читает customer_extra / order_num). */
+/** Ссылка на оплату Prodamus с привязкой к пользователю (webhook читает order_num / customer_extra). */
 export function buildProdamusBuyUrl(
   baseUrl: string,
   user: { id: string; email?: string | null },
@@ -6,11 +6,15 @@ export function buildProdamusBuyUrl(
 ): string {
   if (!baseUrl) return '';
   const origin = successOrigin || import.meta.env.SITE || 'https://shmelcoffee.com';
+  const base = origin.replace(/\/$/, '');
   const sep = baseUrl.includes('?') ? '&' : '?';
   const q = new URLSearchParams();
-  q.set('order_id', user.id);
+  // order_id — уникальный заказ магазина; order_num — стабильный id пользователя для webhook
+  q.set('order_id', crypto.randomUUID());
+  q.set('order_num', user.id);
   q.set('customer_extra', user.id);
-  q.set('customer_email', user.email || '');
-  q.set('urlSuccess', `${origin.replace(/\/$/, '')}/account?paid=1`);
+  if (user.email) q.set('customer_email', user.email);
+  q.set('urlSuccess', `${base}/account?paid=1`);
+  q.set('urlReturn', `${base}/account`);
   return baseUrl + sep + q.toString();
 }
