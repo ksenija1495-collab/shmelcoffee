@@ -54,10 +54,18 @@ const BASE_CSS = `
     border-radius: 36px;
     background: rgba(255,255,255,0.55);
     border: 2px solid #E4D0B9;
-    display: flex; flex-direction: column; align-items: center;
-    text-align: center;
-    padding: 48px 40px 56px;
+    display: flex; flex-direction: column;
+    padding: 48px 44px 40px;
+    overflow: hidden;
   }
+  .frame-main {
+    flex: 1;
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center;
+    text-align: center;
+    min-height: 0;
+  }
+  .frame-main.compact { justify-content: flex-start; padding-top: 8px; }
   .kicker {
     font-size: 22px; font-weight: 700; letter-spacing: 5px;
     color: #a87c4f; text-transform: uppercase; margin-bottom: 24px;
@@ -83,7 +91,7 @@ const BASE_CSS = `
     border: 1px solid rgba(168,124,79,0.35);
     font-size: 28px; font-weight: 600; color: #a87c4f;
   }
-  .hint { font-size: 26px; color: #7a5c48; margin-top: auto; padding-top: 32px; }
+  .hint { font-size: 26px; color: #7a5c48; margin-top: 36px; }
   .score-wrap {
     width: 116px; height: 116px; border-radius: 50%;
     border: 3px solid rgba(90,140,90,0.45);
@@ -104,19 +112,38 @@ const BASE_CSS = `
     margin-top: 28px; padding: 18px 48px; border-radius: 32px;
     background: #462918; color: #fffaf2; font-size: 28px; font-weight: 700;
   }
-  .footer {
-    position: absolute; left: 0; right: 0; bottom: 72px;
-    text-align: center; color: #a89080;
+  .frame-footer {
+    flex-shrink: 0;
+    margin-top: auto;
+    padding-top: 28px;
+    border-top: 1px solid rgba(168,124,79,0.22);
+    text-align: center;
   }
-  .footer-line { font-size: 26px; }
-  .footer-site { font-size: 24px; margin-top: 10px; }
-  .footer-num {
-    position: absolute; right: 72px; bottom: 48px;
-    font-size: 20px; color: #c9ad8e;
+  .footer-guide {
+    font-size: 20px; color: #a89080; letter-spacing: 0.4px;
   }
+  .footer-link {
+    font-size: 24px; color: #a87c4f; font-weight: 700;
+    margin-top: 8px; letter-spacing: 0.5px;
+  }
+  .footer-meta {
+    display: flex; align-items: center; justify-content: center;
+    gap: 20px;
+    margin-top: 16px;
+  }
+  .footer-dot {
+    width: 4px; height: 4px; border-radius: 50%;
+    background: #c9ad8e;
+  }
+  .footer-brand {
+    font-size: 17px; font-weight: 700; letter-spacing: 4px;
+    color: #c9ad8e; text-transform: uppercase;
+  }
+  .footer-num { font-size: 19px; color: #a89080; font-weight: 600; }
 `;
 
-function htmlShell(body, slideIndex, total) {
+function htmlShell(body, slideIndex, total, { compact = false } = {}) {
+  const mainClass = compact ? 'frame-main compact' : 'frame-main';
   return `<!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -125,25 +152,31 @@ function htmlShell(body, slideIndex, total) {
   <style>${BASE_CSS}</style>
 </head>
 <body>
-  <div class="frame">${body}</div>
-  <div class="footer">
-    <div class="footer-line">Полный гид → shmelcoffee.com/blog/kofejnoe-zerno/loty-obzharshchik-goda</div>
-    <div class="footer-site">shmelcoffee.com</div>
+  <div class="frame">
+    <div class="${mainClass}">${body}</div>
+    <footer class="frame-footer">
+      <div class="footer-guide">Полный гид по лотам премии</div>
+      <div class="footer-link">shmelcoffee.com</div>
+      <div class="footer-meta">
+        <span class="footer-brand">Shmelco</span>
+        <span class="footer-dot"></span>
+        <span class="footer-num">${slideIndex} / ${total}</span>
+      </div>
+    </footer>
   </div>
-  <div class="footer-num">${slideIndex}/${total}</div>
 </body>
 </html>`;
 }
 
 function coverHtml(slideIndex, total) {
   return htmlShell(`
-    <div class="kicker">Обжarщик года 2026 · SHMELCO</div>
+    <div class="kicker">Обжарщик года 2026 · SHMELCO</div>
     <div class="emoji-lg">🏆</div>
     <div class="title">Зерно, которое<br>оценили судьи</div>
-    <div class="subtitle">Лучшие лоты российских обжarщиков · сезон 2025/2026</div>
-    <div class="pill">67 обжarщиков · 114 лотов · 37 судей</div>
+    <div class="subtitle">Лучшие лоты российских обжарщиков · сезон 2025/2026</div>
+    <div class="pill">67 обжарщиков · 114 лотов · 37 судей</div>
     <div class="hint">Листай → топ с баллами 85–88+</div>
-  `.replace(/Обжarщик/g, 'Обжарщик').replace(/обжarщик/g, 'обжарщик'), slideIndex, total);
+  `, slideIndex, total);
 }
 
 function lotHtml(lot, slideIndex, total) {
@@ -162,7 +195,7 @@ function lotHtml(lot, slideIndex, total) {
     </div>
     ${badges}
     <div class="tags">${tags}</div>
-  `, slideIndex, total);
+  `, slideIndex, total, { compact: true });
 }
 
 function ctaHtml(slideIndex, total) {
