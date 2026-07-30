@@ -5,7 +5,7 @@ date: 2026-07-30
 cluster: "C3"
 type: "pillar"
 keywords: ["страны кофе", "терруар кофе", "эфиопия кофе", "колумбия кофе", "specialty зерно россия", "карта стран кофе"]
-readAlso: ["kofejnoe-zerno/obrabotka-zerna", "kofejnoe-zerno", "specialty-coffee/s-chego-nachat"]
+readAlso: ["kofejnoe-zerno/obrabotka-zerna", "kofejnoe-zerno/loty-obzharshchik-goda", "kofejnoe-zerno", "specialty-coffee/s-chego-nachat"]
 ---
 
 # Страны кофе: куда можно путешествовать с чашкой
