@@ -119,11 +119,18 @@ readAlso: ["kofejnoe-zerno/strany-kofe", "kofejnoe-zerno", "specialty-coffee/s-c
 
 ## Карусель для Instagram
 
-12 карточек с лучшими лотами — SVG 1080×1350, брендинг SHMELCO:
+12 карточек — **PNG 1080×1350**, готовы к публикации:
 
-`/roaster-award-carousel/00-cover.svg` → 10 лотов → CTA.
+**Папка в проекте:** `public/roaster-award-carousel/`  
+**На сайте:** [shmelcoffee.com/roaster-award-carousel/](https://shmelcoffee.com/roaster-award-carousel/)
 
-Конвертация в PNG: Figma или [cloudconvert.com/svg-to-png](https://cloudconvert.com/svg-to-png).
+| # | Файл |
+|---|------|
+| 1 | [00-cover.png](https://shmelcoffee.com/roaster-award-carousel/00-cover.png) |
+| 2–11 | `01-tasty-bolivia-caranavi.png` … `10-sok-kenya-riara.png` |
+| 12 | [11-cta.png](https://shmelcoffee.com/roaster-award-carousel/11-cta.png) |
+
+Перегенерация: `node scripts/generate-roaster-award-carousel.mjs` (SVG + PNG).
 
 ---
 

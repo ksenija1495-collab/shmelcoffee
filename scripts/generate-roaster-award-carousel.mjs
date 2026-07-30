@@ -1,6 +1,7 @@
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { Resvg } from '@resvg/resvg-js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, '..');
@@ -111,8 +112,15 @@ writeFileSync(join(outDir, `${String(CAROUSEL_LOTS.length + 1).padStart(2, '0')}
 
 writeFileSync(
   join(outDir, 'README.txt'),
-  `Карусель «Лоты Обжarщик года» — ${total} слайдов (1080×1350 SVG).\n00-cover → 10 лотов → cta.\nКонвертация: Figma или cloudconvert.com/svg-to-png\n`,
+  `Карусель «Лоты Обжarщик года» — ${total} слайдов (1080×1350).\n00-cover → 10 лотов → cta.\nФайлы: .svg (исходник) + .png (для Instagram).\nПерегенерация: node scripts/generate-roaster-award-carousel.mjs\n`,
   'utf8',
 );
 
-console.log(`Generated ${total} slides → public/roaster-award-carousel/`);
+for (const file of readdirSync(outDir).filter((f) => f.endsWith('.svg'))) {
+  const svgPath = join(outDir, file);
+  const pngPath = join(outDir, file.replace(/\.svg$/, '.png'));
+  const resvg = new Resvg(readFileSync(svgPath, 'utf8'), { fitTo: { mode: 'width', value: 1080 } });
+  writeFileSync(pngPath, resvg.render().asPng());
+}
+
+console.log(`Generated ${total} slides (+ PNG) → public/roaster-award-carousel/`);
