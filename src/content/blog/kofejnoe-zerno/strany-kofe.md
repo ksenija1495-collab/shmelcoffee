@@ -323,15 +323,104 @@ readAlso: ["kofejnoe-zerno/obrabotka-zerna", "kofejnoe-zerno/loty-obzharshchik-g
 
 ## Обжарщики России: шпаргалка по странам
 
-| Обжарщик | Сильные страны в каталоге | Ссылка |
-|----------|---------------------------|--------|
-| The Welder Catherine | Эфиопия, Кения, Руанда, Колумбия, Бразилия, Коста-Рика, Индонезия | [theweldercatherine.ru](https://theweldercatherine.ru/catalog/dlya_filtra/) |
-| Silky Drum | Эфиопия, Кения, Колумбия, Бразилия | [silkydrum.ru](https://www.silkydrum.ru/catalog) |
-| Rockets Coffee | Эфиопия, Кения, Руанда, Колумбия | [rockets.coffee](https://rockets.coffee/catalog) |
-| Fauno Coffee | Эфиопия, Перу | [fauno.coffee](https://fauno.coffee/classico/) |
-| Tasty Coffee | Широкий origin-каталог | [tastycoffee.ru](https://tastycoffee.ru/catalog/single-origin/) |
-| Submarine | Редкие origins, Geisha | [submarine.coffee](https://submarine.coffee/catalog) |
-| Sibaristica | Центральная и Южная Америка | [sibaristica.com](https://sibaristica.com/catalog/) |
+Ассортимент меняется каждый сезон — ниже **типичный набор стран в фильтр-каталогах** (моносорта + микролоты). На сайте обжарщика ищите фильтр «страна» / «origin».
+
+### Широкий origin-каталог
+
+<table class="roaster-map">
+<thead>
+<tr><th>Обжарщик</th><th>Страны в каталоге (фильтр)</th><th>Ссылка</th></tr>
+</thead>
+<tbody>
+<tr>
+<td>The Welder Catherine</td>
+<td>Эфиопия, Кения, Руанда, Бурунди, Колумбия, Бразилия, Коста-Рика, Гватемала, Панама, Перу, Боливия, Индонезия, Сальвадор, Гондурас, Мексика · сезонно Йемен</td>
+<td><a href="https://theweldercatherine.ru/catalog/dlya_filtra/">theweldercatherine.ru</a></td>
+</tr>
+<tr>
+<td>Tasty Coffee</td>
+<td>Бразилия, Боливия, Перу, Колумбия, Кения, Коста-Рика, Эфиопия, Гватемала, Руанда, Индонезия · в ротации Мексика, Панама, Уганда</td>
+<td><a href="https://shop.tastycoffee.ru/coffee/single-origin/">tastycoffee.ru</a></td>
+</tr>
+<tr>
+<td>Sibaristica</td>
+<td>Эфиопия, Кения, Руанда, Бурунди, Колумбия, Бразилия, Гватемала, Коста-Рика, Панама, Перу, Гондурас, Никарагуа, Сальвадор, Мексика, Индонезия</td>
+<td><a href="https://sibaristica.com/catalog/kofe/kofe-dlya-filtra/">sibaristica.com</a></td>
+</tr>
+<tr>
+<td>Submarine</td>
+<td>Эфиопия, Кения, Колумбия, Гватемала, Мексика, Панама, Перу, Коста-Рика, Бразилия, Руанда, Бурунди, Боливия, Гондурас · редкие Geisha и competition-лоты</td>
+<td><a href="https://sbmrne.ru/katalog/kofe/filtr/">submarine.coffee</a></td>
+</tr>
+<tr>
+<td>Silky Drum</td>
+<td>Эфиопия, Кения, Колумбия, Бразилия, Гватемала, Коста-Рика, Руанда, Перу, Панама, Индонезия</td>
+<td><a href="https://www.silkydrum.ru/catalog">silkydrum.ru</a></td>
+</tr>
+<tr>
+<td>Rockets Coffee</td>
+<td>Эфиопия, Кения, Руанда, Бурунди, Колумбия, Бразилия, Гватемала, Коста-Рика, Перу, Панама, Гондурас</td>
+<td><a href="https://rockets.coffee/catalog">rockets.coffee</a></td>
+</tr>
+</tbody>
+</table>
+
+### Сильные в 3–8 странах + микролоты
+
+<table class="roaster-map">
+<thead>
+<tr><th>Обжарщик</th><th>Страны в каталоге (фильтр)</th><th>Ссылка</th></tr>
+</thead>
+<tbody>
+<tr>
+<td>СОК Кофе</td>
+<td>Эфиопия, Кения, Колумбия, Бразилия, Гватемала, Руанда, Бурунди, Коста-Рика, Перу, Панама</td>
+<td><a href="https://sok.coffee/catalog/kofe/kofe_dlya_filtra/">sok.coffee</a></td>
+</tr>
+<tr>
+<td>Triptych Coffee</td>
+<td>Эфиопия, Кения, Колумбия, Бразилия, Гватемала, Коста-Рика, Руанда, Панама</td>
+<td><a href="https://triptychcoffee.com/filtr">triptychcoffee.com</a></td>
+</tr>
+<tr>
+<td>TAB</td>
+<td>Эфиопия, Кения, Колумбия, Гватемала, Коста-Рика, Руанда, Бурунди, Бразилия, Перу, Гондурас</td>
+<td><a href="https://letstab.ru/catalog/kofe/dlya_filtra/">letstab.ru</a></td>
+</tr>
+<tr>
+<td>KOF</td>
+<td>Эфиопия, Кения, Колумбия, Бразилия, Гватемала, Коста-Рика, Руанда, Перу, Панама</td>
+<td><a href="https://kof.ru/">kof.ru</a></td>
+</tr>
+<tr>
+<td>HQ! coffee</td>
+<td>Эфиопия, Кения, Колумбия, Гватемала, Коста-Рика, Руанда, Панама, Перу, Бразилия</td>
+<td><a href="https://hq-coffee.ru/">hq-coffee.ru</a></td>
+</tr>
+<tr>
+<td>Caffeine Lab</td>
+<td>Эфиопия, Кения, Колумбия, Бразилия, Гватемала, Коста-Рика, Руанда, Бурунди</td>
+<td><a href="https://caffeinelab.ru/">caffeinelab.ru</a></td>
+</tr>
+<tr>
+<td>Atlas Coffee</td>
+<td>Колумбия, Эфиопия, Кения, Гватемала, Бразилия, Коста-Рика, Боливия, Перу, Панама</td>
+<td><a href="https://atlascoffee.ru/">atlascoffee.ru</a></td>
+</tr>
+<tr>
+<td>Skuratov Coffee</td>
+<td>Эфиопия, Кения, Колумбия, Бразилия, Гватемала, Коста-Рика, Руанда, Перу</td>
+<td><a href="https://skuratovcoffee.ru/">skuratovcoffee.ru</a></td>
+</tr>
+<tr>
+<td>Fauno Coffee</td>
+<td>Эфиопия, Кения, Колумбия, Перу, Руанда, Гватемала, Коста-Рика, Бразилия, Панама</td>
+<td><a href="https://fauno.coffee/classico/">fauno.coffee</a></td>
+</tr>
+</tbody>
+</table>
+
+> **Как пользоваться:** выберите страну из гида выше → найдите обжарщика в таблице → откройте каталог и фильтр по origin. Если лота нет — часто та же страна появляется через 1–2 месяца с новым урожаем.
 
 ---
 
