@@ -99,7 +99,7 @@ export const POST: APIRoute = async ({ request, url }) => {
   const sum =
     parseFloat(str(payment.sum || payment.order_sum || payment.amount) || String(UNIT_PRICE)) ||
     UNIT_PRICE;
-  const credits = Math.max(1, Math.round(sum / UNIT_PRICE));
+  const credits = 1;
 
   const supabase = createClient(
     import.meta.env.PUBLIC_SUPABASE_URL,

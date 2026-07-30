@@ -77,9 +77,8 @@ const accountNavTab = (() => {
     <div class="mobile-nav mobile-acc-nav" role="navigation" aria-label="Кабинет">
       <a href="/account?tab=profile" class:list={[{ active: accountNavTab === 'profile' }]} data-acc-tab="profile"><span class="mn-icon">🎯</span>Профиль</a>
       <a href="/account?tab=diary" class:list={[{ active: accountNavTab === 'diary' }]} data-acc-tab="diary"><span class="mn-icon">📔</span>Дневник</a>
-      <a href="/account?tab=recipes" class:list={[{ active: accountNavTab === 'recipes' }]} data-acc-tab="recipes"><span class="mn-icon">📝</span>Рецепты</a>
       <a href="/account?tab=shelf" class:list={[{ active: accountNavTab === 'shelf' }]} data-acc-tab="shelf"><span class="mn-icon">🪵</span>Полка</a>
-      <a href="/add-cup" class:list={[{ active: accountNavTab === 'add-cup' }]} data-acc-tab="add-cup"><span class="mn-icon">＋</span>Чашка</a>
+      <a href="/add-cup" class:list={[{ active: accountNavTab === 'add-cup' }]} data-acc-tab="add-cup"><span class="mn-icon">☕</span>Чашка</a>
     </div>
   ) : (
     <div class="mobile-nav">

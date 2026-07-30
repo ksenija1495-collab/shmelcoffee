@@ -60,6 +60,27 @@ const PRODAMUS_URL = import.meta.env.PUBLIC_PRODAMUS_URL || '';
   .practice-card-title { font-weight: 700; font-size: .92rem; margin-bottom: 4px; }
   .practice-card-desc { font-size: .78rem; color: var(--text-dim); line-height: 1.45; }
 
+  .start-here { text-align: center; padding: 8px 0 4px; }
+  .start-here h3 { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.45rem; margin: 0 0 8px; }
+  .start-here p { font-size: .88rem; color: var(--text-dim); line-height: 1.55; max-width: 440px; margin: 0 auto 20px; }
+  .start-here-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 0 0 16px; }
+  @media (max-width: 520px) { .start-here-grid { grid-template-columns: 1fr; } }
+  .start-card {
+    padding: 22px 16px; border-radius: var(--radius); border: 1px solid var(--border);
+    background: var(--surface); text-align: center; cursor: pointer; text-decoration: none; color: inherit;
+    transition: all .2s; box-shadow: var(--shadow); display: block;
+  }
+  .start-card:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: var(--shadow-hover); }
+  .start-card.primary { border-color: var(--accent); background: rgba(168,124,79,.07); }
+  .start-card-icon { font-size: 2rem; margin-bottom: 8px; }
+  .start-card-title { font-weight: 700; font-size: .92rem; margin-bottom: 4px; }
+  .start-card-desc { font-size: .76rem; color: var(--text-dim); line-height: 1.45; }
+  .start-links { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 8px; }
+  .start-links a, .start-links button {
+    font-size: .78rem; color: var(--accent); background: none; border: none; cursor: pointer;
+    font-family: 'Inter', sans-serif; font-weight: 600; text-decoration: none;
+  }
+
   .offramp {
     text-align: center; padding: 32px 20px;
   }
@@ -275,6 +296,7 @@ function getProgressDots() {
   if (state.phase === 'quiz') { total = 4; current = state.step; }
   else if (state.phase === 'results') { total = 4; current = 4; }
   else if (state.phase === 'practice-choice') { total = 6; current = 4; }
+  else if (state.phase === 'start-here') { total = 5; current = 5; }
   else if (state.phase === 'offramp') { total = 6; current = 5; }
   else if (state.phase === 'equipment') { total = 8; current = 5; }
   else if (state.phase === 'equip-feedback') { total = 8; current = 6; }
@@ -299,8 +321,9 @@ function renderStep() {
   if (state.phase === 'quiz') renderQuiz(card);
   else if (state.phase === 'results') renderResults(card);
   else if (state.phase === 'practice-choice') renderPracticeChoice(card);
+  else if (state.phase === 'start-here') renderStartHere(card);
   else if (state.phase === 'offramp') renderOfframp(card);
-  else if (state.phase === 'guide-upsell') renderGuideUpsell(card);
+  else if (state.phase === 'guide-upsell') renderStartHere(card);
   else if (state.phase === 'equipment') renderEquipment(card);
   else if (state.phase === 'equip-feedback') renderEquipFeedback(card);
   else if (state.phase === 'set-offer') renderSetOffer(card);
@@ -491,8 +514,9 @@ function renderResults(card) {
     </div>
     <div class="result-cta">
       <p id="profileSaveBadge" style="font-size:.82rem;color:var(--text-dim);margin:0 0 4px">Сохраняем профиль…</p>
-      <button class="btn btn-primary" id="goToPractice" style="font-size:.92rem;padding:12px 26px">Подобрать зёрна под профиль →</button>
-      <button class="btn-ghost" id="goToAccount" style="font-size:.82rem">В личный кабинет →</button>
+      <button class="btn btn-primary" id="goToStart" style="font-size:.92rem;padding:12px 26px">С чего начать →</button>
+      <button class="btn-ghost" id="goToPractice" style="font-size:.82rem">Подобрать зёрна под профиль →</button>
+      <button class="btn-ghost" id="goToAccount" style="font-size:.78rem;color:var(--text-muted)">В личный кабинет →</button>
       <button class="btn-ghost" id="backToQuiz" style="font-size:.78rem;color:var(--text-muted)">← Пройти заново</button>
     </div>
   `;
@@ -502,6 +526,12 @@ function renderResults(card) {
   }, 100);
 
   updateProfileBadge();
+  document.getElementById('goToStart').addEventListener('click', async () => {
+    const ok = await ensureProfileSaved();
+    if (!ok) return;
+    state.phase = 'start-here';
+    renderStep();
+  });
   document.getElementById('goToAccount').addEventListener('click', async () => {
     const ok = await ensureProfileSaved();
     if (ok) window.location.href = '/account';
@@ -548,7 +578,7 @@ function renderPracticeChoice(card) {
     state.wantPractice = false;
     const ok = await ensureProfileSaved();
     if (!ok) return;
-    state.phase = 'guide-upsell';
+    state.phase = 'start-here';
     renderStep();
   });
   document.getElementById('backToResults').addEventListener('click', () => {
@@ -580,33 +610,44 @@ function renderOfframp(card) {
   });
 }
 
-/* ═══ PHASE: GUIDE UPSELL ═══ */
-function renderGuideUpsell(card) {
-  const m = DB[state.topCountries[0]];
+/* ═══ PHASE: START HERE ═══ */
+function renderStartHere(card) {
+  const top = state.topCountries[0];
+  const m = DB[top];
+  const countryEnc = encodeURIComponent(m.name);
   card.innerHTML = `
-    <div class="guide-block" style="margin-top:0;text-align:left">
-      <h3 style="text-align:center">${m.flag} ${state.selectionSaved ? 'Подборка сохранена' : 'Профиль сохранён'}</h3>
-      <p style="text-align:center">Хотите персональный гид по дегустации? Рецепты, вопросы к каждому лоту и карта предпочтений — за 99&nbsp;₽.</p>
-      <div class="guide-features">
-        <span class="guide-feat">☕ Рецепт под ваш способ</span>
-        <span class="guide-feat">📊 Карта предпочтений</span>
-        <span class="guide-feat">🔄 Что с чем сравнивать</span>
+    <div class="start-here">
+      <h3>${m.flag} С чего начать</h3>
+      <p>Профиль сохранён. Выбери первое действие — так откроется страна на карте и профиль станет точнее.</p>
+      <div class="start-here-grid">
+        <a class="start-card primary" id="startCup" href="/add-cup?country=${countryEnc}&name=${countryEnc}">
+          <div class="start-card-icon">☕</div>
+          <div class="start-card-title">Только что заварила</div>
+          <div class="start-card-desc">Записать чашку в дневник</div>
+        </a>
+        <a class="start-card" id="startShelf" href="/add-shelf?kind=bean&country=${countryEnc}">
+          <div class="start-card-icon">🫘</div>
+          <div class="start-card-title">У меня уже есть зерно</div>
+          <div class="start-card-desc">Добавить на полку</div>
+        </a>
       </div>
-      <div style="display:flex;flex-direction:column;gap:10px;align-items:center;margin-top:16px">
-        <button class="btn btn-primary" id="buyGuideBtn" style="font-size:.88rem;padding:10px 24px">Купить гид · 99 ₽ →</button>
-        <a href="/account" class="btn-ghost" style="font-size:.82rem;text-decoration:none">Пока без гида — в кабинет</a>
+      <div class="start-links">
+        <button type="button" id="startPractice">Подобрать зёрна →</button>
+        <a href="/account">В кабинет</a>
+        <a href="/passport">Паспорт вкуса</a>
       </div>
-      <p style="font-size:.75rem;color:var(--text-muted);margin-top:12px;text-align:center">После оплаты: Гиды → Создать гид. Оплата не генерирует гид автоматически.</p>
+      <p style="font-size:.72rem;color:var(--text-muted);margin-top:14px;line-height:1.45">🎁 Первый персональный гид — бесплатно (появится в кабинете после записи чашки или зерна).</p>
     </div>
   `;
-
-  document.getElementById('buyGuideBtn').addEventListener('click', async () => {
-    const user = await getUser();
-    if (!user) { window.location.href = '/login'; return; }
-    const url = buildBuyUrl(user);
-    if (url) window.open(url, '_blank');
-    else alert('Оплата скоро будет доступна. Напишите @ksenijashmel в Telegram.');
+  document.getElementById('startPractice')?.addEventListener('click', () => {
+    state.phase = 'practice-choice';
+    renderStep();
   });
+}
+
+/* ═══ PHASE: GUIDE UPSELL (legacy — redirect to start) ═══ */
+function renderGuideUpsell(card) {
+  renderStartHere(card);
 }
 
 /* ═══ PHASE: EQUIPMENT ═══ */
@@ -989,7 +1030,7 @@ function renderSetResults(card) {
 
       btn.textContent = '✓ Сохранено';
       state.selectionSaved = true;
-      state.phase = 'guide-upsell';
+      state.phase = 'start-here';
       renderStep();
     } catch (e) {
       alert('Ошибка сохранения: ' + e.message);

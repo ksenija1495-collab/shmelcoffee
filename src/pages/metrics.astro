@@ -28,6 +28,18 @@ const OWNER = 'ksenija14.95@gmail.com';
   .mx-deny { text-align: center; padding: 40px 20px; color: var(--text-muted); }
   .mx-emails { margin-top: 12px; font-size: .78rem; color: var(--text-dim); line-height: 1.5; }
   .mx-emails span { display: block; padding: 4px 0; border-bottom: 1px dashed var(--border); }
+  .mx-email-box { margin-top: 8px; padding: 18px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); }
+  .mx-email-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+  .mx-email-row input { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; font-size: .82rem; font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); }
+  @media (max-width: 560px) { .mx-email-row { grid-template-columns: 1fr; } }
+  .mx-email-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .mx-email-btn { font-size: .78rem; padding: 8px 14px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); cursor: pointer; font-family: 'Inter', sans-serif; color: var(--text-dim); }
+  .mx-email-btn.primary { background: var(--text); color: var(--bg); border-color: var(--text); }
+  .mx-email-preview { margin-top: 14px; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: #fff; }
+  .mx-email-preview iframe { width: 100%; height: 420px; border: 0; display: block; }
+  .mx-email-msg { font-size: .78rem; margin-top: 10px; color: var(--text-dim); }
+  .mx-inactive { margin-top: 10px; font-size: .76rem; color: var(--text-dim); line-height: 1.5; }
+  .mx-inactive button { margin: 4px 6px 4px 0; font-size: .72rem; padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); cursor: pointer; }
   .loader-spinner { width: 28px; height: 28px; border: 2px solid var(--border); border-top-color: var(--text); border-radius: 50%; animation: spin .6s linear infinite; margin: 0 auto 16px; }
   @keyframes spin { to { transform: rotate(360deg); } }
 </style>
@@ -54,15 +66,40 @@ const OWNER = 'ksenija14.95@gmail.com';
     const token = session?.access_token || '';
     const res = await fetch('/api/admin-metrics', { headers: { Authorization: 'Bearer ' + token } });
     if (!res.ok) { page.innerHTML = '<div class="mx-deny">Не удалось загрузить метрики.</div>'; return; }
-    const { totals: m, today: t } = await res.json();
+    const { totals: m, today: t, inactive_users: inactive = [] } = await res.json();
 
     const emailsHtml = (t.registration_emails || []).length
       ? `<div class="mx-emails">${t.registration_emails.map((e) => `<span>${esc(e)}</span>`).join('')}</div>`
       : '';
 
+    const inactiveHtml = inactive.length
+      ? `<div class="mx-inactive"><b>Неактивные (тест без чашек):</b><br>${inactive.map((u) =>
+          `<button type="button" class="mx-inactive-send" data-email="${esc(u.email)}" data-name="${esc(u.name || '')}">${esc(u.email)}</button>`
+        ).join('')}</div>`
+      : '';
+
     page.innerHTML = `
       <div class="mx-h">Метрики Shmelco</div>
       <div class="mx-sub">Обновляется в реальном времени · только для тебя<br>Трафик страниц — в <a href="https://vercel.com/dashboard" target="_blank" rel="noopener">Vercel → Analytics</a> (после включения)</div>
+
+      <div class="mx-sec">Re-activation email</div>
+      <div class="mx-email-box">
+        <div class="mx-email-row">
+          <input id="emTo" type="email" placeholder="Email получателя" />
+          <input id="emName" type="text" placeholder="Имя (опционально)" />
+        </div>
+        <div class="mx-email-row">
+          <input id="emCountry" type="text" placeholder="Страна для письма (Эфиопия)" value="Эфиопия" />
+          <input id="emFlag" type="text" placeholder="Флаг" value="🇪🇹" />
+        </div>
+        <div class="mx-email-actions">
+          <button type="button" class="mx-email-btn" id="emPreview">👁 Превью</button>
+          <button type="button" class="mx-email-btn primary" id="emSend">✉️ Отправить</button>
+        </div>
+        <div class="mx-email-msg" id="emMsg"></div>
+        <div class="mx-email-preview" id="emPreviewBox" hidden><iframe id="emPreviewFrame" title="Email preview"></iframe></div>
+        ${inactiveHtml}
+      </div>
 
       <div class="mx-sec">Сегодня · ${t.date_label || 'МСК'}</div>
       <div class="mx-grid">
@@ -105,6 +142,42 @@ const OWNER = 'ksenija14.95@gmail.com';
         ${card(m.passport_shares || 0, 'Поделились паспортом')}
       </div>
     `;
+
+    async function sendEmail(previewOnly = false) {
+      const to = (document.getElementById('emTo') as HTMLInputElement).value.trim();
+      const name = (document.getElementById('emName') as HTMLInputElement).value.trim();
+      const topCountry = (document.getElementById('emCountry') as HTMLInputElement).value.trim();
+      const topCountryFlag = (document.getElementById('emFlag') as HTMLInputElement).value.trim();
+      const msgEl = document.getElementById('emMsg')!;
+      if (!to) { msgEl.textContent = 'Укажи email'; return; }
+      msgEl.textContent = previewOnly ? 'Загружаем превью…' : 'Отправляем…';
+      const res = await fetch('/api/admin-send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+        body: JSON.stringify({ to, name, topCountry, topCountryFlag, template: 'reactivation' }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { msgEl.textContent = 'Ошибка: ' + (data.message || res.status); return; }
+      if (data.preview) {
+        msgEl.textContent = 'Превью (RESEND_API_KEY не задан — письмо не ушло)';
+        const box = document.getElementById('emPreviewBox')!;
+        const frame = document.getElementById('emPreviewFrame') as HTMLIFrameElement;
+        box.hidden = false;
+        frame.srcdoc = data.html;
+        return;
+      }
+      msgEl.textContent = '✅ Отправлено · id: ' + (data.id || 'ok');
+    }
+
+    document.getElementById('emPreview')?.addEventListener('click', () => sendEmail(true));
+    document.getElementById('emSend')?.addEventListener('click', () => sendEmail(false));
+    document.querySelectorAll('.mx-inactive-send').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        (document.getElementById('emTo') as HTMLInputElement).value = (btn as HTMLElement).dataset.email || '';
+        (document.getElementById('emName') as HTMLInputElement).value = (btn as HTMLElement).dataset.name || '';
+        sendEmail(true);
+      });
+    });
   }
   init();
 </script>

@@ -258,6 +258,29 @@ import Nav from '../components/Nav.astro';
   .gr-next ul { margin: 0 0 0 18px; padding: 0; font-size: .84rem; color: var(--text-dim); line-height: 1.6; }
   @media (min-width: 560px) { .gb-grid { grid-template-columns: 1fr 1fr; } }
 
+  .onboard-checklist { margin-bottom: 18px; padding: 16px 18px; border-radius: 14px; border: 1px solid var(--border); background: linear-gradient(160deg, rgba(168,124,79,.06), var(--surface)); }
+  .onboard-checklist-h { font-weight: 700; font-size: .88rem; margin-bottom: 10px; }
+  .ob-item { display: flex; align-items: center; gap: 8px; padding: 7px 0; font-size: .82rem; color: var(--text-dim); border-bottom: 1px dashed var(--border); }
+  .ob-item:last-child { border-bottom: 0; }
+  .ob-item.done { color: var(--text-muted); text-decoration: line-through; text-decoration-color: rgba(122,92,72,.35); }
+  .ob-item a { margin-left: auto; font-weight: 700; color: var(--accent); text-decoration: none; white-space: nowrap; }
+  .ob-item a:hover { text-decoration: underline; }
+
+  .acc-more-wrap { position: relative; flex: 0 0 auto; }
+  .acc-more-menu { position: absolute; top: calc(100% + 6px); right: 0; z-index: 20; min-width: 190px; padding: 6px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface); box-shadow: var(--shadow-hover); }
+  .acc-more-item { display: block; width: 100%; text-align: left; padding: 9px 12px; border: 0; border-radius: 8px; background: transparent; color: var(--text-dim); font-size: .82rem; font-weight: 600; cursor: pointer; font-family: 'Inter', sans-serif; }
+  .acc-more-item:hover, .acc-more-item.active { background: var(--surface-2); color: var(--text); }
+
+  .guide-upsell { margin-bottom: 18px; padding: 16px 18px; border-radius: 14px; border: 1px solid rgba(168,124,79,.35); background: rgba(168,124,79,.08); }
+  .guide-upsell .gu-title { font-weight: 700; font-size: .92rem; margin-bottom: 6px; }
+  .guide-upsell p { font-size: .82rem; color: var(--text-dim); line-height: 1.55; margin: 0 0 12px; }
+
+  .disco-empty-cta { margin-bottom: 16px; padding: 14px 16px; border-radius: 12px; background: rgba(90,140,90,.08); border: 1px solid rgba(90,140,90,.22); font-size: .82rem; line-height: 1.55; color: var(--text-dim); }
+  .drc-cta { display: block; margin-top: 6px; font-size: .72rem; font-weight: 700; color: var(--accent); }
+
+  .shelf-brew-btn { display: block; margin-top: 8px; width: 100%; font-size: .72rem; font-weight: 700; padding: 7px 10px; border-radius: 6px; border: 1px solid var(--text); background: var(--text); color: var(--bg); cursor: pointer; text-align: center; text-decoration: none; font-family: 'Inter', sans-serif; transition: all .2s; }
+  .shelf-brew-btn:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
+
   @media (max-width: 768px) { .account-page { padding-top: 72px; } .account-header h1 { font-size: 1.4rem; } .coffee-item { flex-direction: column; align-items: flex-start; } .coffee-price { margin-top: 4px; } .tastemap-wheel { width: 200px; height: 200px; margin: 0 auto; } }
 </style>
 
@@ -481,6 +504,41 @@ import Nav from '../components/Nav.astro';
 
   function guideWord(n: number): string { const a = Math.abs(n) % 100, b = a % 10; if (a > 10 && a < 20) return 'гидов'; if (b > 1 && b < 5) return 'гида'; if (b === 1) return 'гид'; return 'гидов'; }
 
+  const MORE_TABS = new Set(['recipes', 'selections', 'guides', 'community']);
+
+  function shelfBrewHref(s: any) {
+    const q = new URLSearchParams();
+    if (s.name) q.set('name', s.name);
+    if (s.roaster) q.set('roaster', s.roaster);
+    if (s.country) q.set('country', s.country);
+    if (s.process) q.set('process', s.process);
+    return '/add-cup?' + q.toString();
+  }
+
+  function renderChecklist(userId: string, latestProfile: any, cups: any[], shelf: any[], openedSize: number) {
+    const doneQuiz = !!latestProfile;
+    const doneActivity = cups.length > 0 || shelf.length > 0;
+    const doneCountry = openedSize > 0;
+    if (doneQuiz && doneActivity && doneCountry) return '';
+    const items = [
+      { done: doneQuiz, label: 'Пройти тест', href: '/quiz' },
+      { done: doneActivity, label: 'Добавить зерно или чашку', href: '/add-cup' },
+      { done: doneCountry, label: `Открыть первую страну (${openedSize}/${countryOrder.length})`, href: '/add-cup' },
+      { done: false, label: 'Поделиться паспортом', href: `/passport?u=${userId}` },
+    ];
+    return `<div class="onboard-checklist"><div class="onboard-checklist-h">С чего начать</div>${items.map((it) =>
+      `<div class="ob-item${it.done ? ' done' : ''}"><span>${it.done ? '☑' : '☐'}</span><span>${it.label}</span>${!it.done ? `<a href="${it.href}">→</a>` : (it.label.includes('паспорт') ? `<a href="${it.href}">Открыть →</a>` : '')}</div>`
+    ).join('')}</div>`;
+  }
+
+  function renderGuideUpsell(credits: number, cupsCount: number, openedSize: number, guidesCount: number, buyUrl: string) {
+    if (guidesCount > 0 || (cupsCount < 3 && openedSize < 1)) return '';
+    const body = credits > 0
+      ? `<p>У тебя <b>${credits}</b> ${guideWord(credits)} — сгенерируй рецепт под своё зерно и способ заваривания.</p><a href="/generate" class="btn btn-primary" style="text-decoration:none;display:inline-block">✨ Создать гид →</a>`
+      : `<p>Попробуй персональный гид — рецепт и параметры под твоё зерно. Первый гид бесплатно при регистрации.</p><button type="button" class="btn btn-primary" data-buy="1">Купить гид · 99 ₽</button>`;
+    return `<div class="guide-upsell"><div class="gu-title">🎁 Персональный гид под твоё зерно</div>${body}</div>`;
+  }
+
   async function fetchCredits(token: string): Promise<{ balance: number; ok: boolean }> {
     if (!token) return { balance: 0, ok: false };
     try {
@@ -606,9 +664,13 @@ import Nav from '../components/Nav.astro';
     const tasteCard = answers
       ? `<div class="profile-card tastemap-card"><svg id="tasteWheel" class="tastemap-wheel" viewBox="0 0 360 360"></svg><div class="tastemap-side"><div class="tm-row"><span class="profile-label">Кислотность</span><span class="profile-value">${ACID[answers.acidity] || '—'}</span></div><div class="tm-row"><span class="profile-label">Тело</span><span class="profile-value">${BODY[answers.body] || '—'}</span></div><div class="tm-row"><span class="profile-label">Сладость</span><span class="profile-value">${SWEET[answers.sweetness] || '—'}</span></div><div class="tm-fams">${[...prefFams].map(f => `<span class="tm-fam" style="background:${famColor[f] || 'var(--accent)'}">${f}</span>`).join('') || '<span class="profile-tag">—</span>'}</div><div class="tm-hint">Нажми на сектор — ниже откроется список нот этой группы (справочник).</div></div></div><div id="tmInfo" class="info-panel"></div>`
       : '';
-    const profilePanel = `${profileCard}${tasteCard ? `<div class="sub-h">🗺️ Карта вкуса</div>${tasteCard}` : ''}`;
+    const profilePanel = `${renderChecklist(user.id, latestProfile, cups, shelf, openedKeys.size)}${profileCard}${tasteCard ? `<div class="sub-h">🗺️ Карта вкуса</div>${tasteCard}` : ''}`;
 
-    const discoPanel = `<div class="profile-card"><div class="disco-top"><div class="disco-ring">${ringSVG(openedKeys.size, countryOrder.length)}</div><div><div class="disco-count">${openedKeys.size} / ${countryOrder.length}</div><div class="profile-label" style="min-width:0">стран открыто</div></div></div>${answers && recommendedFirst.length ? `<div class="disco-subtitle">Откройте первыми — под ваш вкус</div><div class="disco-rec">${recommendedFirst.map(k => { const c: any = DB[k]; return `<a class="disco-rec-card" href="/countries?c=${k}"><span class="drc-flag">${c.flag}</span><span class="drc-name">${c.name}</span><span class="drc-why">${c.flavors.slice(0, 3).join(' · ')}</span></a>`; }).join('')}</div>` : ''}<div class="disco-subtitle">Весь мир кофе · <a href="/blog/kofejnoe-zerno/strany-kofe" style="color:var(--accent);font-weight:600">гид по странам →</a></div><div class="disco-grid">${countryOrder.map((k: string) => { const c: any = DB[k]; const open = openedKeys.has(k); return `<span class="disco-chip ${open ? 'open' : 'closed'}" data-k="${k}">${c.flag} ${c.name}${open ? ' ✓' : ''}</span>`; }).join('')}</div><div id="discoInfo" class="info-panel"></div><div class="disco-hint">${answers ? 'Пробуйте новые страны и записывайте чашки — карта открывается, а профиль становится точнее.' : 'Записывай чашки с указанием страны (или «Эфиопия …» в названии) — страна откроется на карте. <a href="/quiz">Пройди диагностику</a> для персональных подсказок.'}</div></div>`;
+    const discoEmptyCta = openedKeys.size === 0
+      ? `<div class="disco-empty-cta"><p><b>Как открыть страну?</b> Запишите <b>чашку</b> или добавьте <b>зерно на полку</b> с указанием страны — она появится на карте.</p>${recommendedFirst.length ? `<div class="disco-subtitle" style="margin-top:12px">Начни с этих — под твой вкус</div><div class="disco-rec">${recommendedFirst.map((k: string) => { const c: any = DB[k]; return `<a class="disco-rec-card" href="/add-cup?country=${encodeURIComponent(c.name)}&name=${encodeURIComponent(c.name)}"><span class="drc-flag">${c.flag}</span><span class="drc-name">${c.name}</span><span class="drc-why">${c.flavors.slice(0, 3).join(' · ')}</span><span class="drc-cta">Добавить чашку →</span></a>`; }).join('')}</div>` : `<a href="/add-cup" class="btn btn-primary" style="display:inline-block;margin-top:10px;text-decoration:none">Записать первую чашку →</a>`}</div>`
+      : '';
+
+    const discoPanel = `<div class="profile-card">${discoEmptyCta}<div class="disco-top"><div class="disco-ring">${ringSVG(openedKeys.size, countryOrder.length)}</div><div><div class="disco-count">${openedKeys.size} / ${countryOrder.length}</div><div class="profile-label" style="min-width:0">стран открыто</div></div></div>${answers && recommendedFirst.length && openedKeys.size > 0 ? `<div class="disco-subtitle">Откройте первыми — под ваш вкус</div><div class="disco-rec">${recommendedFirst.map(k => { const c: any = DB[k]; return `<a class="disco-rec-card" href="/add-cup?country=${encodeURIComponent(c.name)}&name=${encodeURIComponent(c.name)}"><span class="drc-flag">${c.flag}</span><span class="drc-name">${c.name}</span><span class="drc-why">${c.flavors.slice(0, 3).join(' · ')}</span><span class="drc-cta">Добавить чашку →</span></a>`; }).join('')}</div>` : ''}<div class="disco-subtitle">Весь мир кофе · <a href="/blog/kofejnoe-zerno/strany-kofe" style="color:var(--accent);font-weight:600">гид по странам →</a></div><div class="disco-grid">${countryOrder.map((k: string) => { const c: any = DB[k]; const open = openedKeys.has(k); return `<span class="disco-chip ${open ? 'open' : 'closed'}" data-k="${k}">${c.flag} ${c.name}${open ? ' ✓' : ''}</span>`; }).join('')}</div><div id="discoInfo" class="info-panel"></div><div class="disco-hint">${answers ? 'Пробуйте новые страны и записывайте чашки — карта открывается, а профиль становится точнее.' : 'Записывай чашки с указанием страны (или «Эфиопия …» в названии) — страна откроется на карте. <a href="/quiz">Пройди диагностику</a> для персональных подсказок.'}</div></div>`;
 
     const brewMethods = [...new Set(cups.map((c: any) => c.brew_method).filter(Boolean))].sort() as string[];
     const diaryFilters = cups.length ? `<div class="diary-filters">
@@ -636,7 +698,7 @@ import Nav from '../components/Nav.astro';
       : `<div class="empty-state">Записывайте кофе, который пьёте дома или заказали сами — он наполнит вашу Карту вкуса.<br><a href="/add-cup">Добавить первую чашку →</a></div>`;
 
     const shelfPanel = shelf.length
-      ? `<div class="shelf-grid">${shelf.map((s: any) => `<div class="shelf-card">${s.photo_url ? `<img src="${esc(s.photo_url)}" class="shelf-photo" alt=""/>` : `<div class="shelf-noimg">${s.kind === 'bean' ? '🫘' : '⚙️'}</div>`}<div class="shelf-body"><div class="shelf-name">${esc(s.name)}</div><div class="shelf-meta">${s.kind === 'bean' ? ([s.roaster, s.country, s.process].filter(Boolean).map(esc).join(' · ') || 'зерно') : esc(s.category || 'оборудование')}</div>${s.kind === 'bean' ? `<a class="shelf-guide-btn" href="/generate?shelf=${s.id}" style="display:block;text-align:center;text-decoration:none">🤖 Сгенерировать гид</a>` : ''}</div><button class="shelf-del" data-shelf-del="${s.id}" title="удалить">×</button></div>`).join('')}</div>`
+      ? `<div class="shelf-grid">${shelf.map((s: any) => `<div class="shelf-card">${s.photo_url ? `<img src="${esc(s.photo_url)}" class="shelf-photo" alt=""/>` : `<div class="shelf-noimg">${s.kind === 'bean' ? '🫘' : '⚙️'}</div>`}<div class="shelf-body"><div class="shelf-name">${esc(s.name)}</div><div class="shelf-meta">${s.kind === 'bean' ? ([s.roaster, s.country, s.process].filter(Boolean).map(esc).join(' · ') || 'зерно') : esc(s.category || 'оборудование')}</div>${s.kind === 'bean' ? `<a class="shelf-brew-btn" href="${shelfBrewHref(s)}">☕ Заварила →</a><a class="shelf-guide-btn" href="/generate?shelf=${s.id}" style="display:block;text-align:center;text-decoration:none">🤖 Сгенерировать гид</a>` : ''}</div><button class="shelf-del" data-shelf-del="${s.id}" title="удалить">×</button></div>`).join('')}</div>`
       : `<div class="empty-state">Полка пуста. <a href="/add-shelf?kind=bean">+ Зерно</a> · <a href="/add-shelf?kind=equipment">+ Оборудование</a></div>`;
 
     const champBlock = renderChampionRecipesBlock();
@@ -681,18 +743,26 @@ import Nav from '../components/Nav.astro';
 
     const twinSoon = `<div class="pro-card soon" style="margin-top:14px"><div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:6px"><div class="pro-title" style="margin:0">🤝 Вкусовой близнец</div><span class="soon-badge">Скоро</span></div><div class="pro-desc" style="margin:0">Найдём людей с похожим на твой вкусом — и полные противоположности. Можно будет обмениваться находками и зёрнами.</div></div>`;
 
+    const guideUpsellBanner = renderGuideUpsell(credits, cups.length, openedKeys.size, guides.length, buyUrl);
+
     page.innerHTML = `
       <div class="account-header"><div><h1>Личный кабинет</h1><div class="account-email">${user.email || ''}</div></div><div style="display:flex;align-items:center;gap:10px">${credits > 0 ? `<span class="pro-badge">${credits} ${guideWord(credits)}</span>` : ''}<button class="logout-btn" id="logoutBtn">Выйти</button></div></div>
+      ${guideUpsellBanner}
 
       <div class="acc-tabs" id="accTabs">
         <button class="acc-tab" data-tab="profile">🎯 Профиль</button>
-        <button class="acc-tab" data-tab="disco">🧭 Открытия</button>
         <button class="acc-tab" data-tab="diary">📔 Дневник</button>
-        <button class="acc-tab" data-tab="recipes">📝 Рецепты</button>
         <button class="acc-tab" data-tab="shelf">🪵 Полка</button>
-        <button class="acc-tab" data-tab="selections">☕ Подборки</button>
-        <button class="acc-tab" data-tab="guides">📖 Гиды</button>
-        <button class="acc-tab" data-tab="community">🌐 Сообщество</button>
+        <button class="acc-tab" data-tab="disco">🧭 Открытия</button>
+        <div class="acc-more-wrap">
+          <button type="button" class="acc-tab acc-more-btn" data-tab="more" id="accMoreBtn">⋯ Ещё</button>
+          <div class="acc-more-menu" id="accMoreMenu" hidden>
+            <button type="button" class="acc-more-item" data-tab="recipes">📝 Рецепты</button>
+            <button type="button" class="acc-more-item" data-tab="selections">☕ Подборки</button>
+            <button type="button" class="acc-more-item" data-tab="guides">📖 Гиды</button>
+            <button type="button" class="acc-more-item" data-tab="community">🌐 Сообщество</button>
+          </div>
+        </div>
       </div>
 
       <section class="acc-panel" data-panel="profile"><div class="panel-h">🎯 Профиль и вкус</div>${profilePanel}</section>
@@ -770,13 +840,58 @@ import Nav from '../components/Nav.astro';
       });
     });
 
-    const MOBILE_ACC_TABS = new Set(['profile', 'diary', 'recipes', 'shelf', 'add-cup']);
+    const MOBILE_ACC_TABS = new Set(['profile', 'diary', 'shelf', 'add-cup']);
     function syncAccountNav(name: string) {
       document.querySelectorAll('.mobile-acc-nav a[data-acc-tab]').forEach((a) => {
         const tab = a.getAttribute('data-acc-tab');
         a.classList.toggle('active', MOBILE_ACC_TABS.has(name) && tab === name);
       });
     }
+
+    const moreBtn = document.getElementById('accMoreBtn');
+    const moreMenu = document.getElementById('accMoreMenu');
+    moreBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (moreMenu) moreMenu.hidden = !moreMenu.hidden;
+    });
+    if (!(window as any).__accDocClickBound) {
+      (window as any).__accDocClickBound = true;
+      document.addEventListener('click', () => {
+        const menu = document.getElementById('accMoreMenu');
+        if (menu) menu.hidden = true;
+      });
+    }
+    moreMenu?.addEventListener('click', (e) => e.stopPropagation());
+
+    const tabs = Array.from(page.querySelectorAll('.acc-tab')) as HTMLElement[];
+    const moreItems = Array.from(page.querySelectorAll('.acc-more-item')) as HTMLElement[];
+    const panels = Array.from(page.querySelectorAll('.acc-panel')) as HTMLElement[];
+    function activateTab(name: string) {
+      tabs.forEach(t => {
+        const tab = t.getAttribute('data-tab');
+        if (tab === 'more') t.classList.toggle('active', MORE_TABS.has(name));
+        else t.classList.toggle('active', tab === name);
+      });
+      moreItems.forEach(m => m.classList.toggle('active', m.getAttribute('data-tab') === name));
+      panels.forEach(p => p.classList.toggle('active', p.getAttribute('data-panel') === name));
+      syncAccountNav(name);
+      if (moreMenu) moreMenu.hidden = true;
+      try { localStorage.setItem('acc_tab', name); } catch (e) {}
+      const url = new URL(location.href);
+      if (name === 'profile') url.searchParams.delete('tab');
+      else url.searchParams.set('tab', name);
+      history.replaceState({}, '', url.pathname + url.search);
+    }
+    tabs.filter(t => t.getAttribute('data-tab') !== 'more').forEach(t => t.addEventListener('click', () => activateTab(t.getAttribute('data-tab')!)));
+    moreItems.forEach(m => m.addEventListener('click', () => activateTab(m.getAttribute('data-tab')!)));
+    let startTab = 'profile';
+    const urlTab = new URL(location.href).searchParams.get('tab');
+    const tabExists = urlTab && (page.querySelector('.acc-tab[data-tab="' + urlTab + '"]') || page.querySelector('.acc-more-item[data-tab="' + urlTab + '"]'));
+    if (tabExists) startTab = urlTab!;
+    else {
+      try { const sv = localStorage.getItem('acc_tab'); if (sv && (page.querySelector('.acc-tab[data-tab="' + sv + '"]') || page.querySelector('.acc-more-item[data-tab="' + sv + '"]'))) startTab = sv; } catch (e) {}
+    }
+    activateTab(startTab);
 
     page.querySelectorAll('[data-recipe-del]').forEach((btn) => {
       btn.addEventListener('click', async () => {
@@ -803,35 +918,15 @@ import Nav from '../components/Nav.astro';
       });
     });
 
-    const tabs = Array.from(page.querySelectorAll('.acc-tab')) as HTMLElement[];
-    const panels = Array.from(page.querySelectorAll('.acc-panel')) as HTMLElement[];
-    function activateTab(name: string) {
-      tabs.forEach(t => t.classList.toggle('active', t.getAttribute('data-tab') === name));
-      panels.forEach(p => p.classList.toggle('active', p.getAttribute('data-panel') === name));
-      syncAccountNav(name);
-      try { localStorage.setItem('acc_tab', name); } catch (e) {}
-      const url = new URL(location.href);
-      if (name === 'profile') url.searchParams.delete('tab');
-      else url.searchParams.set('tab', name);
-      history.replaceState({}, '', url.pathname + url.search);
-    }
-    tabs.forEach(t => t.addEventListener('click', () => activateTab(t.getAttribute('data-tab')!)));
-    let startTab = 'profile';
-    const urlTab = new URL(location.href).searchParams.get('tab');
-    if (urlTab && page.querySelector('.acc-tab[data-tab="' + urlTab + '"]')) startTab = urlTab;
-    else {
-      try { const sv = localStorage.getItem('acc_tab'); if (sv && page.querySelector('.acc-tab[data-tab="' + sv + '"]')) startTab = sv; } catch (e) {}
-    }
-    activateTab(startTab);
-
     if (!(window as any).__accPopBound) {
       (window as any).__accPopBound = true;
       window.addEventListener('popstate', () => {
         const root = document.getElementById('accountPage');
         if (!root?.querySelector('.acc-tab')) return;
         const tabName = new URL(location.href).searchParams.get('tab') || 'profile';
-        const btn = root.querySelector('.acc-tab[data-tab="' + tabName + '"]') as HTMLElement | null;
-        if (btn) btn.click();
+        const btn = root.querySelector('.acc-tab[data-tab="' + tabName + '"]') as HTMLElement | null
+          || root.querySelector('.acc-more-item[data-tab="' + tabName + '"]') as HTMLElement | null;
+        if (btn) activateTab(tabName);
       });
     }
     } catch (e: any) {

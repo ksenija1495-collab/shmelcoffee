@@ -1058,6 +1058,11 @@ import { DB, countryOrder } from '../data/countries';
     }
     if (g('notes')) prefillNotesFromParam(g('notes'));
     maybeOpenRecipePickerFromParams();
+    if (g('from_shelf') === '1') {
+      const el = document.getElementById('fromGuide')!;
+      el.innerHTML = `<div class="fg-h">🫘 Зерно на полке</div><div class="fg-note">Когда заваришь — сохрани чашку. Так откроется страна на <a href="/account?tab=disco" style="color:var(--accent);font-weight:600">карте открытий</a>.</div>`;
+      el.style.display = 'block';
+    }
     if (g('from') === 'guide') {
       const country = g('country'), variety = g('variety'), process = g('process'), brew = g('brew'), focus = g('focus'), notes = g('notes');
       const chips: string[] = [];
@@ -1129,7 +1134,10 @@ import { DB, countryOrder } from '../data/countries';
     payload.user_id = user.id;
     const { data, error } = await supabase.from('cups').insert(payload).select('id').single();
     if(error){ msg.className='addcup-msg error'; msg.textContent='Ошибка: '+error.message; btn.disabled=false; btn.textContent='Сохранить чашку'; return; }
-    window.location.href = `/cup?id=${data.id}&new=1`;
+    const country = readCountryValue();
+    let href = `/cup?id=${data.id}&new=1`;
+    if (country) href += `&opened_country=${encodeURIComponent(country)}`;
+    window.location.href = href;
   }
 
   (async ()=>{

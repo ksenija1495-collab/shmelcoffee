@@ -117,6 +117,8 @@ import { DB, countryOrder } from '../data/countries';
     document.querySelectorAll('.kind-btn').forEach(b => b.addEventListener('click', () => setKind((b as HTMLElement).dataset.kind!)));
     const params = new URLSearchParams(window.location.search);
     setKind(params.get('kind') === 'equipment' ? 'equipment' : 'bean');
+    const preCountry = params.get('country');
+    if (preCountry) setSelect('f_country', preCountry);
     const fileInp = document.getElementById('f_photo') as HTMLInputElement;
     fileInp.addEventListener('change', () => {
       photoFile = fileInp.files && fileInp.files[0] ? fileInp.files[0] : null;
@@ -155,7 +157,17 @@ import { DB, countryOrder } from '../data/countries';
       };
       const { error } = await supabase.from('shelf_items').insert(payload);
       if (error) throw error;
-      window.location.href = '/account';
+      if (kind === 'bean') {
+        const q = new URLSearchParams();
+        q.set('name', name);
+        if (payload.roaster) q.set('roaster', payload.roaster);
+        if (payload.country) q.set('country', payload.country);
+        if (payload.process) q.set('process', payload.process);
+        q.set('from_shelf', '1');
+        window.location.href = `/add-cup?${q.toString()}`;
+      } else {
+        window.location.href = '/account?tab=shelf';
+      }
     } catch (e: any) {
       msg.className = 'sf-msg error'; msg.textContent = 'Ошибка: ' + (e.message || e);
       btn.disabled = false; btn.textContent = 'Добавить на полку';

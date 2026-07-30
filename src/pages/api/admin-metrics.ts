@@ -80,8 +80,40 @@ export const GET: APIRoute = async ({ request }) => {
     page += 1;
   }
 
+  const [{ data: profileRows }, { data: cupRows }, { data: shelfRows }] = await Promise.all([
+    admin.from('taste_profiles').select('user_id'),
+    admin.from('cups').select('user_id'),
+    admin.from('shelf_items').select('user_id'),
+  ]);
+  const activeIds = new Set([
+    ...(cupRows || []).map((r: { user_id: string }) => r.user_id),
+    ...(shelfRows || []).map((r: { user_id: string }) => r.user_id),
+  ]);
+  const profileIds = [...new Set((profileRows || []).map((r: { user_id: string }) => r.user_id))];
+  const inactiveIds = profileIds.filter((id) => !activeIds.has(id));
+
+  const inactive_users: { email: string; name?: string }[] = [];
+  if (inactiveIds.length) {
+    let uPage = 1;
+    while (uPage <= 20 && inactive_users.length < 30) {
+      const { data } = await admin.auth.admin.listUsers({ page: uPage, perPage: 200 });
+      const users = data?.users || [];
+      for (const u of users) {
+        if (u.id && inactiveIds.includes(u.id) && u.email) {
+          inactive_users.push({
+            email: u.email,
+            name: (u.user_metadata?.full_name || u.user_metadata?.name || '') as string,
+          });
+        }
+      }
+      if (users.length < 200) break;
+      uPage += 1;
+    }
+  }
+
   const body = {
     totals: metricsRes.data || {},
+    inactive_users,
     today: {
       date_label: mskDateLabel(),
       registrations: registrationsToday,

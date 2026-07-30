@@ -198,6 +198,15 @@ import Nav from '../components/Nav.astro';
   .cupcard-success {
     text-align: center; margin-bottom: 12px; font-size: .88rem; color: var(--accent-green); font-weight: 600;
   }
+  .cupcard-victory {
+    margin: 0 4px 14px; padding: 16px 18px; border-radius: 14px; text-align: center;
+    background: linear-gradient(160deg, rgba(168,124,79,.12), rgba(90,140,90,.1));
+    border: 1px solid rgba(168,124,79,.35);
+  }
+  .cupcard-victory .cv-title { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.25rem; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+  .cupcard-victory .cv-sub { font-size: .8rem; color: var(--text-dim); line-height: 1.45; margin-bottom: 10px; }
+  .cupcard-victory a { font-size: .78rem; font-weight: 700; color: var(--accent); text-decoration: none; }
+  .cupcard-victory a:hover { text-decoration: underline; }
 
   @media (max-width: 480px) {
     .cupcard-page { padding: 56px 12px 32px; }
@@ -227,6 +236,8 @@ import Nav from '../components/Nav.astro';
   import { countryCardData } from '../lib/cupCountryCard';
   import { resolveRoaster } from '../lib/roasterResolve';
   import { formatTasteCharacterLine, normalizeTasteCharacter } from '../lib/tasteCharacter';
+  import { collectOpenedCountryKeys } from '../lib/countryResolve';
+  import { countryOrder } from '../data/countries';
 
   const supabase = createClient(
     import.meta.env.PUBLIC_SUPABASE_URL,
@@ -238,6 +249,7 @@ import Nav from '../components/Nav.astro';
   const params = new URLSearchParams(location.search);
   const cupId = params.get('id');
   const isNew = params.get('new') === '1';
+  const openedCountryParam = params.get('opened_country') || '';
 
   const esc = (s: unknown) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
   const asNotes = (n: unknown): string[] => Array.isArray(n) ? n.map(String) : n ? [String(n)] : [];
@@ -308,7 +320,7 @@ import Nav from '../components/Nav.astro';
     setTimeout(() => { if (msg) msg.textContent = ''; }, 3000);
   }
 
-  function renderCup(cup: any, isOwner = false) {
+  function renderCup(cup: any, isOwner = false, victoryHtml = '') {
     const notes = asNotes(cup.notes);
     const noteTags = buildCupNoteTags(notes);
     const recipeLines = cupRecipeLines(cup.recipe);
@@ -362,7 +374,7 @@ import Nav from '../components/Nav.astro';
 
     page.innerHTML = `
       <div class="cupcard-wrap">
-        ${isNew ? '<div class="cupcard-success">✓ Чашка сохранена</div>' : ''}
+        ${isNew && victoryHtml ? victoryHtml : isNew ? '<div class="cupcard-success">✓ Чашка сохранена</div>' : ''}
         <article class="cupcard" id="shareCard">
           <div class="cupcard-top">
             <div class="cupcard-brand">Shmelco · coffee diary</div>
@@ -450,7 +462,23 @@ import Nav from '../components/Nav.astro';
     if (!cupId) { showError('Не указана чашка'); return; }
     const loaded = await loadCupCard(cupId);
     if (!loaded) return;
-    renderCup(loaded.cup, loaded.isOwner);
+    let victoryHtml = '';
+    if (isNew && loaded.isOwner) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const [cupsRes, shelfRes] = await Promise.all([
+          supabase.from('cups').select('country, name').eq('user_id', user.id),
+          supabase.from('shelf_items').select('country, name').eq('user_id', user.id),
+        ]);
+        const opened = collectOpenedCountryKeys([...(cupsRes.data || []), ...(shelfRes.data || [])]);
+        const countryLabel = openedCountryParam || loaded.cup.country || '';
+        const cc = countryCardData(countryLabel, loaded.cup.name);
+        if (cc || countryLabel) {
+          victoryHtml = `<div class="cupcard-victory"><div class="cv-title">🎉 +1 страна на карте!</div><div class="cv-sub">${cc ? cc.flag + ' ' + esc(cc.name) : esc(countryLabel)} · теперь <b>${opened.size}</b> / ${countryOrder.length} открыто</div><a href="/account?tab=disco">Посмотреть карту →</a></div>`;
+        }
+      }
+    }
+    renderCup(loaded.cup, loaded.isOwner, victoryHtml);
   })();
 </script>
 
