@@ -66,14 +66,14 @@ readAlso: ["kofejnoe-zerno/strany-kofe", "kofejnoe-zerno", "specialty-coffee/s-c
 
 | Страна | Лот | Обжarщик | Город | Балл | Ноты |
 |--------|-----|----------|-------|------|------|
-| 🇨🇴 | Finca Satus | Silky Drum | Москва | 87+ | ягоды, цитрус, чистота |
-| 🇨🇴 | Carlos Plaza Bourbon | Triptych Coffee | Тамбов | 87+ | карамель, ягоды, структура |
-| 🇰🇪 | Karagoto AA | HQ! coffee | Москва | 87+ | смародина, цитрус, чай |
-| 🇰🇪 | Day Off blend | Bailyday | Химки | 87+ | баланс, домашний фильтр |
-| 🇨🇴 | Geisha | Most Coffee | СПб | 87+ | жасмин, бергамот, чай |
-| 🇰🇪 | Riara | Bravos | Рязань | 87+ | ягоды, грейпфрут |
-| 🇨🇴 | Pink Bourbon | Atlas Coffee | Иркутск | 87+ | лучший произвольный обжар |
-| 🇨🇷 | William Mora | The Welder Catherine | Москва | 87+ | тропики, сладость |
+| 🇨🇴 Колумбия | Finca Satus | Silky Drum | Москва | 87+ | ягоды, цитрус, чистота |
+| 🇨🇴 Колумбия | Carlos Plaza Bourbon | Triptych Coffee | Тамбов | 87+ | карамель, ягоды, структура |
+| 🇰🇪 Кения | Karagoto AA | HQ! coffee | Москва | 87+ | смородина, цитрус, чай |
+| 🇰🇪 Кения | Day Off blend | Bailyday | Химки | 87+ | баланс, домашний фильтр |
+| 🇨🇴 Колумбия | Geisha | Most Coffee | СПб | 87+ | жасмин, бергамот, чай |
+| 🇰🇪 Кения | Riara | Bravos | Рязань | 87+ | ягоды, грейпфрут |
+| 🇨🇴 Колумбия | Pink Bourbon | Atlas Coffee | Иркутск | 87+ | сладость, фрукты · 🏆 произв. обжар |
+| 🇨🇷 Коста-Рика | William Mora | The Welder Catherine | Москва | 87+ | тропики, сладость |
 
 ---
 
@@ -81,14 +81,14 @@ readAlso: ["kofejnoe-zerno/strany-kofe", "kofejnoe-zerno", "specialty-coffee/s-c
 
 | Страна | Лот | Обжarщик | Город | Ноты |
 |--------|-----|----------|-------|------|
-| 🇪🇹 | Dukamo CVA | Kofeop | Челябинск | цветы, фрукты, сложность |
-| 🇲🇽 | Finca La Perla | Submarine | Москва | шоколад, орех, цитрус |
-| 🇰🇪 | Riara | СОК Кофе | Тюмень | смародина, чай, сочность |
-| 🇰🇪 | Rung'eto AA | Camera Obscura | Москва | чёрная смародина, цитрус |
-| 🇰🇪 | Chinga AA | Caffeine Lab | Москва | ягоды, грейпфрут |
-| 🇰🇪 | CVA СпайксиТути | TAB | Новосибирск | яркая кислотность |
-| 🇰🇪 | Muthuaini | ForCup | СПб | смародина, грейпфрут |
-| 🇪🇹 | Ambella | Triptych Coffee | Тамбов | цветы, чай, лимон |
+| 🇪🇹 Эфиопия | Dukamo CVA | Kofeop | Челябинск | цветы, фрукты, сложность |
+| 🇲🇽 Мексика | Finca La Perla | Submarine | Москва | шоколад, орех, цитрус |
+| 🇰🇪 Кения | Riara | СОК Кофе | Тюмень | смородина, чай, сочность |
+| 🇰🇪 Кения | Rung'eto AA | Camera Obscura | Москва | чёрная смородина, цитрус |
+| 🇰🇪 Кения | Chinga AA | Caffeine Lab | Москва | ягоды, грейпфрут |
+| 🇰🇪 Кения | CVA СпайксиТути | TAB | Новосибирск | яркая кислотность |
+| 🇰🇪 Кения | Muthuaini | ForCup | СПб | смородина, грейпфрут |
+| 🇪🇹 Эфиопия | Ambella | Triptych Coffee | Тамбов | цветы, чай, лимон |
 
 ---
 

@@ -153,6 +153,46 @@ const schemaBreadcrumb = JSON.stringify({
     border: none; border-top: 1px solid var(--border); margin: 32px 0;
   }
 
+  .blog-content table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0 24px;
+    font-size: 0.84rem;
+    line-height: 1.45;
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .blog-content table thead,
+  .blog-content table tbody {
+    display: table;
+    width: 100%;
+    min-width: 620px;
+    table-layout: auto;
+  }
+  .blog-content th {
+    font-weight: 600;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--text-muted);
+    padding: 10px 14px 8px;
+    text-align: left;
+    border-bottom: 2px solid var(--border);
+    white-space: nowrap;
+  }
+  .blog-content td {
+    padding: 11px 14px;
+    vertical-align: top;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+  }
+  .blog-content tr:last-child td { border-bottom: none; }
+  .blog-content td:first-child { white-space: nowrap; min-width: 120px; }
+  .blog-content td:nth-child(5),
+  .blog-content th:nth-child(5) { white-space: nowrap; min-width: 52px; }
+  .blog-content td:last-child { min-width: 140px; white-space: normal; }
+
   .read-also {
     margin-top: 40px; padding-top: 24px; border-top: 1px solid var(--border);
   }
