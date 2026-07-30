@@ -112,3 +112,26 @@ export const PUT: APIRoute = async ({ request }) => {
     headers: { 'Content-Type': 'application/json' },
   });
 };
+
+export const DELETE: APIRoute = async ({ request, url }) => {
+  const auth = await getAuthUser(request);
+  if ('error' in auth) return auth.error;
+
+  const id = String(url.searchParams.get('id') || '').trim();
+  if (!id) return new Response('id required', { status: 400 });
+
+  const supabase = adminClient();
+  if (!(await tableReady(supabase))) return migrationResponse();
+
+  const { error } = await supabase
+    .from('saved_brew_recipes')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', auth.user.id);
+
+  if (error) return new Response(error.message, { status: 500 });
+  return new Response(JSON.stringify({ ok: true }), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+  });
+};
