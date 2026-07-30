@@ -1,4 +1,3 @@
-Карусель «Лоты Обжarщик года» — 12 слайдов (1080×1350).
-00-cover → 10 лотов → cta.
-Файлы: .svg (исходник) + .png (для Instagram).
+Карусель «Лоты Обжarщик года» — 12 слайдов (1080×1350 PNG).
+Отправляй .png в Instagram / Telegram.
 Перегенерация: node scripts/generate-roaster-award-carousel.mjs
