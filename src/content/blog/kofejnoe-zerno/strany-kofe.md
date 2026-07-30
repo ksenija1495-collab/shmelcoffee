@@ -1,0 +1,345 @@
+---
+title: "Страны кофе: куда можно путешествовать с чашкой"
+description: "15 стран specialty: терруар, вкус, обработка и где купить зерно в России — с ссылками на обжарщиков."
+date: 2026-07-30
+cluster: "C3"
+type: "pillar"
+keywords: ["страны кофе", "терруар кофе", "эфиопия кофе", "колумбия кофе", "specialty зерно россия", "карта стран кофе"]
+readAlso: ["kofejnoe-zerno/obrabotka-zerna", "kofejnoe-zerno", "specialty-coffee/s-chego-nachat"]
+---
+
+# Страны кофе: куда можно путешествовать с чашкой
+
+Кофе — это география. Одна и та же арабика в Эфиопии и Бразилии звучит как два разных напитка. Высота, почва, обработка и сорт складываются в **терруар** — «адрес» вкуса в чашке.
+
+В приложении Shmelco есть [**карта открытий**](/countries): 15 стран, которые стоит пробовать в specialty. Страна «открывается», когда вы добавляете **чашку в дневник** или **зерно на полку** с этой страной — прогресс виден в [личном кабинете](/account?tab=disco).
+
+Этот гид — подробная версия карты: терруар, вкус, с чем сравнивать и **где попробовать в России** (ссылки на обжарщиков и конкретные лоты, если они есть в каталоге).
+
+> Ассортимент меняется — ссылки ведут на каталоги и актуальные лоты на момент публикации. Если лот закончился, ищите ту же страну в фильтре «single origin» у обжarщика.
+
+---
+
+## Как читать этот гид
+
+У каждой страны — блоки:
+
+- **Терруар** — почему здесь такой вкус
+- **В чашке** — типичные ноты и ощущения
+- **Обработка** — что искать на этикетке
+- **Заваривание** — с чего начать дома
+- **Где попробовать в РФ** — обжarщики и ссылки
+
+Маршрут для новичка в конце статьи.
+
+---
+
+## Африка
+
+### 🇪🇹 Эфиопия — родина кофе
+
+**Терруар:** высокогорные плато 1500–2200 м, полудикие леса, тысячи локальных сортов (heirloom). Регионы Yirgacheffe, Sidamo, Guji, Harrar — разные профили.
+
+**В чашке:** ягоды, жасмин, бергамот, персик, цитрус, мёд. Мытая — цветочная и чайная. Натуральная — взрыв ягод.
+
+**Обработка:** мытая vs натуральная — один из лучших уроков в specialty.
+
+**Заваривание:** V60, Chemex, AeroPress. 92–94°C, медленный пролив.
+
+**Где попробовать в России:**
+- [The Welder Catherine — Эфиопия Урага Раро](https://theweldercatherine.ru/catalog/dlya_filtra/efiopiya_uraga_raro_2/) (натуральная)
+- [The Welder Catherine — Эфиопия Челчеле 120ч](https://theweldercatherine.ru/catalog/dlya_filtra/efiopiya_chelchele_120_chasov/) (анаэроб)
+- [Silky Drum — каталог](https://www.silkydrum.ru/catalog) (несколько лотов Эфиопии)
+- [Rockets Coffee — каталог](https://rockets.coffee/catalog)
+- [Fauno Coffee — Эфиопия Леми](https://fauno.coffee/classico/ethiopia-lemi) · [Бенса Голба](https://fauno.coffee/classico/ethiopia-bensa)
+
+---
+
+### 🇰🇪 Кения — ягодная кислотность
+
+**Терруар:** вулканические почвы у Кении, 1400–2000 м. Сорта SL28, SL34.
+
+**В чашке:** чёрная смородина, томат, грейпфрут, красные ягоды. Очень яркая, «фосфорная» кислотность.
+
+**Обработка:** двойная мытая (Kenya-style) — стандарт.
+
+**Заваривание:** V60, Chemex. Пейте остывающей — профиль меняется.
+
+**Где попробовать:**
+- [The Welder Catherine — Кения Ньери ПБ](https://theweldercatherine.ru/catalog/dlya_filtra/keniya_neri_pb/)
+- [The Welder Catherine — Кения Тириква](https://theweldercatherine.ru/catalog/dlya_filtra/keniya_tirikva_gukuyuni_av/)
+- [Silky Drum — каталог](https://www.silkydrum.ru/catalog) (мытая Кения)
+- [Rockets Coffee — каталог](https://rockets.coffee/catalog)
+
+---
+
+### 🇷🇼 Руанда — мягкая Африка
+
+**Терруар:** «страна тысячи холмов», 1500–2000 м, washing stations.
+
+**В чашке:** красные ягоды, цитрус, чай, кaramel. Ярко, но мягче Кении.
+
+**Обработка:** мытая — лучший старт. Натуральная — больше сладости.
+
+**Заваривание:** V60, AeroPress.
+
+**Где попробовать:**
+- [The Welder Catherine — Руанда Бисумо](https://theweldercatherine.ru/catalog/dlya_filtra/ruanda_bisumo/)
+- [The Welder Catherine — Руанда Кабуе](https://theweldercatherine.ru/catalog/dlya_filtra/ruanda_kabue_/)
+- [The Welder Catherine — Руанда Гикумби](https://theweldercatherine.ru/catalog/dlya_filtra/ruanda_gikumbi_mytaya/)
+- [Rockets Coffee — каталог](https://rockets.coffee/catalog)
+
+---
+
+### 🇧🇮 Бурунди — ярко, но дружелюбно
+
+**Терруар:** сосед Руанды и Тanzании, бурбон на высоте, озеро Танганьика.
+
+**В чашке:** смородина, красные ягоды, цитрус, чай. Часто называют «мягкой Кенией».
+
+**Обработка:** мытая бурбон — ищите лоты 1700+ м.
+
+**Заваривание:** V60, Switch.
+
+**Где попробовать:**
+- [The Welder Catherine — каталог фильтра](https://theweldercatherine.ru/catalog/dlya_filtra/) (лоты появляются сезонно)
+- [Submarine Coffee — каталог](https://submarine.coffee/catalog)
+- [Sibaristica — single origin](https://sibaristica.com/catalog/)
+
+---
+
+## Южная Америка
+
+### 🇨🇴 Колумбия — универсальный specialty
+
+**Терруар:** Анды, 1200–2000 м. Huila, Nariño, Cauca.
+
+**В чашке:** кaramel, красное яблоко, орехи, молочный шоколад, цитрус.
+
+**Обработка:** мытая — классика. Хани и анаэроб — эксперименты последних лет.
+
+**Заваривание:** V60, эспрессо, AeroPress — универсальная страна.
+
+**Где попробовать:**
+- [The Welder Catherine — Колумбия Оливер Бердуго](https://theweldercatherine.ru/catalog/dlya_filtra/kolumbiya_oliver_berdugo_1/)
+- [The Welder Catherine — Колумбия Джеферсон Кастаньo](https://theweldercatherine.ru/catalog/dlya_filtra/kolumbiya_dzheferson_kastano/)
+- [Silky Drum — Колумбия Ла Ривьера Гейша](https://www.silkydrum.ru/catalog)
+- [Rockets Coffee — каталог](https://rockets.coffee/catalog) (несколько колумбийских лотов)
+- [Tasty Coffee — single origin](https://tastycoffee.ru/catalog/single-origin/)
+
+---
+
+### 🇧🇷 Бразилия — шоколад и орех
+
+**Терруар:** 800–1400 м, большие fazendas, Cerrado и Minas Gerais.
+
+**В чашке:** тёмный шоколад, орехи, кaramel, низкая кислотность, плотное тело.
+
+**Обработка:** натуральная — стандарт. Specialty-сегмент всё чаще экспериментирует с анаэробом.
+
+**Заваривание:** эспрессо, френч-пресс, cold brew.
+
+**Где попробовать:**
+- [The Welder Catherine — Бразилия Флавио Рейс](https://theweldercatherine.ru/catalog/dlya_filtra/braziliya_flavio_reys/)
+- [Silky Drum — каталог](https://www.silkydrum.ru/catalog)
+- [Fauno Coffee — классика](https://fauno.coffee/classico/)
+- [Tasty Coffee — Бразилия](https://tastycoffee.ru/catalog/single-origin/)
+
+---
+
+### 🇵🇪 Перу — мягкий шоколад
+
+**Терруар:** Cajamarca, San Martín, Cusco. Много органического кофе.
+
+**В чашке:** молочный шоколад, орехи, кaramel, мягкие фрукты.
+
+**Обработка:** мытая — комфортный профиль без сюрпризов.
+
+**Заваривание:** эспрессо, AeroPress, молочные напитки.
+
+**Где попробовать:**
+- [Fauno Coffee — Перу Ла Коипа](https://fauno.coffee/classico/peru-la-coipa)
+- [Tasty Coffee — каталог](https://tastycoffee.ru/catalog/single-origin/)
+- [Sibaristica — каталог](https://sibaristica.com/catalog/)
+
+---
+
+## Центральная Америка
+
+### 🇬🇹 Гватемала — структура и вулканы
+
+**Терруar:** Antigua между тремя вулканами, Huehuetenango.
+
+**В чашке:** чистый шоколад, апельсин, мёд, специи, структура.
+
+**Обработка:** мытая — визитная карточка.
+
+**Заваривание:** V60, эспрессо.
+
+**Где попробовать:**
+- [The Welder Catherine — каталог](https://theweldercatherine.ru/catalog/dlya_filtra/)
+- [Skuratov Coffee — каталог](https://skuratovcoffee.ru/catalog/)
+- [Double B — single origin](https://doubleb.ru/)
+
+---
+
+### 🇭🇳 Гондурас — яркость без пафоса
+
+**Терруар:** Copán, Marcala, Santa Bárbara — высокогорные лоты 1400+ м.
+
+**В чашке:** яркие фрукты, кaramel, цитрус, красные ягоды.
+
+**Обработка:** мытая высокогорья — часто неожиданно яркая.
+
+**Заваривание:** V60, AeroPress.
+
+**Где попробовать:**
+- [Silky Drum — каталог](https://www.silkydrum.ru/catalog)
+- [Rockets Coffee — каталог](https://rockets.coffee/catalog)
+- [Submarine Coffee — каталог](https://submarine.coffee/catalog)
+
+---
+
+### 🇨🇷 Коста-Рика — мед и хани
+
+**Терруар:** Tarrazú, вулканические почвы. Робusta запрещена законом.
+
+**В чашке:** мёд, цитрус, красное яблоко, чистота.
+
+**Обработка:** жёлтый / красный / чёрный **hani** — фирменный стиль страны.
+
+**Заваривание:** V60, AeroPress.
+
+**Где попробовать:**
+- [The Welder Catherine — Коста-Рика Дон Эли](https://theweldercatherine.ru/catalog/dlya_filtra/kosta_rika_don_eli/)
+- [Self Edge Coffee — каталог](https://selfedge.ru/)
+- [Favorit Coffee — каталог](https://favorit.coffee/)
+
+---
+
+### 🇵🇦 Панама — Geisha и элегантность
+
+**Терруар:** склоны вулкана Barú, Boquete, туманные леса.
+
+**В чашке:** жасмин, бергамот, тропики, персик, личи. Чайное тело.
+
+**Обработка:** мытая Geisha — «шампанское» specialty.
+
+**Заваривание:** только фильтр. 90–92°C. Без молока.
+
+**Где попробовать:**
+- [The Welder Catherine — каталог](https://theweldercatherine.ru/catalog/dlya_filtra/) (Geisha — редко, следите за новинками)
+- [Submarine Coffee — каталог](https://submarine.coffee/catalog)
+- [Skuratov Coffee — каталог](https://skuratovcoffee.ru/catalog/)
+
+---
+
+### 🇸🇻 Сальвадор — родина Pacamara
+
+**Терруar:** вулканы Apaneca, Santa Ana. Крупное зерно, сложный профиль.
+
+**В чашке:** тропики, шоколад, орехи, цветы у пакамары.
+
+**Обработка:** Pacamara — отдельная дегустация, не смешивать с «просто бурбоном».
+
+**Заваривание:** V60 для пакамары, эспрессо для бурбона.
+
+**Где попробовать:**
+- [Submarine Coffee — каталог](https://submarine.coffee/catalog)
+- [Sibaristica — каталог](https://sibaristica.com/catalog/)
+- [Mad Espresso Team — каталог](https://madespressoteam.ru/)
+
+---
+
+### 🇳🇮 Никарагуа — мягкий центральноамериканский
+
+**Терруар:** Matagalpa, Jinotega, Nueva Segovia.
+
+**В чашке:** шоколад, орехи, красное яблоко, кaramel.
+
+**Обработка:** мытая — универсальный «домашний» specialty.
+
+**Заваривание:** эспрессо, AeroPress, френч-пресс.
+
+**Где попробовать:**
+- [Tasty Coffee — каталог](https://tastycoffee.ru/catalog/single-origin/)
+- [Sibaristica — каталог](https://sibaristica.com/catalog/)
+- [Bushido Coffee — каталог](https://bushidocoffee.ru/)
+
+---
+
+## Азия и Ближний Восток
+
+### 🇮🇩 Индонезия (Суматра, Ява) — земля и тело
+
+**Терруar:** влажный тропический климат, вет-халлинг (giling basah).
+
+**В чашке:** земля, табак, тёмный шоколад, пряности, кедр. Очень плотное тело.
+
+**Обработка:** wet-hulling — уникален для Суматры. Экспериментальная Ява — другой, фруктовый мир.
+
+**Заваривание:** френч-пресс, эспрессо, мока.
+
+**Где попробовать:**
+- [The Welder Catherine — Ява Вайни](https://theweldercatherine.ru/catalog/dlya_filtra/yava_vayni/)
+- [The Welder Catherine — Индонезия Иджен](https://theweldercatherine.ru/catalog/dlya_filtra/indoneziya_idzhen/)
+- [Fauno Coffee — каталог](https://fauno.coffee/classico/)
+- [Tasty Coffee — Индонезия](https://tastycoffee.ru/catalog/single-origin/)
+
+---
+
+### 🇾🇪 Йемен — древний и пряный
+
+**Терруar:** террасы гор, минимум воды, древние сорта. Порт Мокka дал название напитку.
+
+**В чашке:** специи, сухофрукты, вино, шоколад, дикий мёд.
+
+**Обработка:** только натуральная — воды мало.
+
+**Заваривание:** V60, AeroPress, **джезва** — исторически аутентично.
+
+**Где попробовать:**
+- [The Welder Catherine — каталог](https://theweldercatherine.ru/catalog/dlya_filtra/) (лоты редкие)
+- [Bazzara — каталог](https://bazzara.ru/) (йеменская линейка периодически)
+- [Submarine Coffee — каталог](https://submarine.coffee/catalog)
+
+---
+
+## Маршрут «путешествие с чашкой»
+
+Если хотите пройти карту осмысленно — не хаотично:
+
+1. **Бразилия** — понять плотность и низкую кислотность (комфорт)
+2. **Колумбия** — добавить баланс и кaramel
+3. **Эфиопия мытая** — цветочность и «вау»
+4. **Кения или Руанда** — яркая африканская кислотность
+5. **Коста-Рика хани** — сладость обработки
+6. **Индонезия** — противоположный полюс (земля vs фрукты)
+7. **Панама Geisha** — финал, когда палитра готова
+
+Записывайте каждую чашку в [дневник Shmelco](/add-cup) — страна откроется на [карте](/account?tab=disco).
+
+---
+
+## Обжарщики России: шпаргалка по странам
+
+| Обжарщик | Сильные страны в каталоге | Ссылка |
+|----------|---------------------------|--------|
+| The Welder Catherine | Эфиопия, Кения, Руанда, Колумбия, Бразилия, Коста-Рика, Индонезия | [theweldercatherine.ru](https://theweldercatherine.ru/catalog/dlya_filtra/) |
+| Silky Drum | Эфиопия, Кения, Колумбия, Бразилия | [silkydrum.ru](https://www.silkydrum.ru/catalog) |
+| Rockets Coffee | Эфиопия, Кения, Руанда, Колумбия | [rockets.coffee](https://rockets.coffee/catalog) |
+| Fauno Coffee | Эфиопия, Перу | [fauno.coffee](https://fauno.coffee/classico/) |
+| Tasty Coffee | Широкий origin-каталог | [tastycoffee.ru](https://tastycoffee.ru/catalog/single-origin/) |
+| Submarine | Редкие origins, Geisha | [submarine.coffee](https://submarine.coffee/catalog) |
+| Sibaristica | Центральная и Южная Америка | [sibaristica.com](https://sibaristica.com/catalog/) |
+
+---
+
+## Что дальше
+
+- Пройдите [тест вкуса](/quiz) — получите топ-3 страны под ваш профиль
+- Откройте [карту в кабинете](/account?tab=disco) и отмечайте прогресс
+- Разберитесь в [обработке зерна](/blog/kofejnoe-zerno/obrabotka-zerna) — она меняет страну сильнее, ч кажется
+- Научитесь [описывать вкус](/blog/degustaciya-kofe/kak-opisat-vkus) — так путешествие запоминается
+
+15 стран — не весь мир кофе, но **достаточно**, чтобы понять главные «вкусовые континенты». Дальше — ваши открытия в чашке.

@@ -5,7 +5,7 @@ date: 2026-05-24
 cluster: "C3"
 type: "pillar"
 keywords: ["сорта кофе", "виды арабики", "гейша кофе", "бурбон кофе", "типика", "хейрлум"]
-readAlso: ["kofejnoe-zerno/obrabotka-zerna", "specialty-coffee", "degustaciya-kofe"]
+readAlso: ["kofejnoe-zerno/obrabotka-zerna", "kofejnoe-zerno/strany-kofe", "specialty-coffee", "degustaciya-kofe"]
 ---
 
 # Сорта кофе: от арабики до гейши — полный разбор

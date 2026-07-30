@@ -15,6 +15,10 @@ const ALIAS_TO_KEY: Record<string, string> = {
   yirgacheffe: 'ethiopia',
   sidamo: 'ethiopia',
   guji: 'ethiopia',
+  burundi: 'burundi',
+  salvador: 'elsalvador',
+  'el salvador': 'elsalvador',
+  nicaragua: 'nicaragua',
 };
 
 const byNameLength = countryOrder
