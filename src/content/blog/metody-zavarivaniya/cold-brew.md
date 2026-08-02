@@ -21,7 +21,7 @@ readAlso: ["metody-zavarivaniya", "metody-zavarivaniya/purover-gid", "kofejnoe-z
 Именно поэтому выбор зерна для cold brew подчиняется собственной логике, а не общему правилу «берите то, что вкусно».
 
 <figure>
-  <img src="/blog/cold-brew/cold-brew-i-purover.jpg" alt="Бутылка Hario Filter-in с завариваемым cold brew рядом с пуровером V60" loading="lazy" width="1024" height="794">
+  <img src="/blog/cold-brew/cold-brew-i-purover.jpg" alt="Бутылка Hario Filter-in с завариваемым cold brew рядом с пуровером V60" loading="eager" fetchpriority="high" decoding="async" width="1024" height="794">
   <figcaption>Слева холодная экстракция только началась — вода ещё почти прозрачная. Справа тот же кофе в пуровере отдаст всё за три минуты.</figcaption>
 </figure>
 

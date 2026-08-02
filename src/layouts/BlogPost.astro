@@ -248,6 +248,7 @@ const schemaBreadcrumb = JSON.stringify({
     width: 100%;
     height: auto;
     border-radius: var(--radius);
+    background: var(--surface-2);
   }
   .blog-content figure {
     margin: 28px 0;
@@ -264,6 +265,10 @@ const schemaBreadcrumb = JSON.stringify({
     grid-template-columns: 1fr 1fr;
     gap: 12px;
   }
+  .blog-content figure.figure-pair img {
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+  }
   .blog-content figure.figure-pair figcaption {
     grid-column: 1 / -1;
     margin-top: 0;
@@ -271,6 +276,9 @@ const schemaBreadcrumb = JSON.stringify({
   @media (max-width: 520px) {
     .blog-content figure.figure-pair {
       grid-template-columns: 1fr;
+    }
+    .blog-content figure.figure-pair img {
+      aspect-ratio: auto;
     }
   }
 
