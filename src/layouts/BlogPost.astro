@@ -248,7 +248,14 @@ const schemaBreadcrumb = JSON.stringify({
     width: 100%;
     height: auto;
     border-radius: var(--radius);
-    background: var(--surface-2);
+    background: #ece7d8;
+  }
+  /* Вертикальные кадры иначе занимают почти два экрана: ограничиваем высотой, а не шириной */
+  .blog-content figure:not(.figure-pair) > img {
+    width: auto;
+    max-width: 100%;
+    max-height: 560px;
+    margin: 0 auto;
   }
   .blog-content figure {
     margin: 28px 0;

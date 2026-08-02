@@ -105,8 +105,8 @@ Nordic filter roast разрабатывался под 95-градусную в
 ## Помол и пропорции
 
 <figure class="figure-pair">
-  <img src="/blog/cold-brew/pomol-dlya-cold-brew.jpg" alt="Крупный помол кофе в сетчатом фильтре рядом с весами" loading="lazy" width="1024" height="682">
-  <img src="/blog/cold-brew/filtr-i-pomol.jpg" alt="Фильтр бутылки и молотый кофе крупным планом сверху" loading="lazy" width="682" height="1024">
+  <img src="/blog/cold-brew/pomol-dlya-cold-brew.jpg" alt="Крупный помол кофе в сетчатом фильтре рядом с весами" loading="eager" decoding="async" width="1024" height="682">
+  <img src="/blog/cold-brew/filtr-i-pomol.jpg" alt="Фильтр бутылки и молотый кофе крупным планом сверху" loading="eager" decoding="async" width="682" height="1024">
   <figcaption>Помол крупный, но не грубый: частицы должны быть различимы глазом, как морская соль.</figcaption>
 </figure>
 
@@ -125,7 +125,7 @@ Nordic filter roast разрабатывался под 95-градусную в
 **Вода.** Та же, что для пуровера: фильтрованная, TDS 70–150 ppm. Хлор за двенадцать часов пропитает напиток так, что уже ничего не спасёт.
 
 <figure>
-  <img src="/blog/cold-brew/cold-brew-nastaivaetsya.jpg" alt="Бутылка с настаивающимся cold brew на кухне" loading="lazy" width="682" height="1024">
+  <img src="/blog/cold-brew/cold-brew-nastaivaetsya.jpg" alt="Бутылка с настаивающимся cold brew на кухне" loading="eager" decoding="async" width="682" height="1024">
   <figcaption>Самая приятная часть метода: поставили вечером — забыли до утра.</figcaption>
 </figure>
 
@@ -174,7 +174,7 @@ Cold brew в пропорции 1:8–1:10 — это база, из котор�
 ## Рецепт
 
 <figure>
-  <img src="/blog/cold-brew/nastoy-v-butylke.jpg" alt="Готовый cold brew в бутылке Hario Filter-in на кухне" loading="lazy" width="1024" height="682">
+  <img src="/blog/cold-brew/nastoy-v-butylke.jpg" alt="Готовый cold brew в бутылке Hario Filter-in на кухне" loading="eager" decoding="async" width="1024" height="682">
   <figcaption>Hario Filter-in Bottle: сетчатый фильтр вынимается вместе с гущей, переливать ничего не нужно.</figcaption>
 </figure>
 
