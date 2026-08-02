@@ -6,6 +6,9 @@ cluster: "C2"
 type: "cluster"
 keywords: ["cold brew", "колд брю", "холодный кофе", "холодная экстракция", "какой кофе для cold brew", "рецепт cold brew", "cold brew tonic"]
 readAlso: ["metody-zavarivaniya", "metody-zavarivaniya/purover-gid", "kofejnoe-zerno/obrabotka-zerna", "kofejnoe-zerno/strany-kofe"]
+ogTitle: "Cold brew: какое зерно подходит"
+ogPhoto: "/blog/cold-brew/nastoy-v-butylke.jpg"
+ogPhotoFocus: "left"
 ---
 
 ## Cold brew — это не холодный кофе

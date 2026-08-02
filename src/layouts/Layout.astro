@@ -8,6 +8,7 @@ interface Props {
   keywords?: string[];
   ogType?: string;
   ogImage?: string;
+  ogImageAlt?: string;
   canonical?: string;
   noindex?: boolean;
   publishedTime?: string;
@@ -20,6 +21,7 @@ const {
   keywords = [],
   ogType = 'website',
   ogImage,
+  ogImageAlt,
   canonical,
   noindex: noindexProp = false,
   publishedTime,
@@ -72,6 +74,8 @@ const accountNavTab = (() => {
   <meta property="og:image" content={ogImageUrl}>
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
+  <meta property="og:image:type" content="image/png">
+  {ogImageAlt && <meta property="og:image:alt" content={ogImageAlt} />}
   {publishedTime && <meta property="article:published_time" content={publishedTime} />}
   {modifiedTime && <meta property="article:modified_time" content={modifiedTime} />}
 
@@ -80,6 +84,7 @@ const accountNavTab = (() => {
   <meta name="twitter:title" content={title}>
   <meta name="twitter:description" content={description}>
   <meta name="twitter:image" content={ogImageUrl}>
+  {ogImageAlt && <meta name="twitter:image:alt" content={ogImageAlt} />}
 
   {isBlog && <link rel="alternate" type="application/rss+xml" title="Блог Shmelco Coffee" href={`${siteUrl}/rss.xml`} />}
 

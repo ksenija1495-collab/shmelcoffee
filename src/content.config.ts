@@ -13,6 +13,10 @@ const blog = defineCollection({
     keywords: z.array(z.string()),
     tags: z.array(z.string()).optional(),
     readAlso: z.array(z.string()).optional(),
+    // Короткий заголовок и фото для картинки, которая уходит в превью ссылки
+    ogTitle: z.string().optional(),
+    ogPhoto: z.string().optional(),
+    ogPhotoFocus: z.enum(['left', 'center', 'right']).optional(),
   }),
 });
 

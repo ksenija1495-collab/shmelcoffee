@@ -1,4 +1,6 @@
 ---
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import Layout from './Layout.astro';
 import Nav from '../components/Nav.astro';
 import { CLUSTER_SEO, ORG_SCHEMA, absoluteUrl } from '../lib/seo';
@@ -19,7 +21,11 @@ const { title, description, date, updatedDate, cluster, type, keywords, slug, re
 const siteUrl = 'https://shmelcoffee.com';
 const canonicalUrl = absoluteUrl(`/blog/${slug}/`);
 const clusterInfo = CLUSTER_SEO[cluster] || { name: cluster, pillarSlug: '', ogImage: absoluteUrl('/og/blog.png') };
-const ogImage = clusterInfo.ogImage;
+/* Своя карточка на статью; если её ещё не сгенерировали — берём картинку кластера */
+const articleOgPath = `/og/blog/${slug}.png`;
+const hasArticleOg = existsSync(join(process.cwd(), 'public', articleOgPath));
+const ogImage = hasArticleOg ? absoluteUrl(articleOgPath) : clusterInfo.ogImage;
+const ogImageAlt = `${title} — Shmelco Coffee Guide`;
 const dateISO = date.toISOString();
 const updatedISO = (updatedDate || date).toISOString();
 const dateDisplay = date.toLocaleDateString('ru-RU', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -66,6 +72,7 @@ const schemaBreadcrumb = JSON.stringify({
   keywords={keywords}
   ogType="article"
   ogImage={ogImage}
+  ogImageAlt={ogImageAlt}
   canonical={canonicalUrl}
   publishedTime={dateISO}
   modifiedTime={updatedISO}
