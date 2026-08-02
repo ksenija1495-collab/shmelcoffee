@@ -149,3 +149,11 @@ create policy "cups_select" on cups for select using (auth.uid() = user_id);
 create policy "cups_insert" on cups for insert with check (auth.uid() = user_id);
 create policy "cups_update" on cups for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
 create policy "cups_delete" on cups for delete using (auth.uid() = user_id);
+
+-- 7. Статус запаса зерна на полке (см. migration-shelf-status.sql)
+alter table shelf_items add column if not exists status text not null default 'ok';
+alter table shelf_items drop constraint if exists shelf_items_status_check;
+alter table shelf_items add constraint shelf_items_status_check check (status in ('ok', 'low', 'out'));
+create index if not exists shelf_items_user_status_idx on shelf_items (user_id, status);
+drop policy if exists "shelf_items_update" on shelf_items;
+create policy "shelf_items_update" on shelf_items for update using (auth.uid() = user_id) with check (auth.uid() = user_id);

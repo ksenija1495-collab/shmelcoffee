@@ -158,6 +158,14 @@ import Nav from '../components/Nav.astro';
   .shelf-guide-btn { margin-top: 9px; width: 100%; font-size: .7rem; padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); color: var(--text-dim); cursor: pointer; font-family: 'Inter', sans-serif; transition: all .2s; }
   .shelf-guide-btn:hover { border-color: var(--accent); color: var(--accent); }
   .shelf-del { position: absolute; top: 6px; right: 6px; width: 24px; height: 24px; border-radius: 50%; border: 0; background: rgba(0,0,0,.5); color: #fff; cursor: pointer; font-size: 15px; line-height: 1; }
+  .shelf-status { margin-top: 8px; width: 100%; font-size: .68rem; font-weight: 600; padding: 5px 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text-dim); cursor: pointer; font-family: 'Inter', sans-serif; transition: all .2s; }
+  .shelf-status:hover { border-color: var(--text-dim); }
+  .shelf-status.st-low { border-color: #d99a2b; background: rgba(217,154,43,.12); color: #a9751a; }
+  .shelf-status.st-out { border-color: var(--border); background: transparent; color: var(--text-muted); }
+  .shelf-card.shelf-st-low { border-color: #d99a2b; }
+  .shelf-card.shelf-st-out { opacity: .55; }
+  .shelf-card.shelf-st-out:hover { opacity: 1; }
+  .shelf-low-count { display: inline-block; margin-left: 6px; font-size: .66rem; font-weight: 700; padding: 2px 7px; border-radius: 999px; background: rgba(217,154,43,.16); color: #a9751a; vertical-align: middle; }
   .selection-card { padding: 20px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 12px; transition: border-color .2s; }
   .selection-card:hover { border-color: var(--border-hover); }
   .selection-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 8px; }
@@ -506,6 +514,30 @@ import Nav from '../components/Nav.astro';
 
   const MORE_TABS = new Set(['recipes', 'selections', 'guides', 'community']);
 
+  const SHELF_STATUS: Record<string, { label: string; rank: number }> = {
+    ok: { label: '🟢 Есть', rank: 1 },
+    low: { label: '🟡 Заканчивается', rank: 0 },
+    out: { label: '⚪️ Закончилось', rank: 2 },
+  };
+  const SHELF_STATUS_NEXT: Record<string, string> = { ok: 'low', low: 'out', out: 'ok' };
+
+  function shelfStatus(s: any): string {
+    return SHELF_STATUS[s?.status] ? s.status : 'ok';
+  }
+
+  function shelfStatusRank(s: any) {
+    return s.kind === 'bean' ? SHELF_STATUS[shelfStatus(s)].rank : 1;
+  }
+
+  function shelfStatusMigrationBox(): string {
+    return `<div class="migration-box"><b>Отметки «заканчивается» недоступны — нужна миграция в Supabase</b>
+      <ol>
+        <li>Открой <a href="https://supabase.com/dashboard/project/vakdjxdbfoxkrsedgwcl/sql/new" target="_blank" rel="noopener">SQL Editor</a></li>
+        <li>Вставь файл <code>supabase/migration-shelf-status.sql</code> из репозитория</li>
+        <li>Нажми Run → обнови эту страницу</li>
+      </ol></div>`;
+  }
+
   function shelfBrewHref(s: any) {
     const q = new URLSearchParams();
     if (s.name) q.set('name', s.name);
@@ -697,8 +729,19 @@ import Nav from '../components/Nav.astro';
       ? `<div class="profile-card">${diaryFilters}<div id="diaryList">${cups.map(renderCupItem).join('')}</div><div id="diaryEmpty" class="empty-state" style="display:none">Нет чашек по этому фильтру</div></div>`
       : `<div class="empty-state">Записывайте кофе, который пьёте дома или заказали сами — он наполнит вашу Карту вкуса.<br><a href="/add-cup">Добавить первую чашку →</a></div>`;
 
+    const shelfHasStatus = shelf.length > 0 && Object.prototype.hasOwnProperty.call(shelf[0], 'status');
+    const shelfSorted = shelfHasStatus
+      ? [...shelf].sort((a: any, b: any) => shelfStatusRank(a) - shelfStatusRank(b))
+      : shelf;
+    const lowCount = shelfHasStatus ? shelf.filter((s: any) => s.kind === 'bean' && s.status === 'low').length : 0;
     const shelfPanel = shelf.length
-      ? `<div class="shelf-grid">${shelf.map((s: any) => `<div class="shelf-card">${s.photo_url ? `<img src="${esc(s.photo_url)}" class="shelf-photo" alt=""/>` : `<div class="shelf-noimg">${s.kind === 'bean' ? '🫘' : '⚙️'}</div>`}<div class="shelf-body"><div class="shelf-name">${esc(s.name)}</div><div class="shelf-meta">${s.kind === 'bean' ? ([s.roaster, s.country, s.process].filter(Boolean).map(esc).join(' · ') || 'зерно') : esc(s.category || 'оборудование')}</div>${s.kind === 'bean' ? `<a class="shelf-brew-btn" href="${shelfBrewHref(s)}">☕ Заварила →</a><a class="shelf-guide-btn" href="/generate?shelf=${s.id}" style="display:block;text-align:center;text-decoration:none">🤖 Сгенерировать гид</a>` : ''}</div><button class="shelf-del" data-shelf-del="${s.id}" title="удалить">×</button></div>`).join('')}</div>`
+      ? `<div class="shelf-grid">${shelfSorted.map((s: any) => {
+          const st = shelfStatus(s);
+          const statusBtn = shelfHasStatus && s.kind === 'bean'
+            ? `<button type="button" class="shelf-status st-${st}" data-shelf-status="${s.id}" data-status="${st}" title="Нажми, чтобы отметить запас">${SHELF_STATUS[st].label}</button>`
+            : '';
+          return `<div class="shelf-card${s.kind === 'bean' ? ` shelf-st-${st}` : ''}">${s.photo_url ? `<img src="${esc(s.photo_url)}" class="shelf-photo" alt=""/>` : `<div class="shelf-noimg">${s.kind === 'bean' ? '🫘' : '⚙️'}</div>`}<div class="shelf-body"><div class="shelf-name">${esc(s.name)}</div><div class="shelf-meta">${s.kind === 'bean' ? ([s.roaster, s.country, s.process].filter(Boolean).map(esc).join(' · ') || 'зерно') : esc(s.category || 'оборудование')}</div>${statusBtn}${s.kind === 'bean' ? `<a class="shelf-brew-btn" href="${shelfBrewHref(s)}">☕ Заварила →</a><a class="shelf-guide-btn" href="/generate?shelf=${s.id}" style="display:block;text-align:center;text-decoration:none">🤖 Сгенерировать гид</a>` : ''}</div><button class="shelf-del" data-shelf-del="${s.id}" title="удалить">×</button></div>`;
+        }).join('')}</div>${shelfHasStatus ? '' : shelfStatusMigrationBox()}`
       : `<div class="empty-state">Полка пуста. <a href="/add-shelf?kind=bean">+ Зерно</a> · <a href="/add-shelf?kind=equipment">+ Оборудование</a></div>`;
 
     const champBlock = renderChampionRecipesBlock();
@@ -769,7 +812,7 @@ import Nav from '../components/Nav.astro';
       <section class="acc-panel" data-panel="disco"><div class="panel-h">🧭 Карта открытий</div>${discoPanel}</section>
       <section class="acc-panel" data-panel="diary"><div class="panel-h"><span>📔 Моё кофе</span><a href="/add-cup" class="add-cup-btn">+ Добавить чашку</a></div>${diaryPanel}</section>
       <section class="acc-panel" data-panel="recipes"><div class="panel-h"><span>📝 Рецепты</span><a href="/add-cup" class="add-cup-btn">+ Новая чашка</a></div>${recipesPanel}</section>
-      <section class="acc-panel" data-panel="shelf"><div class="panel-h"><span>🪵 Моя полка</span><span style="display:flex;gap:6px"><a href="/add-shelf?kind=bean" class="add-cup-btn">+ Зерно</a><a href="/add-shelf?kind=equipment" class="add-cup-btn">+ Оборудование</a></span></div>${shelfPanel}</section>
+      <section class="acc-panel" data-panel="shelf"><div class="panel-h"><span>🪵 Моя полка${shelfHasStatus ? ` <span class="shelf-low-count"${lowCount ? '' : ' style="display:none"'}>${lowCount} заканчивается</span>` : ''}</span><span style="display:flex;gap:6px"><a href="/add-shelf?kind=bean" class="add-cup-btn">+ Зерно</a><a href="/add-shelf?kind=equipment" class="add-cup-btn">+ Оборудование</a></span></div>${shelfPanel}</section>
       <section class="acc-panel" data-panel="selections"><div class="panel-h">☕ Мои подборки</div>${selectionsPanel}</section>
       <section class="acc-panel" data-panel="guides"><div class="panel-h">📖 Гиды</div>${paidBanner}${guidesPanel}</section>
       <section class="acc-panel" data-panel="community"><div class="panel-h">🌐 Сообщество</div>${communityJoin}<div class="profile-card" id="communityCard"><div class="profile-label" style="min-width:0">Загружаем статистику…</div></div>${twinSoon}</section>
@@ -816,6 +859,28 @@ import Nav from '../components/Nav.astro';
     }));
 
     page.querySelectorAll('[data-shelf-del]').forEach(b => b.addEventListener('click', async () => { await supabase.from('shelf_items').delete().eq('id', (b as HTMLElement).dataset.shelfDel); init(); }));
+    page.querySelectorAll('[data-shelf-status]').forEach(b => b.addEventListener('click', async () => {
+      const btn = b as HTMLButtonElement;
+      const prev = btn.dataset.status || 'ok';
+      const next = SHELF_STATUS_NEXT[prev];
+      const card = btn.closest('.shelf-card') as HTMLElement | null;
+      const apply = (st: string) => {
+        btn.dataset.status = st;
+        btn.textContent = SHELF_STATUS[st].label;
+        btn.className = `shelf-status st-${st}`;
+        if (card) card.className = `shelf-card shelf-st-${st}`;
+      };
+      btn.disabled = true;
+      apply(next);
+      const { error } = await supabase.from('shelf_items').update({ status: next }).eq('id', btn.dataset.shelfStatus).eq('user_id', user.id);
+      btn.disabled = false;
+      if (error) { apply(prev); alert('Не удалось сохранить статус: ' + error.message); return; }
+      const item = shelf.find((s: any) => s.id === btn.dataset.shelfStatus);
+      if (item) item.status = next;
+      const counter = page.querySelector('.shelf-low-count') as HTMLElement | null;
+      const low = shelf.filter((s: any) => s.kind === 'bean' && s.status === 'low').length;
+      if (counter) { counter.textContent = `${low} заканчивается`; counter.style.display = low ? '' : 'none'; }
+    }));
     page.querySelectorAll('[data-sel-del]').forEach(b => b.addEventListener('click', async () => { if (!confirm('Удалить подборку?')) return; await supabase.from('coffee_selections').delete().eq('id', (b as HTMLElement).dataset.selDel); init(); }));
     page.querySelectorAll('[data-shelf-all]').forEach(b => b.addEventListener('click', async () => { const sel = selections.find((s: any) => s.id === (b as HTMLElement).dataset.shelfAll); if (!sel) return; const rows = (sel.coffees || []).map((c: any) => ({ user_id: user.id, kind: 'bean', name: c.name || 'Кофе', roaster: c.roaster || null, country: c.origin || null, process: c.process || null, source: 'selection' })); if (rows.length) await supabase.from('shelf_items').insert(rows); init(); }));
     page.querySelectorAll('.coffee-shelf-one').forEach(b => b.addEventListener('click', async () => { const el = b as HTMLElement; const sel = selections.find((s: any) => s.id === el.dataset.sid); if (!sel) return; const c = (sel.coffees || [])[parseInt(el.dataset.ci!)]; if (!c) return; await addCoffeeToShelf(user, c); el.textContent = '✓ на полке'; (el as HTMLButtonElement).disabled = true; }));

@@ -28,6 +28,10 @@ import { DB, countryOrder } from '../data/countries';
           <div><label class="fl">Страна</label><select id="f_country"></select><p class="field-hint">Открывает страну на карте — можно подставить из названия кофе</p></div>
           <div><label class="fl">Обработка</label><select id="f_process"></select></div>
         </div>
+        <div class="shelf-add-row" id="shelfAddRow">
+          <label class="shelf-add-check"><input type="checkbox" id="f_to_shelf" checked/><span>Добавить зерно на полку</span></label>
+          <p class="field-hint shelf-add-hint" id="shelfAddHint">Полка помнит зерно между чашками — заваришь его снова в один клик и не будешь заполнять поля заново.</p>
+        </div>
         <label class="fl">Способ заваривания</label>
         <select id="f_brew"></select>
         <details class="recipe-picker" id="recipePicker">
@@ -248,6 +252,12 @@ import { DB, countryOrder } from '../data/countries';
   .sliderrow input[type=range] { width: 100%; accent-color: var(--accent); }
   .balance-hint { font-size: .72rem; color: var(--text-muted); margin: -4px 0 10px; line-height: 1.45; }
   .field-hint { font-size: .68rem; color: var(--text-muted); margin: 4px 0 0; line-height: 1.4; }
+  .shelf-add-row { margin: 10px 0 4px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); }
+  .shelf-add-check { display: flex; align-items: center; gap: 8px; font-size: .8rem; font-weight: 600; color: var(--text); cursor: pointer; }
+  .shelf-add-check input { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
+  .shelf-add-row.is-on-shelf { border-color: var(--accent); }
+  .shelf-add-row.is-on-shelf .shelf-add-check { color: var(--text-muted); cursor: default; }
+  .shelf-add-hint { margin-top: 6px; }
   .brew-time-inp, .pour-inp.brew-time-inp { font-variant-numeric: tabular-nums; letter-spacing: .02em; }
   .pour-ml-inp { font-variant-numeric: tabular-nums; text-align: center; }
   .brew-time-hint { margin-top: 6px; }
@@ -546,6 +556,70 @@ import { DB, countryOrder } from '../data/countries';
     setGrinderValue(current);
     const hint = document.getElementById('grinderHint') as HTMLElement;
     if (hint) hint.style.display = data?.length ? 'none' : 'block';
+  }
+
+  type ShelfBean = { id: string; name: string; roaster: string | null };
+  let shelfBeans: ShelfBean[] = [];
+  let shelfChoiceTouched = false;
+
+  const beanKey = (name: string) => name.trim().toLowerCase().replace(/\s+/g, ' ');
+
+  function matchShelfBean(): ShelfBean | null {
+    const name = (document.getElementById('f_name') as HTMLInputElement).value.trim();
+    if (!name) return null;
+    return shelfBeans.find((b) => beanKey(b.name) === beanKey(name)) || null;
+  }
+
+  function updateShelfAddState() {
+    const row = document.getElementById('shelfAddRow') as HTMLElement | null;
+    const box = document.getElementById('f_to_shelf') as HTMLInputElement | null;
+    const hint = document.getElementById('shelfAddHint') as HTMLElement | null;
+    if (!row || !box || !hint) return;
+    if (editCupId) { row.style.display = 'none'; box.checked = false; return; }
+    const existing = matchShelfBean();
+    if (existing) {
+      row.classList.add('is-on-shelf');
+      box.checked = false;
+      box.disabled = true;
+      hint.textContent = `«${existing.name}» уже на полке — добавлять второй раз не нужно.`;
+    } else {
+      row.classList.remove('is-on-shelf');
+      box.disabled = false;
+      if (!shelfChoiceTouched) box.checked = true;
+      hint.textContent = 'Полка помнит зерно между чашками — заваришь его снова в один клик, не заполняя поля заново.';
+    }
+  }
+
+  async function loadShelfBeans() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data } = await supabase
+      .from('shelf_items')
+      .select('id, name, roaster')
+      .eq('user_id', user.id)
+      .eq('kind', 'bean');
+    shelfBeans = (data as ShelfBean[]) || [];
+    updateShelfAddState();
+  }
+
+  function bindShelfAdd() {
+    document.getElementById('f_name')!.addEventListener('input', updateShelfAddState);
+    document.getElementById('f_to_shelf')!.addEventListener('change', () => { shelfChoiceTouched = true; });
+    updateShelfAddState();
+  }
+
+  async function addBeanToShelf(userId: string, payload: any) {
+    const { error } = await supabase.from('shelf_items').insert({
+      user_id: userId,
+      kind: 'bean',
+      name: payload.name,
+      roaster: payload.roaster,
+      country: payload.country,
+      process: payload.process,
+      variety: payload.variety,
+      source: 'manual',
+    });
+    if (error) console.warn('shelf insert failed:', error.message);
   }
 
   function clearRecipeForm() {
@@ -1134,6 +1208,8 @@ import { DB, countryOrder } from '../data/countries';
     payload.user_id = user.id;
     const { data, error } = await supabase.from('cups').insert(payload).select('id').single();
     if(error){ msg.className='addcup-msg error'; msg.textContent='Ошибка: '+error.message; btn.disabled=false; btn.textContent='Сохранить чашку'; return; }
+    const toShelf = document.getElementById('f_to_shelf') as HTMLInputElement | null;
+    if (toShelf && toShelf.checked && !toShelf.disabled) await addBeanToShelf(user.id, payload);
     const country = readCountryValue();
     let href = `/cup?id=${data.id}&new=1`;
     if (country) href += `&opened_country=${encodeURIComponent(country)}`;
@@ -1145,8 +1221,10 @@ import { DB, countryOrder } from '../data/countries';
       if(await guard()){
         build();
         bindRecipeActions();
+        bindShelfAdd();
         await loadGrinders();
         await loadSavedRecipes();
+        await loadShelfBeans();
         if (editCupId) {
           await loadCupForEdit();
         }
