@@ -429,6 +429,21 @@ import { DB, countryOrder } from '../data/countries';
     }
   }
 
+  /* Метод или обработка могли прийти из гида в другой формулировке, чем в списке.
+     Без своего варианта поле осталось бы пустым и затёрлось при сохранении. */
+  function setSelectKeepingValue(id: string, val: string | null | undefined) {
+    const v = (val || '').trim();
+    const s = document.getElementById(id) as HTMLSelectElement;
+    if (!s) return;
+    s.value = '';
+    if (!v) return;
+    setSelect(id, v);
+    if (!s.value) {
+      s.add(new Option(v, v));
+      s.value = v;
+    }
+  }
+
   async function guard(){
     const { data:{ user } } = await supabase.auth.getUser();
     if(!user){ window.location.href = '/login'; return null; }
@@ -538,13 +553,11 @@ import { DB, countryOrder } from '../data/countries';
     sel.value = v;
   }
 
-  async function loadGrinders() {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+  async function loadGrinders(userId: string) {
     const { data } = await supabase
       .from('shelf_items')
       .select('name')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .eq('kind', 'equipment')
       .eq('category', 'Кофемолка')
       .order('created_at', { ascending: false });
@@ -590,13 +603,11 @@ import { DB, countryOrder } from '../data/countries';
     }
   }
 
-  async function loadShelfBeans() {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+  async function loadShelfBeans(userId: string) {
     const { data } = await supabase
       .from('shelf_items')
       .select('id, name, roaster')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .eq('kind', 'bean');
     shelfBeans = (data as ShelfBean[]) || [];
     updateShelfAddState();
@@ -884,9 +895,9 @@ import { DB, countryOrder } from '../data/countries';
     (document.getElementById('f_name') as HTMLInputElement).value = cup.name || '';
     (document.getElementById('f_roaster') as HTMLInputElement).value = cup.roaster || '';
     setVarietyValue(cup.variety);
-    setSelect('f_country', cup.country || '');
-    setSelect('f_process', cup.process || '');
-    setSelect('f_brew', cup.brew_method || '');
+    setSelectKeepingValue('f_country', cup.country);
+    setSelectKeepingValue('f_process', cup.process);
+    setSelectKeepingValue('f_brew', cup.brew_method);
     sel.acidity = cup.acidity ?? 3;
     sel.sweetness = cup.sweetness ?? 3;
     sel.bitterness = cup.bitterness ?? 2;
@@ -914,23 +925,35 @@ import { DB, countryOrder } from '../data/countries';
     renderMyRecipesPanel();
   }
 
-  async function loadCupForEdit() {
-    if (!editCupId) return;
-    setEditModeUI();
-    const user = await guard();
-    if (!user) return;
-    const { data: cup, error } = await supabase
+  async function fetchCupForEdit(userId: string) {
+    if (!editCupId) return null;
+    const { data, error } = await supabase
       .from('cups')
       .select('*')
       .eq('id', editCupId)
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .maybeSingle();
-    if (error || !cup) {
+    if (error || !data) return 'notfound';
+    return data;
+  }
+
+  /* Пока чашка не подгрузилась, форма выглядит как пустая форма добавления —
+     блокируем сохранение, чтобы записанное не затёрлось пустыми полями. */
+  function beginEditMode() {
+    setEditModeUI();
+    const btn = document.getElementById('saveBtn') as HTMLButtonElement;
+    if (btn) { btn.disabled = true; btn.textContent = 'Загружаем чашку…'; }
+  }
+
+  function finishEditMode(cup: any) {
+    const btn = document.getElementById('saveBtn') as HTMLButtonElement;
+    if (cup === 'notfound' || !cup) {
       alert('Чашка не найдена');
       window.location.href = '/account';
       return;
     }
     prefillFromCup(cup);
+    if (btn) { btn.disabled = false; btn.textContent = 'Сохранить изменения'; }
   }
 
   function addNote(n: string, cat?: string) {
@@ -1218,17 +1241,20 @@ import { DB, countryOrder } from '../data/countries';
 
   (async ()=>{
     try {
-      if(await guard()){
+      const user = await guard();
+      if (user) {
         build();
         bindRecipeActions();
         bindShelfAdd();
-        await loadGrinders();
-        await loadSavedRecipes();
-        await loadShelfBeans();
-        if (editCupId) {
-          await loadCupForEdit();
-        }
+        if (editCupId) beginEditMode();
         document.getElementById('saveBtn')!.addEventListener('click', save);
+        const [, , , cup] = await Promise.all([
+          loadGrinders(user.id),
+          loadSavedRecipes(),
+          loadShelfBeans(user.id),
+          fetchCupForEdit(user.id),
+        ]);
+        if (editCupId) finishEditMode(cup);
       }
     } catch (e) {
       console.error(e);
