@@ -7,6 +7,27 @@ for (const [key, c] of Object.entries(DB)) {
 
 /** Доп. подсказки в названии зерна (Ява → Индонезия и т.п.) */
 const ALIAS_TO_KEY: Record<string, string> = {
+  bolivia: 'bolivia',
+  caranavi: 'bolivia',
+  каранави: 'bolivia',
+  самайпата: 'bolivia',
+  china: 'china',
+  yunnan: 'china',
+  юньнань: 'china',
+  пуэр: 'china',
+  мэнлянь: 'china',
+  vietnam: 'vietnam',
+  'viet nam': 'vietnam',
+  далат: 'vietnam',
+  dalat: 'vietnam',
+  'da lat': 'vietnam',
+  'son la': 'vietnam',
+  шонла: 'vietnam',
+  'лам донг': 'vietnam',
+  malawi: 'malawi',
+  мзузу: 'malawi',
+  нгапани: 'malawi',
+  ngapani: 'malawi',
   ява: 'indonesia',
   java: 'indonesia',
   sumatra: 'indonesia',
@@ -34,6 +55,9 @@ export function resolveCountryKey(country?: string | null, hint?: string | null)
     for (const { key, name } of byNameLength) {
       const n = name.toLowerCase();
       if (lower.includes(n) || n.includes(lower)) return key;
+    }
+    for (const [alias, key] of Object.entries(ALIAS_TO_KEY)) {
+      if (lower.includes(alias)) return key;
     }
   }
 
