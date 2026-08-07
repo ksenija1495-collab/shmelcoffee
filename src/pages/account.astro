@@ -279,7 +279,9 @@ import Nav from '../components/Nav.astro';
   .ob-item a:hover { text-decoration: underline; }
 
   .acc-more-wrap { position: relative; flex: 0 0 auto; }
-  .acc-more-menu { position: absolute; top: calc(100% + 6px); right: 0; z-index: 20; min-width: 190px; padding: 6px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface); box-shadow: var(--shadow-hover); }
+  /* Меню позиционируется fixed и координатами из JS: .acc-tabs скроллится по горизонтали,
+     а overflow обрезал бы выпадающий список. */
+  .acc-more-menu { position: fixed; z-index: 90; min-width: 190px; padding: 6px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface); box-shadow: var(--shadow-hover); }
   .acc-more-item { display: block; width: 100%; text-align: left; padding: 9px 12px; border: 0; border-radius: 8px; background: transparent; color: var(--text-dim); font-size: .82rem; font-weight: 600; cursor: pointer; font-family: 'Inter', sans-serif; }
   .acc-more-item:hover, .acc-more-item.active { background: var(--surface-2); color: var(--text); }
 
@@ -903,8 +905,9 @@ import Nav from '../components/Nav.astro';
     page.querySelectorAll('[data-guide-del]').forEach(b => b.addEventListener('click', async () => { if (!confirm('Удалить этот гид?')) return; await supabase.from('guides').delete().eq('id', (b as HTMLElement).getAttribute('data-guide-del')); init(); }));
 
     page.querySelectorAll('[data-buy]').forEach(b => b.addEventListener('click', () => {
-      if (buyUrl) { window.open(buyUrl, '_blank'); }
-      else { alert('Оплата не настроена (нет PUBLIC_PRODAMUS_URL). Напишите @ksenijashmel.'); }
+      if (!buyUrl) { alert('Оплата не настроена (нет PUBLIC_PRODAMUS_URL). Напишите @ksenijashmel.'); return; }
+      /* Мобильные браузеры часто блокируют новую вкладку молча — тогда уходим в текущей. */
+      if (!window.open(buyUrl, '_blank')) window.location.href = buyUrl;
     }));
 
     page.querySelectorAll('[data-shelf-del]').forEach(b => b.addEventListener('click', async () => { await supabase.from('shelf_items').delete().eq('id', (b as HTMLElement).dataset.shelfDel); init(); }));
@@ -964,16 +967,28 @@ import Nav from '../components/Nav.astro';
 
     const moreBtn = document.getElementById('accMoreBtn');
     const moreMenu = document.getElementById('accMoreMenu');
+    function placeMoreMenu() {
+      if (!moreBtn || !moreMenu || moreMenu.hidden) return;
+      const r = moreBtn.getBoundingClientRect();
+      const w = moreMenu.offsetWidth;
+      moreMenu.style.top = `${r.bottom + 6}px`;
+      moreMenu.style.left = `${Math.max(8, Math.min(r.right - w, window.innerWidth - w - 8))}px`;
+    }
     moreBtn?.addEventListener('click', (e) => {
       e.stopPropagation();
-      if (moreMenu) moreMenu.hidden = !moreMenu.hidden;
+      if (!moreMenu) return;
+      moreMenu.hidden = !moreMenu.hidden;
+      placeMoreMenu();
     });
     if (!(window as any).__accDocClickBound) {
       (window as any).__accDocClickBound = true;
-      document.addEventListener('click', () => {
+      const closeMoreMenu = () => {
         const menu = document.getElementById('accMoreMenu');
         if (menu) menu.hidden = true;
-      });
+      };
+      document.addEventListener('click', closeMoreMenu);
+      window.addEventListener('scroll', closeMoreMenu, { passive: true });
+      window.addEventListener('resize', closeMoreMenu);
     }
     moreMenu?.addEventListener('click', (e) => e.stopPropagation());
 

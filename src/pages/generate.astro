@@ -54,6 +54,15 @@ import Nav from '../components/Nav.astro';
   .gen-empty { font-size: .82rem; color: var(--text-muted); padding: 12px 0; }
   .loader-spinner { width: 28px; height: 28px; border: 2px solid var(--border); border-top-color: var(--text); border-radius: 50%; animation: spin .6s linear infinite; margin: 0 auto 16px; }
   @keyframes spin { to { transform: rotate(360deg); } }
+  /* Мобильная таб-навигация тоже прибита к низу и лежит выше по z-index,
+     поэтому панель генерации поднимаем над ней — иначе тап по кнопке уходит в навигацию. */
+  @media (max-width: 768px) {
+    .gen-bar { bottom: calc(74px + env(safe-area-inset-bottom, 0px)); z-index: 101; padding: 10px 16px; }
+    .gen-bar-inner { gap: 8px; }
+    .gen-bar-note { flex: 1; min-width: 0; font-size: .72rem; }
+    .gen-gen-btn { font-size: .84rem; padding: 11px 18px; }
+    .gen-page { padding-bottom: 210px; }
+  }
 </style>
 
 <script>
@@ -285,7 +294,11 @@ import Nav from '../components/Nav.astro';
     if (preShelf) { const card = page.querySelector('.bean-card[data-bean="' + preShelf + '"]') as HTMLElement | null; if (card) card.click(); }
     else if (!beans.length) addManualEntry();
 
-    document.getElementById('buyBtn')?.addEventListener('click', () => { if (buyUrl) window.open(buyUrl, '_blank'); else alert('Оплата не настроена (нет PUBLIC_PRODAMUS_URL). Напишите @ksenijashmel.'); });
+    document.getElementById('buyBtn')?.addEventListener('click', () => {
+      if (!buyUrl) { alert('Оплата не настроена (нет PUBLIC_PRODAMUS_URL). Напишите @ksenijashmel.'); return; }
+      /* Мобильные браузеры часто блокируют новую вкладку молча — тогда уходим в текущей. */
+      if (!window.open(buyUrl, '_blank')) window.location.href = buyUrl;
+    });
 
     genBtn?.addEventListener('click', async () => {
       const beansArr: any[] = [];
