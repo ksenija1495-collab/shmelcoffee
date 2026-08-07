@@ -152,10 +152,35 @@ import Nav from '../components/Nav.astro';
   .shelf-card { position: relative; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; box-shadow: var(--shadow); }
   .shelf-photo { width: 100%; height: 120px; object-fit: cover; display: block; }
   .shelf-noimg { width: 100%; height: 120px; display: flex; align-items: center; justify-content: center; font-size: 2.4rem; background: var(--surface-2); }
-  .shelf-cover { width: 100%; height: 120px; padding: 10px 12px; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; }
-  .shelf-cover-flag { font-size: 1.9rem; line-height: 1; margin-bottom: auto; }
-  .shelf-cover-country { font-size: .78rem; font-weight: 700; line-height: 1.2; }
-  .shelf-cover-proc { font-size: .66rem; opacity: .8; line-height: 1.2; }
+  .shelf-cover {
+    position: relative; overflow: hidden; width: 100%; height: 120px; padding: 11px 13px 13px;
+    display: flex; flex-direction: column; justify-content: space-between;
+  }
+  /* Кольца высот + мягкий свет сверху: фактура вместо плоской заливки, одинаковая для всех обложек. */
+  .shelf-cover::before {
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    background:
+      repeating-radial-gradient(circle at 92% 122%, rgba(248,247,237,.055) 0 1px, transparent 1px 12px),
+      radial-gradient(120% 100% at 8% -30%, rgba(248,247,237,.15), transparent 62%);
+  }
+  /* Правый верхний угол занят кнопкой удаления — обложка туда не заходит. */
+  .shelf-cover-proc {
+    position: relative; display: flex; align-items: center; gap: 6px;
+    padding-right: 26px; font-size: .58rem; font-weight: 700; letter-spacing: .12em;
+    text-transform: uppercase; opacity: .82; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .shelf-cover-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .shelf-cover-flag { font-size: 1.05rem; line-height: 1; flex-shrink: 0; opacity: .9; }
+  .shelf-cover-bottom { position: relative; display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; }
+  .shelf-cover-name { min-width: 0; }
+  .shelf-cover-country {
+    font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.3rem; font-weight: 600;
+    line-height: 1.08; letter-spacing: .02em; overflow-wrap: anywhere;
+  }
+  .shelf-cover-variety {
+    font-size: .62rem; line-height: 1.3; opacity: .62; margin-top: 3px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
   .shelf-body { padding: 10px 12px; }
   .shelf-name { font-weight: 700; font-size: .82rem; color: var(--text); }
   .shelf-meta { font-size: .72rem; color: var(--text-muted); margin-top: 2px; }
@@ -544,20 +569,26 @@ import Nav from '../components/Nav.astro';
       </ol></div>`;
   }
 
-  /* Обработка сильнее всего определяет характер чашки, поэтому она задаёт цвет карточки,
-     а флаг страны позволяет считывать полку не читая названий. */
-  const PROCESS_LOOK: { match: RegExp; label: string; bg: string; ink: string }[] = [
-    { match: /анаэроб|carbonic|мацерац|ферментир/i, label: 'анаэробная', bg: 'linear-gradient(145deg,#7b3f6b,#4e2745)', ink: '#f6e9f2' },
-    { match: /натур|natural|сух/i, label: 'натуральная', bg: 'linear-gradient(145deg,#a4442f,#6d2a1c)', ink: '#fbe9e2' },
-    { match: /хани|honey|пульп/i, label: 'хани', bg: 'linear-gradient(145deg,#c98a2b,#8a5613)', ink: '#fdf1dc' },
-    { match: /мыт|washed|wet/i, label: 'мытая', bg: 'linear-gradient(145deg,#3f7d74,#22514a)', ink: '#e2f2ef' },
+  /* Обложка зерна работает как корешок книги на полке: страна набрана крупно и читается
+     первой, обработка кодируется приглушённым тоном и точкой-маркером. Тона намеренно
+     низкой насыщенности — 13 карточек в сетке должны выглядеть набором, а не мозаикой. */
+  type ProcessTone = { match?: RegExp; label: string; h: number; s: number; l: number; dot: string };
+  const PROCESS_LOOK: ProcessTone[] = [
+    { match: /анаэроб|carbonic|мацерац|ферментир/i, label: 'анаэробная', h: 300, s: 15, l: 24, dot: '#c4a3c6' },
+    { match: /натур|natural|сух/i, label: 'натуральная', h: 14, s: 26, l: 24, dot: '#d99a7e' },
+    { match: /хани|honey|пульп/i, label: 'хани', h: 36, s: 28, l: 25, dot: '#dcb173' },
+    { match: /мыт|washed|wet/i, label: 'мытая', h: 168, s: 15, l: 23, dot: '#94bdb2' },
   ];
-  const PROCESS_DEFAULT = { label: 'обработка не указана', bg: 'linear-gradient(145deg,#6f5a48,#43352a)', ink: '#f1e8de' };
+  const PROCESS_DEFAULT: ProcessTone = { label: 'без обработки', h: 30, s: 8, l: 24, dot: '#bfae9b' };
+  const COVER_INK = '#F2EADF';
 
-  function processLook(process?: string | null) {
+  /* «Катимор (Catimor)» → «Катимор»: латинские дубли не помещаются и не добавляют смысла. */
+  const stripLatin = (s: string) => s.replace(/\s*\([^)]*\)/g, '').trim();
+
+  function processLook(process?: string | null): ProcessTone {
     const p = (process || '').trim();
     if (!p) return PROCESS_DEFAULT;
-    return PROCESS_LOOK.find((x) => x.match.test(p)) || { ...PROCESS_DEFAULT, label: p.toLowerCase() };
+    return PROCESS_LOOK.find((x) => x.match!.test(p)) || { ...PROCESS_DEFAULT, label: stripLatin(p).toLowerCase() };
   }
 
   function countryFlag(country?: string | null): string {
@@ -570,14 +601,30 @@ import Nav from '../components/Nav.astro';
     return key ? (DB as any)[key]?.flag || '' : '';
   }
 
+  /* Внутри одной обработки тон слегка гуляет по стране — три йеменских анаэроба рядом
+     не сливаются, но и не спорят друг с другом. */
+  function coverBackground(look: ProcessTone, seedText: string): string {
+    let seed = 0;
+    for (let i = 0; i < seedText.length; i++) seed = (seed * 31 + seedText.charCodeAt(i)) % 9973;
+    const h = look.h + ((seed % 9) - 4);
+    const l = look.l + ((Math.floor(seed / 9) % 7) - 3);
+    return `linear-gradient(157deg, hsl(${h} ${look.s}% ${l + 6}%), hsl(${h} ${look.s + 5}% ${l - 6}%))`;
+  }
+
   function shelfBeanCover(s: any): string {
     const look = processLook(s.process);
-    const flag = countryFlag(s.country);
-    const variety = (s.variety || '').trim();
-    return `<div class="shelf-cover" style="background:${look.bg};color:${look.ink}">
-      <div class="shelf-cover-flag">${flag || '🫘'}</div>
-      <div class="shelf-cover-country">${esc(s.country || 'страна не указана')}</div>
-      <div class="shelf-cover-proc">${esc(variety || look.label)}</div>
+    const country = (s.country || '').trim();
+    const flag = countryFlag(country);
+    const variety = stripLatin(s.variety || '');
+    return `<div class="shelf-cover" style="background:${coverBackground(look, country || s.name || '')};color:${COVER_INK}">
+      <div class="shelf-cover-proc"><span class="shelf-cover-dot" style="background:${look.dot}"></span>${esc(look.label)}</div>
+      <div class="shelf-cover-bottom">
+        <div class="shelf-cover-name">
+          <div class="shelf-cover-country">${esc(country || 'Без страны')}</div>
+          ${variety ? `<div class="shelf-cover-variety">${esc(variety)}</div>` : ''}
+        </div>
+        <div class="shelf-cover-flag">${flag || '🫘'}</div>
+      </div>
     </div>`;
   }
 
@@ -783,14 +830,18 @@ import Nav from '../components/Nav.astro';
           const statusBtn = shelfHasStatus && s.kind === 'bean'
             ? `<button type="button" class="shelf-status st-${st}" data-shelf-status="${s.id}" data-status="${st}" title="Нажми, чтобы отметить запас">${SHELF_STATUS[st].label}</button>`
             : '';
+          const hasGeneratedCover = s.kind === 'bean' && !s.photo_url;
           const cover = s.photo_url
             ? `<img src="${esc(s.photo_url)}" class="shelf-photo" alt=""/>`
             : s.kind === 'bean'
             ? shelfBeanCover(s)
             : `<div class="shelf-noimg">⚙️</div>`;
-          const meta = s.kind === 'bean'
-            ? ([s.roaster, s.variety, s.process].filter(Boolean).map(esc).join(' · ') || 'зерно')
-            : esc(s.category || 'оборудование');
+          /* Обложка уже показывает страну, сорт и обработку — в подписи остаётся только обжарщик. */
+          const meta = s.kind !== 'bean'
+            ? esc(s.category || 'оборудование')
+            : hasGeneratedCover
+            ? (esc(s.roaster) || 'зерно')
+            : ([s.roaster, s.variety, s.process].filter(Boolean).map(esc).join(' · ') || 'зерно');
           return `<div class="shelf-card${s.kind === 'bean' ? ` shelf-st-${st}` : ''}">${cover}<div class="shelf-body"><div class="shelf-name">${esc(s.name)}</div><div class="shelf-meta">${meta}</div>${statusBtn}${s.kind === 'bean' ? `<a class="shelf-brew-btn" href="${shelfBrewHref(s)}">☕ Заварила →</a><a class="shelf-guide-btn" href="/generate?shelf=${s.id}" style="display:block;text-align:center;text-decoration:none">🤖 Сгенерировать гид</a>` : ''}</div><button class="shelf-del" data-shelf-del="${s.id}" title="удалить">×</button></div>`;
         }).join('')}</div>${shelfHasStatus ? '' : shelfStatusMigrationBox()}`
       : `<div class="empty-state">Полка пуста. <a href="/add-shelf?kind=bean">+ Зерно</a> · <a href="/add-shelf?kind=equipment">+ Оборудование</a></div>`;
