@@ -107,6 +107,7 @@ import { DB, countryOrder } from '../data/countries';
   .addcup-page h1 { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.6rem; font-weight: 600; margin: 12px 0 4px; }
   .addcup-sub { font-size: .84rem; color: var(--text-dim); margin-bottom: 20px; line-height: 1.5; }
   .addcup-card { padding: 22px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); }
+  .addcup-card[inert] { opacity: .5; pointer-events: none; }
   .addcup-card .fl { display: block; font-size: .8rem; font-weight: 600; color: var(--text); margin: 14px 0 6px; }
   .addcup-card input[type=text], .addcup-card input[type=number], .addcup-card select, .addcup-card textarea {
     width: 100%; padding: 11px 12px; border: 1px solid var(--border); border-radius: 10px;
@@ -937,10 +938,12 @@ import { DB, countryOrder } from '../data/countries';
     return data;
   }
 
-  /* Пока чашка не подгрузилась, форма выглядит как пустая форма добавления —
-     блокируем сохранение, чтобы записанное не затёрлось пустыми полями. */
+  /* Пока чашка не подгрузилась, форма выглядит как пустая форма добавления.
+     Блокируем её целиком: иначе набранное до префилла молча затрётся чашкой. */
   function beginEditMode() {
     setEditModeUI();
+    const card = document.getElementById('formCard');
+    if (card) card.setAttribute('inert', '');
     const btn = document.getElementById('saveBtn') as HTMLButtonElement;
     if (btn) { btn.disabled = true; btn.textContent = 'Загружаем чашку…'; }
   }
@@ -953,6 +956,7 @@ import { DB, countryOrder } from '../data/countries';
       return;
     }
     prefillFromCup(cup);
+    document.getElementById('formCard')?.removeAttribute('inert');
     if (btn) { btn.disabled = false; btn.textContent = 'Сохранить изменения'; }
   }
 
@@ -1223,8 +1227,18 @@ import { DB, countryOrder } from '../data/countries';
       payload.taste_character = readTasteCharacterFromForm();
     }
     if (editCupId) {
-      const { error } = await supabase.from('cups').update(payload).eq('id', editCupId).eq('user_id', user.id);
-      if (error) { msg.className = 'addcup-msg error'; msg.textContent = 'Ошибка: ' + error.message; btn.disabled = false; btn.textContent = 'Сохранить изменения'; return; }
+      /* select() обязателен: без него update по чужой или отфильтрованной строке
+         возвращает 204 без ошибки, и правка теряется молча. */
+      const { data: updated, error } = await supabase
+        .from('cups').update(payload).eq('id', editCupId).eq('user_id', user.id).select('id');
+      if (error || !updated?.length) {
+        msg.className = 'addcup-msg error';
+        msg.textContent = error
+          ? 'Ошибка: ' + error.message
+          : 'Изменения не сохранились — обнови страницу и попробуй ещё раз';
+        btn.disabled = false; btn.textContent = 'Сохранить изменения';
+        return;
+      }
       window.location.href = `/cup?id=${editCupId}`;
       return;
     }
@@ -1248,13 +1262,17 @@ import { DB, countryOrder } from '../data/countries';
         bindShelfAdd();
         if (editCupId) beginEditMode();
         document.getElementById('saveBtn')!.addEventListener('click', save);
-        const [, , , cup] = await Promise.all([
+        /* Префилл не ждёт молки, полку и рецепты: чашка приходит первой,
+           а форма разблокируется сразу, как только заполнена. */
+        const cupReady = editCupId
+          ? fetchCupForEdit(user.id).then((cup) => finishEditMode(cup))
+          : Promise.resolve();
+        await Promise.all([
           loadGrinders(user.id),
           loadSavedRecipes(),
           loadShelfBeans(user.id),
-          fetchCupForEdit(user.id),
+          cupReady,
         ]);
-        if (editCupId) finishEditMode(cup);
       }
     } catch (e) {
       console.error(e);
