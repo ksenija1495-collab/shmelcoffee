@@ -31,6 +31,9 @@ import Nav from '../components/Nav.astro';
   .acc-tab { flex: 0 0 auto; padding: 9px 15px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--text-dim); font-size: .82rem; font-weight: 600; cursor: pointer; white-space: nowrap; font-family: 'Inter', sans-serif; transition: all .15s; }
   .acc-tab:hover { border-color: var(--border-hover); color: var(--text); }
   .acc-tab.active { background: var(--text); color: var(--bg); border-color: var(--text); }
+  /* На узком экране строка не помещается, а горизонтальный скролл на телефоне ничем
+     не обозначен — «Открытия» и «Ещё» просто уезжали за край. Переносим в две строки. */
+  @media (max-width: 768px) { .acc-tabs { flex-wrap: wrap; overflow-x: visible; } }
   .acc-panel { display: none; }
   .acc-panel.active { display: block; animation: fadein .25s ease; }
   .panel-h { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.5rem; font-weight: 600; margin: 0 0 18px; display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
