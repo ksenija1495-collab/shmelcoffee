@@ -207,6 +207,15 @@ import Nav from '../components/Nav.astro';
     font-size: .62rem; line-height: 1.3; opacity: .62; margin-top: 3px;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
+  .shelf-cover-blend {
+    display: inline-block; margin-top: 4px; padding: 1px 6px; border-radius: 999px;
+    font-size: .52rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+    background: rgba(242,234,223,.18); border: 1px solid rgba(242,234,223,.28); opacity: .9;
+  }
+  .shelf-blend-tag {
+    display: inline-block; margin-top: 4px; font-size: .64rem; font-weight: 600;
+    color: var(--accent); background: rgba(90,140,90,.1); padding: 2px 7px; border-radius: 999px;
+  }
   .shelf-body { padding: 10px 12px; }
   .shelf-name { font-weight: 700; font-size: .82rem; color: var(--text); }
   .shelf-meta { font-size: .72rem; color: var(--text-muted); margin-top: 2px; }
@@ -364,6 +373,7 @@ import Nav from '../components/Nav.astro';
   import { fetchSavedBrewRecipes } from '../lib/savedBrewRecipeApi';
   import { CHAMPION_PICKER_ITEMS } from '../data/championRecipePicker';
   import { recommendBrew, renderBrewRecHtml, formatBrewRecCompact } from '../lib/brewRecommend';
+  import { isVarietyBlend } from '../lib/varietyBlend';
 
   const supabase = createClient(
     import.meta.env.PUBLIC_SUPABASE_URL,
@@ -643,12 +653,14 @@ import Nav from '../components/Nav.astro';
     const country = (s.country || '').trim();
     const flag = countryFlag(country);
     const variety = stripLatin(s.variety || '');
+    const blend = isVarietyBlend(s.variety, s.name);
     return `<div class="shelf-cover" style="background:${coverBackground(look, country || s.name || '')};color:${COVER_INK}">
       <div class="shelf-cover-proc"><span class="shelf-cover-dot" style="background:${look.dot}"></span>${esc(look.label)}</div>
       <div class="shelf-cover-bottom">
         <div class="shelf-cover-name">
           <div class="shelf-cover-country">${esc(country || 'Без страны')}</div>
           ${variety ? `<div class="shelf-cover-variety">${esc(variety)}</div>` : ''}
+          ${blend ? `<div class="shelf-cover-blend">смесь</div>` : ''}
         </div>
         <div class="shelf-cover-flag">${flag || '🫘'}</div>
       </div>
@@ -867,18 +879,20 @@ import Nav from '../components/Nav.astro';
             ? shelfBeanCover(s)
             : `<div class="shelf-noimg">⚙️</div>`;
           /* Обложка уже показывает страну, сорт и обработку — в подписи остаётся только обжарщик. */
+          const blend = s.kind === 'bean' && isVarietyBlend(s.variety, s.name);
           const meta = s.kind !== 'bean'
             ? esc(s.category || 'оборудование')
             : hasGeneratedCover
             ? (esc(s.roaster) || 'зерно')
             : ([s.roaster, s.variety, s.process].filter(Boolean).map(esc).join(' · ') || 'зерно');
+          const blendTag = blend ? `<div class="shelf-blend-tag">смесь сортов</div>` : '';
           const brewRec = s.kind === 'bean' ? recommendBrew(s) : null;
           const brewTip = brewRec
             ? `<details class="shelf-brew-tip"><summary>☕ ${esc(formatBrewRecCompact(brewRec))}</summary>${renderBrewRecHtml(brewRec)}</details>`
             : '';
           const searchBlob = [s.name, s.roaster, s.country, s.process, s.variety, s.category, s.kind === 'equipment' ? 'оборудование' : 'зерно']
             .filter(Boolean).join(' ').toLowerCase();
-          return `<div class="shelf-card${s.kind === 'bean' ? ` shelf-st-${st}` : ''}" data-shelf-q="${esc(searchBlob)}">${cover}<div class="shelf-body"><div class="shelf-name">${esc(s.name)}</div><div class="shelf-meta">${meta}</div>${statusBtn}${brewTip}${s.kind === 'bean' ? `<a class="shelf-brew-btn" href="${shelfBrewHref(s)}">☕ Заварила →</a><a class="shelf-guide-btn" href="/generate?shelf=${s.id}" style="display:block;text-align:center;text-decoration:none">🤖 Сгенерировать гид</a>` : ''}</div><button class="shelf-del" data-shelf-del="${s.id}" title="удалить">×</button></div>`;
+          return `<div class="shelf-card${s.kind === 'bean' ? ` shelf-st-${st}` : ''}" data-shelf-q="${esc(searchBlob)}">${cover}<div class="shelf-body"><div class="shelf-name">${esc(s.name)}</div><div class="shelf-meta">${meta}</div>${blendTag}${statusBtn}${brewTip}${s.kind === 'bean' ? `<a class="shelf-brew-btn" href="${shelfBrewHref(s)}">☕ Заварила →</a><a class="shelf-guide-btn" href="/generate?shelf=${s.id}" style="display:block;text-align:center;text-decoration:none">🤖 Сгенерировать гид</a>` : ''}</div><button class="shelf-del" data-shelf-del="${s.id}" title="удалить">×</button></div>`;
         }).join('')}</div>${shelfHasStatus ? '' : shelfStatusMigrationBox()}`
       : `<div class="empty-state">Полка пуста. <a href="/add-shelf?kind=bean">+ Зерно</a> · <a href="/add-shelf?kind=equipment">+ Оборудование</a></div>`;
 
@@ -950,7 +964,7 @@ import Nav from '../components/Nav.astro';
       <section class="acc-panel" data-panel="disco"><div class="panel-h">🧭 Карта открытий</div>${discoPanel}</section>
       <section class="acc-panel" data-panel="diary"><div class="panel-h"><span>📔 Моё кофе</span><a href="/add-cup" class="add-cup-btn">+ Добавить чашку</a></div>${diaryPanel}</section>
       <section class="acc-panel" data-panel="recipes"><div class="panel-h"><span>📝 Рецепты</span><a href="/add-cup" class="add-cup-btn">+ Новая чашка</a></div>${recipesPanel}</section>
-      <section class="acc-panel" data-panel="shelf"><div class="panel-h"><span>🪵 Моя полка${shelfHasStatus ? ` <span class="shelf-low-count"${lowCount ? '' : ' style="display:none"'}>${lowCount} заканчивается</span>` : ''}</span><span style="display:flex;gap:6px"><a href="/add-shelf?kind=bean" class="add-cup-btn">+ Зерно</a><a href="/add-shelf?kind=equipment" class="add-cup-btn">+ Оборудование</a></span></div>${shelfPanel}</section>
+      <section class="acc-panel" data-panel="shelf"><div class="panel-h"><span>🪵 Моя полка${shelfHasStatus ? ` <span class="shelf-low-count"${lowCount ? '' : ' style="display:none"'}>${lowCount} заканчивается</span>` : ''}</span><span style="display:flex;gap:6px;flex-wrap:wrap"><a href="/add-shelf?kind=bean" class="add-cup-btn">+ Зерно</a><a href="/add-shelf?mode=photo" class="add-cup-btn">📷 С фото</a><a href="/add-shelf?kind=equipment" class="add-cup-btn">+ Оборудование</a></span></div><div id="shelfImportBanner" class="paid-banner" style="display:none"></div>${shelfPanel}</section>
       <section class="acc-panel" data-panel="selections"><div class="panel-h">☕ Мои подборки</div>${selectionsPanel}</section>
       <section class="acc-panel" data-panel="guides"><div class="panel-h">📖 Гиды</div>${paidBanner}${guidesPanel}</section>
       <section class="acc-panel" data-panel="community"><div class="panel-h">🌐 Сообщество</div>${communityJoin}<div class="profile-card" id="communityCard"><div class="profile-label" style="min-width:0">Загружаем статистику…</div></div>${twinSoon}</section>
@@ -1123,6 +1137,18 @@ import Nav from '../components/Nav.astro';
       try { const sv = localStorage.getItem('acc_tab'); if (sv && (page.querySelector('.acc-tab[data-tab="' + sv + '"]') || page.querySelector('.acc-more-item[data-tab="' + sv + '"]'))) startTab = sv; } catch (e) {}
     }
     activateTab(startTab);
+
+    const importedN = Number(new URL(location.href).searchParams.get('imported') || 0);
+    if (importedN > 0) {
+      const banner = document.getElementById('shelfImportBanner');
+      if (banner) {
+        banner.style.display = '';
+        banner.textContent = `✓ На полку добавлено ${importedN} ${importedN === 1 ? 'лот' : importedN < 5 ? 'лота' : 'лотов'} из фото. Смеси сортов помечены отдельно — у каждой карточки есть совет по заварке.`;
+      }
+      const url = new URL(location.href);
+      url.searchParams.delete('imported');
+      history.replaceState({}, '', url.pathname + url.search);
+    }
 
     page.querySelectorAll('[data-recipe-del]').forEach((btn) => {
       btn.addEventListener('click', async () => {

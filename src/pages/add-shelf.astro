@@ -9,9 +9,15 @@ import { DB, countryOrder } from '../data/countries';
   <Nav />
   <div class="container">
     <div class="shelf-form-page">
-      <a href="/account" class="sf-back">← В кабинет</a>
+      <a href="/account?tab=shelf" class="sf-back">← В кабинет</a>
       <h1 id="sfTitle">Добавить на полку</h1>
-      <p class="sf-sub">Что у вас есть дома — зерно или оборудование. Можно с фото.</p>
+      <p class="sf-sub">Одно зерно вручную — или фото списка заказа, чека, скрина корзины.</p>
+
+      <div class="mode-toggle" id="modeToggle">
+        <button type="button" class="mode-btn on" data-mode="manual">✍️ Вручную</button>
+        <button type="button" class="mode-btn" data-mode="photo">📷 Список с фото</button>
+      </div>
+
       <div class="sf-card" id="sfFormCard">
         <div class="kind-toggle">
           <button type="button" class="kind-btn" data-kind="bean">🫘 Зерно</button>
@@ -37,24 +43,46 @@ import { DB, countryOrder } from '../data/countries';
           <label class="fl">Категория</label>
           <select id="f_category"></select>
         </div>
-        <label class="fl">Фото</label>
+        <label class="fl">Фото пачки (необязательно)</label>
         <input type="file" id="f_photo" accept="image/*"/>
         <div id="preview" class="photo-preview"></div>
         <button type="button" class="btn btn-primary sf-save" id="saveBtn">Добавить на полку</button>
         <div id="msg" class="sf-msg"></div>
       </div>
+
+      <div class="sf-card" id="sfPhotoCard" hidden>
+        <p class="photo-hint">Сфоткай список: заказ у обжарщика, скрин корзины, чек, рукописный список. Разберём позиции и покажем на проверку — на полку уйдёт только то, что подтвердишь.</p>
+        <label class="fl">Фото списка</label>
+        <input type="file" id="listPhoto" accept="image/*" capture="environment"/>
+        <div id="listPreview" class="photo-preview"></div>
+        <button type="button" class="btn btn-primary sf-save" id="parseBtn" disabled>Распознать список</button>
+        <div id="parseMsg" class="sf-msg"></div>
+        <div id="parseReview" class="parse-review" hidden></div>
+      </div>
+
       <div id="brewDone" class="brew-done" hidden></div>
     </div>
   </div>
 <style is:global>
-  .shelf-form-page { padding-top: 88px; max-width: 600px; margin: 0 auto; padding-bottom: 100px; }
+  .shelf-form-page { padding-top: 88px; max-width: 640px; margin: 0 auto; padding-bottom: 100px; }
   .sf-back { font-size: .8rem; color: var(--text-muted); text-decoration: none; }
   .sf-back:hover { color: var(--accent); }
   .shelf-form-page h1 { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.6rem; font-weight: 600; margin: 12px 0 4px; }
-  .sf-sub { font-size: .84rem; color: var(--text-dim); margin-bottom: 20px; }
+  .sf-sub { font-size: .84rem; color: var(--text-dim); margin-bottom: 14px; }
+  .mode-toggle { display: flex; gap: 8px; margin-bottom: 14px; }
+  .mode-btn {
+    flex: 1; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border);
+    background: var(--surface); font-size: .84rem; font-weight: 600; cursor: pointer;
+    font-family: 'Inter', sans-serif; color: var(--text-dim);
+  }
+  .mode-btn.on { background: var(--text); color: var(--bg); border-color: var(--text); }
   .sf-card { padding: 22px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); }
   .sf-card .fl { display: block; font-size: .8rem; font-weight: 600; color: var(--text); margin: 14px 0 6px; }
-  .sf-card input[type=text], .sf-card select { width: 100%; padding: 11px 12px; border: 1px solid var(--border); border-radius: 10px; font-size: .92rem; background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; }
+  .sf-card input[type=text], .sf-card select, .parse-row input, .parse-row select {
+    width: 100%; padding: 11px 12px; border: 1px solid var(--border); border-radius: 10px;
+    font-size: .92rem; background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif;
+  }
+  .parse-row input, .parse-row select { padding: 8px 10px; font-size: .82rem; }
   .sf-card input[type=file] { font-size: .82rem; }
   .variety-custom { margin-top: 8px; }
   .variety-custom input {
@@ -66,10 +94,12 @@ import { DB, countryOrder } from '../data/countries';
   .kind-btn { flex: 1; padding: 11px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg); font-size: .88rem; cursor: pointer; font-family: 'Inter', sans-serif; transition: .15s; }
   .kind-btn.on { background: var(--accent); color: #fff; border-color: var(--accent); }
   .photo-preview { margin-top: 10px; }
-  .photo-preview img { max-width: 100%; max-height: 180px; border-radius: 10px; border: 1px solid var(--border); }
+  .photo-preview img { max-width: 100%; max-height: 220px; border-radius: 10px; border: 1px solid var(--border); object-fit: contain; background: var(--bg); }
+  .photo-hint { font-size: .84rem; color: var(--text-dim); line-height: 1.5; margin: 0 0 4px; }
   .sf-save { width: 100%; margin-top: 20px; }
   .sf-msg { margin-top: 12px; font-size: .84rem; text-align: center; min-height: 20px; }
   .sf-msg.error { color: var(--accent-warm); }
+  .sf-msg.ok { color: var(--accent); }
   .brew-preview, .brew-done {
     margin-top: 16px; padding: 14px 16px; border-radius: 12px;
     background: var(--bg); border: 1px solid var(--border);
@@ -85,15 +115,30 @@ import { DB, countryOrder } from '../data/countries';
   .brew-rec-note { font-size: .76rem; color: var(--text-muted); margin-top: 4px; line-height: 1.4; }
   .brew-rec-why, .brew-rec-avoid { font-size: .76rem; color: var(--text-dim); margin-top: 10px; line-height: 1.45; }
   .brew-done-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
-  .brew-done-actions a, .brew-done-actions button {
+  .brew-done-actions a {
     flex: 1; min-width: 140px; text-align: center; padding: 11px 14px; border-radius: 10px;
-    font-size: .84rem; font-weight: 600; font-family: 'Inter', sans-serif; cursor: pointer; text-decoration: none;
+    font-size: .84rem; font-weight: 600; font-family: 'Inter', sans-serif; text-decoration: none;
   }
   .brew-done-primary { background: var(--text); color: var(--bg); border: 1px solid var(--text); }
-  .brew-done-primary:hover { background: var(--accent); border-color: var(--accent); }
   .brew-done-secondary { background: var(--bg); color: var(--text); border: 1px solid var(--border); }
-  .brew-done-secondary:hover { border-color: var(--accent); color: var(--accent); }
-  @media (max-width: 600px) { .shelf-form-page { padding-top: 72px; } .row2 { grid-template-columns: 1fr; } }
+  .parse-review { margin-top: 18px; }
+  .parse-review-h { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.25rem; font-weight: 600; margin: 0 0 10px; }
+  .parse-row {
+    border: 1px solid var(--border); border-radius: 12px; padding: 12px; margin-bottom: 10px; background: var(--bg);
+  }
+  .parse-row.off { opacity: .45; }
+  .parse-row-top { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 8px; }
+  .parse-row-top input[type=checkbox] { margin-top: 4px; width: 18px; height: 18px; flex-shrink: 0; }
+  .parse-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .parse-blend {
+    display: inline-block; margin-top: 6px; font-size: .68rem; font-weight: 700;
+    color: var(--accent); background: rgba(90,140,90,.12); padding: 2px 8px; border-radius: 999px;
+  }
+  .parse-note { font-size: .72rem; color: var(--text-muted); margin-top: 6px; font-style: italic; }
+  @media (max-width: 600px) {
+    .shelf-form-page { padding-top: 72px; }
+    .row2, .parse-grid { grid-template-columns: 1fr; }
+  }
 </style>
 
 <script>
@@ -111,9 +156,13 @@ import { DB, countryOrder } from '../data/countries';
   );
 
   const PROCESSES = PROCESS_OPTIONS;
+  const COUNTRIES = countryOrder.map((k: string) => (DB as any)[k].name);
   const CATEGORIES = ['Воронка','Кофемолка','Весы','Чайник с тонким носиком','Эспрессо-машина','Гейзерная','Френч-пресс','Аэропресс','Кемекс','Турка','Капсульная','Другое'];
   let kind = 'bean';
+  let mode: 'manual' | 'photo' = 'manual';
   let photoFile: File | null = null;
+  let listDataUrl: string | null = null;
+  let parsedBeans: any[] = [];
 
   function fill(id: string, arr: readonly string[], ph: string) {
     const s = document.getElementById(id) as HTMLSelectElement;
@@ -129,6 +178,10 @@ import { DB, countryOrder } from '../data/countries';
       s.appendChild(opt);
     }
     s.value = value;
+  }
+
+  function esc(s: string) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
   async function guard() {
@@ -159,8 +212,11 @@ import { DB, countryOrder } from '../data/countries';
 
   function showBrewDone(payload: any, addCupUrl: string) {
     const form = document.getElementById('sfFormCard')!;
+    const photo = document.getElementById('sfPhotoCard')!;
     const done = document.getElementById('brewDone')!;
     form.hidden = true;
+    photo.hidden = true;
+    document.getElementById('modeToggle')!.hidden = true;
     const rec = recommendBrew(payload);
     const tip = rec
       ? renderBrewRecHtml(rec)
@@ -175,32 +231,198 @@ import { DB, countryOrder } from '../data/countries';
       </div>`;
   }
 
+  function setMode(m: 'manual' | 'photo') {
+    mode = m;
+    document.querySelectorAll('.mode-btn').forEach((b) => b.classList.toggle('on', (b as HTMLElement).dataset.mode === m));
+    document.getElementById('sfFormCard')!.hidden = m !== 'manual';
+    document.getElementById('sfPhotoCard')!.hidden = m !== 'photo';
+    document.getElementById('sfTitle')!.textContent = m === 'photo' ? 'Список с фото' : 'Добавить на полку';
+    if (m === 'manual') setKind(kind);
+  }
+
   function setKind(k: string) {
     kind = k;
     document.querySelectorAll('.kind-btn').forEach(b => b.classList.toggle('on', (b as HTMLElement).dataset.kind === k));
     (document.getElementById('beanFields') as HTMLElement).style.display = k === 'bean' ? 'block' : 'none';
     (document.getElementById('equipFields') as HTMLElement).style.display = k === 'equipment' ? 'block' : 'none';
-    document.getElementById('sfTitle')!.textContent = k === 'bean' ? 'Добавить зерно' : 'Добавить оборудование';
+    if (mode === 'manual') {
+      document.getElementById('sfTitle')!.textContent = k === 'bean' ? 'Добавить зерно' : 'Добавить оборудование';
+    }
     updateBrewPreview();
+  }
+
+  function fileToDataUrl(file: File, maxSide = 1600, quality = 0.82): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+        const w = Math.round(img.width * scale);
+        const h = Math.round(img.height * scale);
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext('2d')!;
+        ctx.drawImage(img, 0, 0, w, h);
+        URL.revokeObjectURL(url);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Не удалось прочитать фото')); };
+      img.src = url;
+    });
+  }
+
+  function optHtml(arr: readonly string[], selected: string | null, ph: string) {
+    const sel = selected || '';
+    const extra = sel && !arr.includes(sel) ? `<option selected>${esc(sel)}</option>` : '';
+    return `<option value="">${ph}</option>${extra}` + arr.map((x) =>
+      `<option${x === sel ? ' selected' : ''}>${esc(x)}</option>`).join('');
+  }
+
+  function renderParseReview(beans: any[]) {
+    const box = document.getElementById('parseReview')!;
+    if (!beans.length) {
+      box.hidden = false;
+      box.innerHTML = `<div class="sf-msg error">На фото не нашлось зерна. Попробуй более чёткий кадр.</div>`;
+      return;
+    }
+    box.hidden = false;
+    box.innerHTML = `
+      <div class="parse-review-h">Проверь перед сохранением · ${beans.length}</div>
+      <div id="parseRows">${beans.map((b, i) => `
+        <div class="parse-row" data-i="${i}">
+          <div class="parse-row-top">
+            <input type="checkbox" class="parse-on" checked/>
+            <div style="flex:1;min-width:0">
+              <input type="text" class="parse-name" value="${esc(b.name || '')}" placeholder="Название"/>
+              ${b.isBlend || /\//.test(b.variety || '') ? '<span class="parse-blend">смесь сортов</span>' : ''}
+              ${b.note ? `<div class="parse-note">${esc(b.note)}</div>` : ''}
+            </div>
+          </div>
+          <div class="parse-grid">
+            <input type="text" class="parse-roaster" value="${esc(b.roaster || '')}" placeholder="Обжарщик"/>
+            <input type="text" class="parse-variety" value="${esc(b.variety || '')}" placeholder="Сорт / смесь"/>
+            <select class="parse-country">${optHtml(COUNTRIES, b.country, 'страна')}</select>
+            <select class="parse-process">${optHtml(PROCESSES, b.process, 'обработка')}</select>
+          </div>
+        </div>`).join('')}</div>
+      <button type="button" class="btn btn-primary sf-save" id="bulkSaveBtn">Добавить выбранные на полку</button>
+      <div id="bulkMsg" class="sf-msg"></div>`;
+
+    box.querySelectorAll('.parse-on').forEach((cb) => {
+      cb.addEventListener('change', () => {
+        const row = (cb as HTMLElement).closest('.parse-row')!;
+        row.classList.toggle('off', !(cb as HTMLInputElement).checked);
+      });
+    });
+    document.getElementById('bulkSaveBtn')!.addEventListener('click', bulkSave);
+  }
+
+  async function parseList() {
+    const user = await guard();
+    if (!user || !listDataUrl) return;
+    const btn = document.getElementById('parseBtn') as HTMLButtonElement;
+    const msg = document.getElementById('parseMsg')!;
+    btn.disabled = true; btn.textContent = 'Распознаём...';
+    msg.className = 'sf-msg'; msg.textContent = 'Читаю список — обычно 5–15 секунд';
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch('/api/parse-shelf-photo', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer ' + (session?.access_token || ''),
+        },
+        body: JSON.stringify({ image: listDataUrl }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.message || data.error || `Ошибка ${res.status}`);
+      parsedBeans = data.beans || [];
+      msg.className = 'sf-msg ok';
+      msg.textContent = parsedBeans.length
+        ? `Нашла ${parsedBeans.length} ${parsedBeans.length === 1 ? 'позицию' : 'позиций'} — проверь и сохрани`
+        : 'Позиций не найдено';
+      renderParseReview(parsedBeans);
+    } catch (e: any) {
+      msg.className = 'sf-msg error';
+      msg.textContent = e.message || String(e);
+    } finally {
+      btn.disabled = !listDataUrl;
+      btn.textContent = 'Распознать список';
+    }
+  }
+
+  async function bulkSave() {
+    const user = await guard();
+    if (!user) return;
+    const rows = [...document.querySelectorAll('#parseRows .parse-row')];
+    const selected = rows.filter((r) => (r.querySelector('.parse-on') as HTMLInputElement).checked).map((r) => ({
+      user_id: user.id,
+      kind: 'bean',
+      name: (r.querySelector('.parse-name') as HTMLInputElement).value.trim(),
+      roaster: (r.querySelector('.parse-roaster') as HTMLInputElement).value.trim() || null,
+      variety: (r.querySelector('.parse-variety') as HTMLInputElement).value.trim() || null,
+      country: (r.querySelector('.parse-country') as HTMLSelectElement).value || null,
+      process: (r.querySelector('.parse-process') as HTMLSelectElement).value || null,
+      source: 'photo_import',
+    })).filter((b) => b.name);
+
+    const msg = document.getElementById('bulkMsg')!;
+    if (!selected.length) {
+      msg.className = 'sf-msg error'; msg.textContent = 'Выбери хотя бы одну позицию'; return;
+    }
+    const btn = document.getElementById('bulkSaveBtn') as HTMLButtonElement;
+    btn.disabled = true; btn.textContent = 'Сохраняем...';
+    try {
+      const { error } = await supabase.from('shelf_items').insert(selected);
+      if (error) throw error;
+      window.location.href = `/account?tab=shelf&imported=${selected.length}`;
+    } catch (e: any) {
+      msg.className = 'sf-msg error'; msg.textContent = 'Ошибка: ' + (e.message || e);
+      btn.disabled = false; btn.textContent = 'Добавить выбранные на полку';
+    }
   }
 
   function build() {
     fill('f_variety', BEAN_VARIETIES, '— не знаю / смесь');
     bindVarietyOther();
-    fill('f_country', countryOrder.map((k: string) => (DB as any)[k].name), 'выберите страну');
+    fill('f_country', COUNTRIES, 'выберите страну');
     fill('f_process', PROCESSES, 'выберите обработку');
     fill('f_category', CATEGORIES, 'выберите категорию');
     document.querySelectorAll('.kind-btn').forEach(b => b.addEventListener('click', () => setKind((b as HTMLElement).dataset.kind!)));
+    document.querySelectorAll('.mode-btn').forEach(b => b.addEventListener('click', () => setMode((b as HTMLElement).dataset.mode as any)));
     const params = new URLSearchParams(window.location.search);
     setKind(params.get('kind') === 'equipment' ? 'equipment' : 'bean');
+    setMode(params.get('mode') === 'photo' ? 'photo' : 'manual');
     const preCountry = params.get('country');
     if (preCountry) setSelect('f_country', preCountry);
+
     const fileInp = document.getElementById('f_photo') as HTMLInputElement;
     fileInp.addEventListener('change', () => {
       photoFile = fileInp.files && fileInp.files[0] ? fileInp.files[0] : null;
       const prev = document.getElementById('preview')!;
       if (photoFile) { prev.innerHTML = `<img src="${URL.createObjectURL(photoFile)}"/>`; } else { prev.innerHTML = ''; }
     });
+
+    const listInp = document.getElementById('listPhoto') as HTMLInputElement;
+    listInp.addEventListener('change', async () => {
+      const file = listInp.files?.[0];
+      const prev = document.getElementById('listPreview')!;
+      const btn = document.getElementById('parseBtn') as HTMLButtonElement;
+      const msg = document.getElementById('parseMsg')!;
+      listDataUrl = null;
+      btn.disabled = true;
+      if (!file) { prev.innerHTML = ''; return; }
+      try {
+        listDataUrl = await fileToDataUrl(file);
+        prev.innerHTML = `<img src="${listDataUrl}"/>`;
+        btn.disabled = false;
+        msg.textContent = '';
+      } catch (e: any) {
+        msg.className = 'sf-msg error'; msg.textContent = e.message || String(e);
+      }
+    });
+    document.getElementById('parseBtn')!.addEventListener('click', parseList);
+
     ['f_name', 'f_country', 'f_process', 'f_variety', 'f_variety_custom'].forEach((id) => {
       document.getElementById(id)?.addEventListener('input', updateBrewPreview);
       document.getElementById(id)?.addEventListener('change', updateBrewPreview);

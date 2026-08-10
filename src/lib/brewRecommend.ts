@@ -4,6 +4,7 @@
  */
 import { DB } from '../data/countries';
 import { resolveCountryKey } from './countryResolve';
+import { isVarietyBlend, varietyBlendLabel } from './varietyBlend';
 
 export type BrewRecipeRec = {
   method: string;
@@ -78,6 +79,7 @@ export function recommendBrew(input: BrewBeanInput): BrewRecommendation | null {
   const pk = processKind(input.process);
   const dense = isDenseVariety(input.variety, input.name);
   const catimor = isCatimorFamily(input.variety, input.name);
+  const blend = isVarietyBlend(input.variety, input.name);
   const alt = country ? parseAltitudeMid(country.altitude) : null;
   const body = country?.bLvl ?? 50;
   const acid = country?.aLvl ?? 60;
@@ -259,7 +261,14 @@ export function recommendBrew(input: BrewBeanInput): BrewRecommendation | null {
 
   const countryName = country?.name || input.country || 'это зерно';
   const processLabel = (input.process || '').replace(/\s*\([^)]*\)/, '') || 'неизвестная обработка';
-  const headline = `${countryName} · ${processLabel}`;
+  const headline = blend
+    ? `${countryName} · ${processLabel} · смесь: ${varietyBlendLabel(input.variety)}`
+    : `${countryName} · ${processLabel}`;
+
+  if (blend) {
+    why +=
+      ' Это смесь сортов — чашка будет усреднённой: не жди чистого характера одного сорта, слушай баланс.';
+  }
 
   return {
     primary,
