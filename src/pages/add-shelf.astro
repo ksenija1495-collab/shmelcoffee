@@ -12,7 +12,7 @@ import { DB, countryOrder } from '../data/countries';
       <a href="/account" class="sf-back">← В кабинет</a>
       <h1 id="sfTitle">Добавить на полку</h1>
       <p class="sf-sub">Что у вас есть дома — зерно или оборудование. Можно с фото.</p>
-      <div class="sf-card">
+      <div class="sf-card" id="sfFormCard">
         <div class="kind-toggle">
           <button type="button" class="kind-btn" data-kind="bean">🫘 Зерно</button>
           <button type="button" class="kind-btn" data-kind="equipment">⚙️ Оборудование</button>
@@ -31,6 +31,7 @@ import { DB, countryOrder } from '../data/countries';
             <div><label class="fl">Страна</label><select id="f_country"></select></div>
             <div><label class="fl">Обработка</label><select id="f_process"></select></div>
           </div>
+          <div id="brewPreview" class="brew-preview" hidden></div>
         </div>
         <div id="equipFields" style="display:none">
           <label class="fl">Категория</label>
@@ -42,6 +43,7 @@ import { DB, countryOrder } from '../data/countries';
         <button type="button" class="btn btn-primary sf-save" id="saveBtn">Добавить на полку</button>
         <div id="msg" class="sf-msg"></div>
       </div>
+      <div id="brewDone" class="brew-done" hidden></div>
     </div>
   </div>
 <style is:global>
@@ -68,6 +70,29 @@ import { DB, countryOrder } from '../data/countries';
   .sf-save { width: 100%; margin-top: 20px; }
   .sf-msg { margin-top: 12px; font-size: .84rem; text-align: center; min-height: 20px; }
   .sf-msg.error { color: var(--accent-warm); }
+  .brew-preview, .brew-done {
+    margin-top: 16px; padding: 14px 16px; border-radius: 12px;
+    background: var(--bg); border: 1px solid var(--border);
+  }
+  .brew-done { margin-top: 0; box-shadow: var(--shadow); background: var(--surface); }
+  .brew-rec-h { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.2rem; font-weight: 600; margin: 0 0 4px; }
+  .brew-rec-sub { font-size: .78rem; color: var(--text-muted); margin-bottom: 12px; }
+  .brew-rec-card { padding: 10px 0; }
+  .brew-rec-card + .brew-rec-card { border-top: 1px solid var(--border); }
+  .brew-rec-label { font-size: .78rem; font-weight: 700; color: var(--text); }
+  .brew-rec-params { font-size: .84rem; color: var(--text); margin-top: 3px; line-height: 1.4; }
+  .brew-rec-time { font-size: .76rem; color: var(--text-dim); margin-top: 2px; }
+  .brew-rec-note { font-size: .76rem; color: var(--text-muted); margin-top: 4px; line-height: 1.4; }
+  .brew-rec-why, .brew-rec-avoid { font-size: .76rem; color: var(--text-dim); margin-top: 10px; line-height: 1.45; }
+  .brew-done-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+  .brew-done-actions a, .brew-done-actions button {
+    flex: 1; min-width: 140px; text-align: center; padding: 11px 14px; border-radius: 10px;
+    font-size: .84rem; font-weight: 600; font-family: 'Inter', sans-serif; cursor: pointer; text-decoration: none;
+  }
+  .brew-done-primary { background: var(--text); color: var(--bg); border: 1px solid var(--text); }
+  .brew-done-primary:hover { background: var(--accent); border-color: var(--accent); }
+  .brew-done-secondary { background: var(--bg); color: var(--text); border: 1px solid var(--border); }
+  .brew-done-secondary:hover { border-color: var(--accent); color: var(--accent); }
   @media (max-width: 600px) { .shelf-form-page { padding-top: 72px; } .row2 { grid-template-columns: 1fr; } }
 </style>
 
@@ -77,6 +102,7 @@ import { DB, countryOrder } from '../data/countries';
   import { BEAN_VARIETIES } from '../data/varieties';
   import { bindVarietyOther, readVarietyValue } from '../lib/beanVarietyField';
   import { PROCESS_OPTIONS } from '../data/processing';
+  import { recommendBrew, renderBrewRecHtml } from '../lib/brewRecommend';
 
   const supabase = createClient(
     import.meta.env.PUBLIC_SUPABASE_URL,
@@ -94,10 +120,59 @@ import { DB, countryOrder } from '../data/countries';
     s.innerHTML = `<option value="">${ph}</option>` + arr.map(x => `<option>${x}</option>`).join('');
   }
 
+  function setSelect(id: string, value: string) {
+    const s = document.getElementById(id) as HTMLSelectElement;
+    if (!s || !value) return;
+    if (![...s.options].some((o) => o.value === value)) {
+      const opt = document.createElement('option');
+      opt.value = value; opt.textContent = value;
+      s.appendChild(opt);
+    }
+    s.value = value;
+  }
+
   async function guard() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { window.location.href = '/login'; return null; }
     return user;
+  }
+
+  function beanInput() {
+    return {
+      name: (document.getElementById('f_name') as HTMLInputElement).value.trim(),
+      variety: readVarietyValue(),
+      country: (document.getElementById('f_country') as HTMLSelectElement).value || null,
+      process: (document.getElementById('f_process') as HTMLSelectElement).value || null,
+    };
+  }
+
+  function updateBrewPreview() {
+    const box = document.getElementById('brewPreview')!;
+    if (kind !== 'bean') { box.hidden = true; box.innerHTML = ''; return; }
+    const input = beanInput();
+    if (!input.country && !input.process) { box.hidden = true; box.innerHTML = ''; return; }
+    const rec = recommendBrew(input);
+    if (!rec) { box.hidden = true; box.innerHTML = ''; return; }
+    box.hidden = false;
+    box.innerHTML = renderBrewRecHtml(rec);
+  }
+
+  function showBrewDone(payload: any, addCupUrl: string) {
+    const form = document.getElementById('sfFormCard')!;
+    const done = document.getElementById('brewDone')!;
+    form.hidden = true;
+    const rec = recommendBrew(payload);
+    const tip = rec
+      ? renderBrewRecHtml(rec)
+      : `<div class="brew-rec-h">Зерно на полке</div><div class="brew-rec-sub">Укажи страну и обработку в следующий раз — появится рецепт.</div>`;
+    done.hidden = false;
+    done.innerHTML = `
+      <div style="font-size:.78rem;color:var(--text-muted);margin-bottom:8px">✓ Добавлено на полку</div>
+      ${tip}
+      <div class="brew-done-actions">
+        <a class="brew-done-primary" href="${addCupUrl}">Заварить сейчас →</a>
+        <a class="brew-done-secondary" href="/account?tab=shelf">К полке</a>
+      </div>`;
   }
 
   function setKind(k: string) {
@@ -106,6 +181,7 @@ import { DB, countryOrder } from '../data/countries';
     (document.getElementById('beanFields') as HTMLElement).style.display = k === 'bean' ? 'block' : 'none';
     (document.getElementById('equipFields') as HTMLElement).style.display = k === 'equipment' ? 'block' : 'none';
     document.getElementById('sfTitle')!.textContent = k === 'bean' ? 'Добавить зерно' : 'Добавить оборудование';
+    updateBrewPreview();
   }
 
   function build() {
@@ -125,7 +201,12 @@ import { DB, countryOrder } from '../data/countries';
       const prev = document.getElementById('preview')!;
       if (photoFile) { prev.innerHTML = `<img src="${URL.createObjectURL(photoFile)}"/>`; } else { prev.innerHTML = ''; }
     });
+    ['f_name', 'f_country', 'f_process', 'f_variety', 'f_variety_custom'].forEach((id) => {
+      document.getElementById(id)?.addEventListener('input', updateBrewPreview);
+      document.getElementById(id)?.addEventListener('change', updateBrewPreview);
+    });
     document.getElementById('saveBtn')!.addEventListener('click', save);
+    updateBrewPreview();
   }
 
   async function save() {
@@ -164,7 +245,7 @@ import { DB, countryOrder } from '../data/countries';
         if (payload.country) q.set('country', payload.country);
         if (payload.process) q.set('process', payload.process);
         q.set('from_shelf', '1');
-        window.location.href = `/add-cup?${q.toString()}`;
+        showBrewDone(payload, `/add-cup?${q.toString()}`);
       } else {
         window.location.href = '/account?tab=shelf';
       }

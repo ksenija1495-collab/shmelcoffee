@@ -99,6 +99,29 @@ import Nav from '../components/Nav.astro';
     font-size: .82rem; background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif;
   }
   @media (max-width: 560px) { .diary-filters { grid-template-columns: 1fr; } }
+  .shelf-search-wrap { margin-bottom: 14px; }
+  .shelf-search {
+    width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px;
+    font-size: .84rem; background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif;
+  }
+  .shelf-search:focus { outline: none; border-color: var(--accent); }
+  .shelf-search-empty { display: none; margin-top: 8px; }
+  .brew-rec { margin-top: 10px; padding: 10px 11px; border-radius: 10px; background: var(--bg); border: 1px dashed var(--border); }
+  .brew-rec-compact { margin-top: 8px; }
+  .brew-rec-h { font-size: .72rem; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+  .brew-rec-sub { font-size: .68rem; color: var(--text-muted); margin-bottom: 8px; }
+  .brew-rec-card + .brew-rec-card { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); }
+  .brew-rec-label { font-size: .7rem; font-weight: 700; color: var(--text); }
+  .brew-rec-params { font-size: .72rem; color: var(--text); margin-top: 2px; line-height: 1.35; }
+  .brew-rec-time { font-size: .68rem; color: var(--text-dim); margin-top: 2px; }
+  .brew-rec-note { font-size: .68rem; color: var(--text-muted); margin-top: 3px; line-height: 1.35; }
+  .brew-rec-why, .brew-rec-avoid { font-size: .68rem; color: var(--text-dim); margin-top: 8px; line-height: 1.4; }
+  .shelf-brew-tip > summary {
+    list-style: none; cursor: pointer; font-size: .7rem; font-weight: 600; color: var(--accent);
+    margin-top: 8px; padding: 4px 0;
+  }
+  .shelf-brew-tip > summary::-webkit-details-marker { display: none; }
+  .shelf-brew-tip[open] > summary { margin-bottom: 2px; }
   .recipe-item {
     padding: 14px 0; border-bottom: 1px solid var(--border); display: flex; flex-wrap: wrap;
     gap: 10px; align-items: flex-start; justify-content: space-between;
@@ -340,6 +363,7 @@ import Nav from '../components/Nav.astro';
   import { resolveCountryKey } from '../lib/countryResolve';
   import { fetchSavedBrewRecipes } from '../lib/savedBrewRecipeApi';
   import { CHAMPION_PICKER_ITEMS } from '../data/championRecipePicker';
+  import { recommendBrew, renderBrewRecHtml, formatBrewRecCompact } from '../lib/brewRecommend';
 
   const supabase = createClient(
     import.meta.env.PUBLIC_SUPABASE_URL,
@@ -827,8 +851,11 @@ import Nav from '../components/Nav.astro';
       ? [...shelf].sort((a: any, b: any) => shelfStatusRank(a) - shelfStatusRank(b))
       : shelf;
     const lowCount = shelfHasStatus ? shelf.filter((s: any) => s.kind === 'bean' && s.status === 'low').length : 0;
+    const shelfSearch = shelf.length
+      ? `<div class="shelf-search-wrap"><input type="search" id="shelfSearch" class="shelf-search" placeholder="Поиск: страна, сорт, обжарщик, обработка…" autocomplete="off"/><div id="shelfSearchEmpty" class="empty-state shelf-search-empty">Ничего не нашлось</div></div>`
+      : '';
     const shelfPanel = shelf.length
-      ? `<div class="shelf-grid">${shelfSorted.map((s: any) => {
+      ? `${shelfSearch}<div class="shelf-grid" id="shelfGrid">${shelfSorted.map((s: any) => {
           const st = shelfStatus(s);
           const statusBtn = shelfHasStatus && s.kind === 'bean'
             ? `<button type="button" class="shelf-status st-${st}" data-shelf-status="${s.id}" data-status="${st}" title="Нажми, чтобы отметить запас">${SHELF_STATUS[st].label}</button>`
@@ -845,7 +872,13 @@ import Nav from '../components/Nav.astro';
             : hasGeneratedCover
             ? (esc(s.roaster) || 'зерно')
             : ([s.roaster, s.variety, s.process].filter(Boolean).map(esc).join(' · ') || 'зерно');
-          return `<div class="shelf-card${s.kind === 'bean' ? ` shelf-st-${st}` : ''}">${cover}<div class="shelf-body"><div class="shelf-name">${esc(s.name)}</div><div class="shelf-meta">${meta}</div>${statusBtn}${s.kind === 'bean' ? `<a class="shelf-brew-btn" href="${shelfBrewHref(s)}">☕ Заварила →</a><a class="shelf-guide-btn" href="/generate?shelf=${s.id}" style="display:block;text-align:center;text-decoration:none">🤖 Сгенерировать гид</a>` : ''}</div><button class="shelf-del" data-shelf-del="${s.id}" title="удалить">×</button></div>`;
+          const brewRec = s.kind === 'bean' ? recommendBrew(s) : null;
+          const brewTip = brewRec
+            ? `<details class="shelf-brew-tip"><summary>☕ ${esc(formatBrewRecCompact(brewRec))}</summary>${renderBrewRecHtml(brewRec)}</details>`
+            : '';
+          const searchBlob = [s.name, s.roaster, s.country, s.process, s.variety, s.category, s.kind === 'equipment' ? 'оборудование' : 'зерно']
+            .filter(Boolean).join(' ').toLowerCase();
+          return `<div class="shelf-card${s.kind === 'bean' ? ` shelf-st-${st}` : ''}" data-shelf-q="${esc(searchBlob)}">${cover}<div class="shelf-body"><div class="shelf-name">${esc(s.name)}</div><div class="shelf-meta">${meta}</div>${statusBtn}${brewTip}${s.kind === 'bean' ? `<a class="shelf-brew-btn" href="${shelfBrewHref(s)}">☕ Заварила →</a><a class="shelf-guide-btn" href="/generate?shelf=${s.id}" style="display:block;text-align:center;text-decoration:none">🤖 Сгенерировать гид</a>` : ''}</div><button class="shelf-del" data-shelf-del="${s.id}" title="удалить">×</button></div>`;
         }).join('')}</div>${shelfHasStatus ? '' : shelfStatusMigrationBox()}`
       : `<div class="empty-state">Полка пуста. <a href="/add-shelf?kind=bean">+ Зерно</a> · <a href="/add-shelf?kind=equipment">+ Оборудование</a></div>`;
 
@@ -945,6 +978,21 @@ import Nav from '../components/Nav.astro';
     }
     document.getElementById('diaryFilterBrew')?.addEventListener('change', applyDiaryFilters);
     document.getElementById('diaryFilterRecipe')?.addEventListener('change', applyDiaryFilters);
+
+    function applyShelfSearch() {
+      const q = ((document.getElementById('shelfSearch') as HTMLInputElement)?.value || '').trim().toLowerCase();
+      let visible = 0;
+      document.querySelectorAll('#shelfGrid .shelf-card').forEach((el) => {
+        const card = el as HTMLElement;
+        const blob = card.dataset.shelfQ || '';
+        const show = !q || blob.includes(q);
+        card.style.display = show ? '' : 'none';
+        if (show) visible++;
+      });
+      const empty = document.getElementById('shelfSearchEmpty');
+      if (empty) empty.style.display = q && !visible ? 'block' : 'none';
+    }
+    document.getElementById('shelfSearch')?.addEventListener('input', applyShelfSearch);
 
     page.querySelectorAll('.disco-chip[data-k]').forEach(ch => { ch.addEventListener('click', () => showCountry((ch as HTMLElement).getAttribute('data-k')!)); });
     document.getElementById('logoutBtn')?.addEventListener('click', async () => { await supabase.auth.signOut(); window.location.href = '/'; });
