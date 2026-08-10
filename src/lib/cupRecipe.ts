@@ -80,9 +80,15 @@ export function formatCupRecipe(recipe: unknown): string {
   if (r.time) parts.push(`∑ ${r.time}`);
   const bloomStr = formatPourValue(r.blooming);
   if (bloomStr) parts.push(`предсмачивание ${bloomStr}`);
-  (r.pours || []).forEach((p, i) => {
+  let pourN = 0;
+  (r.pours || []).forEach((p) => {
     const v = formatPourValue(p);
-    if (v) parts.push(`${i + 1}-й ${v}`);
+    if (!v) return;
+    if (p.role === 'bypass') parts.push(v);
+    else {
+      pourN++;
+      parts.push(`${pourN}-й ${v}`);
+    }
   });
   return parts.join(' · ');
 }
@@ -119,9 +125,16 @@ export function cupRecipeLines(recipe: unknown): CupRecipeLine[] {
   if (r.time) lines.push({ label: 'Общее время', value: r.time });
   const bloomStr = formatPourValue(r.blooming);
   if (bloomStr) lines.push({ label: 'Предсмачивание (блум)', value: bloomStr });
-  (r.pours || []).forEach((p, i) => {
+  let pourN = 0;
+  (r.pours || []).forEach((p) => {
     const v = formatPourValue(p);
-    if (v) lines.push({ label: `${i + 1}-й пролив`, value: v });
+    if (!v) return;
+    if (p.role === 'bypass') lines.push({ label: 'Байпас', value: v.replace(/^байпас\s*·\s*/i, '') || v });
+    else {
+      pourN++;
+      const toMark = p.mlMode === 'to' ? ' (до)' : '';
+      lines.push({ label: `${pourN}-й пролив${toMark}`, value: v });
+    }
   });
   return lines;
 }

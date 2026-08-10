@@ -60,7 +60,7 @@ import { DB, countryOrder } from '../data/countries';
         <p class="field-hint brew-time-hint">Время в формате м:сс — набираешь 150, получаешь 1:50</p>
         <div id="grinderHint" class="recipe-hint" style="display:none;margin-top:4px">Добавь кофемолку на <a href="/add-shelf?kind=equipment">полку</a> — она появится в списке.</div>
         <label class="fl">Проливы</label>
-        <p class="pour-block-hint">Пролив — порция воды через кофе. Укажи объём (мл) и время каждого этапа. Первый — предсмачивание (блум).</p>
+        <p class="pour-block-hint">Пролив — порция воды через кофе. «до» — итоговый вес на весах (долила до 150 мл), без флага — сколько мл влила в этот пролив. «байпас» — вода мимо кофе (разбавление после пресса).</p>
         <div class="pour-block-head">
           <span class="pour-col-spacer"></span>
           <span class="pour-col-h">мл</span>
@@ -74,7 +74,10 @@ import { DB, countryOrder } from '../data/countries';
             <input type="text" id="p_bloom" class="pour-inp brew-time-inp" inputmode="numeric" placeholder="0:30"/>
           </div>
           <div id="pourList"></div>
-          <button type="button" class="pour-add" id="addPourBtn">+ Пролив</button>
+          <div class="pour-add-row">
+            <button type="button" class="pour-add" id="addPourBtn">+ Пролив</button>
+            <button type="button" class="pour-add pour-add-bypass" id="addBypassBtn">+ Байпас</button>
+          </div>
         </div>
         <div id="recipeHint" class="recipe-hint" style="display:none">Подставлен рецепт — поправь под то, как заварил на самом деле.</div>
         <div id="recipeActions" class="recipe-actions">
@@ -123,26 +126,45 @@ import { DB, countryOrder } from '../data/countries';
   }
   .pour-col-h { font-size: .62rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--text-muted); text-align: center; }
   .pour-col-spacer--btn { width: 32px; }
-  .pour-row { display: grid; grid-template-columns: 92px 1fr 1fr 32px; gap: 8px; align-items: center; }
+  .pour-row {
+    display: grid; grid-template-columns: 92px 1fr 1fr 32px; gap: 6px 8px; align-items: center;
+  }
   .pour-row--bloom { grid-template-columns: 92px 1fr 1fr; }
+  .pour-row.is-bypass { background: rgba(90,140,90,.06); border-radius: 10px; padding: 6px 4px; }
   .pour-lbl { font-size: .78rem; color: var(--text-dim); font-weight: 600; line-height: 1.25; }
   .pour-lbl-sub { display: block; font-size: .62rem; font-weight: 500; color: var(--text-muted); }
   .pour-block-hint { font-size: .68rem; color: var(--text-muted); margin: 0 0 8px; line-height: 1.45; }
+  .pour-ml-wrap { display: flex; gap: 4px; align-items: center; min-width: 0; }
   .pour-inp {
     width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px;
     font-size: .92rem; background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif;
   }
+  .pour-flag {
+    flex-shrink: 0; padding: 7px 8px; border: 1px solid var(--border); border-radius: 8px;
+    background: var(--bg); color: var(--text-muted); font-size: .68rem; font-weight: 700;
+    cursor: pointer; font-family: 'Inter', sans-serif; line-height: 1; letter-spacing: .02em;
+  }
+  .pour-flag[aria-pressed="true"] {
+    background: var(--text); color: var(--bg); border-color: var(--text);
+  }
+  .pour-flag.pour-bypass-flag[aria-pressed="true"] {
+    background: var(--accent); border-color: var(--accent); color: #fff;
+  }
+  .pour-flags { grid-column: 2 / 4; display: flex; gap: 6px; flex-wrap: wrap; }
   .pour-rm {
     width: 32px; height: 32px; border: 1px solid var(--border); border-radius: 8px;
     background: var(--bg); color: var(--text-muted); cursor: pointer; font-size: 1rem; line-height: 1;
   }
   .pour-rm:hover { border-color: var(--accent-warm); color: var(--accent-warm); }
+  .pour-add-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 2px; }
   .pour-add {
-    align-self: flex-start; margin-top: 2px; padding: 7px 12px; border: 1px dashed var(--border);
+    padding: 7px 12px; border: 1px dashed var(--border);
     border-radius: 8px; background: none; color: var(--accent); font-size: .78rem; font-weight: 600;
     cursor: pointer; font-family: 'Inter', sans-serif;
   }
   .pour-add:hover { border-color: var(--accent); background: rgba(168,124,79,.06); }
+  .pour-add-bypass { color: var(--text-dim); }
+  .pour-add-bypass:hover { color: var(--accent); }
   .note-selected {
     min-height: 44px; padding: 10px 12px; border: 1px dashed var(--border); border-radius: 12px;
     display: flex; flex-wrap: wrap; gap: 7px; align-items: center; margin-bottom: 10px; background: var(--bg);
@@ -340,6 +362,7 @@ import { DB, countryOrder } from '../data/countries';
     .row2 { grid-template-columns: 1fr; }
     .pour-block-head, .pour-row { grid-template-columns: 72px 1fr 1fr 28px; gap: 6px; }
     .pour-row--bloom { grid-template-columns: 72px 1fr 1fr; }
+    .pour-flags { grid-column: 2 / 4; }
     .pour-lbl { font-size: .72rem; }
   }
 </style>
@@ -453,23 +476,62 @@ import { DB, countryOrder } from '../data/countries';
 
   function pourLabel(n: number) { return `${n}-й пролив`; }
 
+  function flagPressed(btn: Element | null): boolean {
+    return (btn as HTMLElement | null)?.getAttribute('aria-pressed') === 'true';
+  }
+
+  function setFlagPressed(btn: Element | null, on: boolean) {
+    if (!btn) return;
+    (btn as HTMLElement).setAttribute('aria-pressed', on ? 'true' : 'false');
+  }
+
+  function syncPourRowUi(row: HTMLElement) {
+    const bypass = flagPressed(row.querySelector('.pour-bypass-flag'));
+    const to = flagPressed(row.querySelector('.pour-to-flag'));
+    row.classList.toggle('is-bypass', bypass);
+    const mlInp = row.querySelector('.pour-ml-inp') as HTMLInputElement | null;
+    if (mlInp) mlInp.placeholder = to ? 'до, мл' : 'мл';
+  }
+
   function renumberPours() {
-    document.querySelectorAll('#pourList .pour-row').forEach((row, idx) => {
-      const lbl = row.querySelector('.pour-lbl');
-      if (lbl) lbl.textContent = pourLabel(idx + 1);
+    let n = 0;
+    document.querySelectorAll('#pourList .pour-row').forEach((row) => {
+      const el = row as HTMLElement;
+      const lbl = el.querySelector('.pour-lbl');
+      if (!lbl) return;
+      if (flagPressed(el.querySelector('.pour-bypass-flag'))) {
+        lbl.innerHTML = `Байпас<span class="pour-lbl-sub">мимо кофе</span>`;
+      } else {
+        n += 1;
+        lbl.textContent = pourLabel(n);
+      }
+      syncPourRowUi(el);
     });
   }
 
-  function pourRowHtml(label: string) {
-    return `<span class="pour-lbl">${label}</span>
-      <input type="number" class="pour-inp pour-ml-inp" inputmode="decimal" min="0" step="1" placeholder="мл"/>
+  function pourRowHtml() {
+    return `<span class="pour-lbl">1-й пролив</span>
+      <div class="pour-ml-wrap">
+        <button type="button" class="pour-flag pour-to-flag" aria-pressed="false" title="Объём «до» — итоговый на весах">до</button>
+        <input type="number" class="pour-inp pour-ml-inp" inputmode="decimal" min="0" step="1" placeholder="мл"/>
+      </div>
       <input type="text" class="pour-inp brew-time-inp pour-time-inp" inputmode="numeric" placeholder="0:45"/>
-      <button type="button" class="pour-rm" title="Убрать пролив">×</button>`;
+      <button type="button" class="pour-rm" title="Убрать пролив">×</button>
+      <div class="pour-flags">
+        <button type="button" class="pour-flag pour-bypass-flag" aria-pressed="false" title="Вода мимо кофе — разбавление">байпас</button>
+      </div>`;
   }
 
   function bindPourRow(row: HTMLElement) {
     bindBrewTimeInput(row.querySelector('.pour-time-inp') as HTMLInputElement);
     row.querySelector('.pour-rm')?.addEventListener('click', () => { row.remove(); renumberPours(); });
+    row.querySelectorAll('.pour-flag').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const on = !flagPressed(btn);
+        setFlagPressed(btn, on);
+        renumberPours();
+      });
+    });
   }
 
   function readPourMl(inp: HTMLInputElement | null): number | null {
@@ -483,8 +545,13 @@ import { DB, countryOrder } from '../data/countries';
   function readPourRow(row: Element): BrewPour | null {
     const ml = readPourMl(row.querySelector('.pour-ml-inp') as HTMLInputElement);
     const time = readBrewTimeInput(row.querySelector('.pour-time-inp') as HTMLInputElement);
-    if (!ml && !time) return null;
-    return { ml, time };
+    const to = flagPressed(row.querySelector('.pour-to-flag'));
+    const bypass = flagPressed(row.querySelector('.pour-bypass-flag'));
+    if (!ml && !time && !bypass) return null;
+    const out: BrewPour = { ml, time };
+    if (to) out.mlMode = 'to';
+    if (bypass) out.role = 'bypass';
+    return out;
   }
 
   function setPourRow(row: Element, p: BrewPour) {
@@ -492,6 +559,9 @@ import { DB, countryOrder } from '../data/countries';
     const timeInp = row.querySelector('.pour-time-inp') as HTMLInputElement;
     if (mlInp) mlInp.value = p.ml != null && p.ml > 0 ? String(p.ml) : '';
     setBrewTimeInputValue(timeInp, p.time);
+    setFlagPressed(row.querySelector('.pour-to-flag'), p.mlMode === 'to');
+    setFlagPressed(row.querySelector('.pour-bypass-flag'), p.role === 'bypass');
+    syncPourRowUi(row as HTMLElement);
   }
 
   function setBloomOnForm(bloom: BrewPour | null | undefined) {
@@ -516,13 +586,13 @@ import { DB, countryOrder } from '../data/countries';
 
   function appendPourRow(pour?: BrewPour) {
     const list = document.getElementById('pourList')!;
-    const n = list.querySelectorAll('.pour-row').length + 1;
     const row = document.createElement('div');
     row.className = 'pour-row';
-    row.innerHTML = pourRowHtml(pourLabel(n));
+    row.innerHTML = pourRowHtml();
     bindPourRow(row);
     if (pour) setPourRow(row, pour);
     list.appendChild(row);
+    renumberPours();
   }
 
   function setPourRows(pours: BrewPour[]) {
@@ -536,6 +606,7 @@ import { DB, countryOrder } from '../data/countries';
   function initPours() {
     setPourRows([]);
     document.getElementById('addPourBtn')!.addEventListener('click', () => appendPourRow());
+    document.getElementById('addBypassBtn')!.addEventListener('click', () => appendPourRow({ role: 'bypass' }));
   }
 
   function collectPours(): BrewPour[] {
