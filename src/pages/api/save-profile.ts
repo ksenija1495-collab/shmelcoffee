@@ -55,9 +55,10 @@ export const POST: APIRoute = async ({ request }) => {
 
   if (error) return new Response(error.message, { status: 500 });
 
+  // Кредиты не должны блокировать ответ новым пользователям (RPC/таблица могут висеть).
   const isNewProfile = !existing?.id;
   if (isNewProfile) {
-    try {
+    const grant = (async () => {
       const { data: creditRow } = await supabase
         .from('guide_credits')
         .select('balance')
@@ -66,8 +67,14 @@ export const POST: APIRoute = async ({ request }) => {
       if (!creditRow || creditRow.balance === 0) {
         await supabase.rpc('add_guide_credits', { p_user: auth.user.id, p_amount: 1 });
       }
+    })();
+    try {
+      await Promise.race([
+        grant,
+        new Promise((_, reject) => setTimeout(() => reject(new Error('credits timeout')), 2500)),
+      ]);
     } catch {
-      /* guide_credits может быть не настроен */
+      /* guide_credits может быть не настроен / медленный — профиль уже сохранён */
     }
   }
 

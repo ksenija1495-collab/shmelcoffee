@@ -1,12 +1,6 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import Nav from '../components/Nav.astro';
-import { DB } from '../data/countries';
-import { COFFEE_DB } from '../data/coffees';
-
-const SUPA_URL = import.meta.env.PUBLIC_SUPABASE_URL || '';
-const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '';
-const PRODAMUS_URL = import.meta.env.PUBLIC_PRODAMUS_URL || '';
 ---
 
 <Layout title="Диагностика вкуса — Shmelco">
@@ -160,38 +154,44 @@ const PRODAMUS_URL = import.meta.env.PUBLIC_PRODAMUS_URL || '';
   }
 </style>
 
-<script define:vars={{ DB, COFFEE_DB, SUPA_URL, SUPA_KEY, PRODAMUS_URL }}>
+<script>
+import { createClient } from '@supabase/supabase-js';
+import { DB } from '../data/countries';
+import { COFFEE_DB } from '../data/coffees';
 
-async function supaAuth(method, body) {
-  const res = await fetch(`${SUPA_URL}/auth/v1/${method}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'apikey': SUPA_KEY },
-    body: JSON.stringify(body),
-  });
-  return res.json();
+const supabase = createClient(
+  import.meta.env.PUBLIC_SUPABASE_URL,
+  import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+  { auth: { flowType: 'implicit' } }
+);
+const PRODAMUS_URL = import.meta.env.PUBLIC_PRODAMUS_URL || '';
+
+function fetchWithTimeout(url, options = {}, ms = 15000) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), ms);
+  return fetch(url, { ...options, signal: ctrl.signal }).finally(() => clearTimeout(timer));
+}
+
+/** Same session path as account/Nav: client recovers + refreshes; no raw localStorage JWT. */
+async function getUser() {
+  const { data: { user }, error } = await supabase.auth.getUser();
+  if (user) return user;
+  // Expired access_token / recover after idle — try refresh once before treating as logged out
+  if (error) {
+    const { data: { session } } = await supabase.auth.refreshSession();
+    if (session?.user) return session.user;
+  }
+  return null;
 }
 
 async function getAccessToken() {
-  const ref = SUPA_URL.replace('https://','').split('.')[0];
-  const stored = localStorage.getItem(`sb-${ref}-auth-token`);
-  if (!stored) return null;
-  try { return JSON.parse(stored).access_token || null; } catch { return null; }
-}
-
-async function getUser() {
-  const ref = SUPA_URL.replace('https://','').split('.')[0];
-  const stored = localStorage.getItem(`sb-${ref}-auth-token`);
-  if (!stored) return null;
-  try {
-    const parsed = JSON.parse(stored);
-    const token = parsed.access_token;
-    if (!token) return null;
-    const res = await fetch(`${SUPA_URL}/auth/v1/user`, {
-      headers: { 'Authorization': `Bearer ${token}`, 'apikey': SUPA_KEY },
-    });
-    if (!res.ok) return null;
-    return await res.json();
-  } catch { return null; }
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session?.access_token) {
+    const expiresAtMs = (session.expires_at || 0) * 1000;
+    if (!expiresAtMs || expiresAtMs > Date.now() + 30_000) return session.access_token;
+  }
+  const { data: refreshed } = await supabase.auth.refreshSession();
+  return refreshed.session?.access_token || null;
 }
 
 const TOTAL_STEPS = 10;
@@ -270,6 +270,21 @@ let state = {
   profileSaving: false,
   selectionSaved: false,
 };
+let profileSavePromise = null;
+
+// bfcache: после «Назад» с /login кнопка не должна остаться в «Сохраняем...»
+window.addEventListener('pageshow', (e) => {
+  if (!e.persisted) return;
+  const btn = document.getElementById('saveAndOrder');
+  if (btn && btn.disabled && !state.selectionSaved) {
+    btn.textContent = 'Сохранить подборку →';
+    btn.disabled = false;
+  }
+  if (state.profileSaving && !profileSavePromise) {
+    state.profileSaving = false;
+    updateProfileBadge();
+  }
+});
 
 function beanOutLink(c, source) {
   const q = new URLSearchParams({ url: c.url, name: c.name, roaster: c.roaster, source });
@@ -403,32 +418,44 @@ function renderQuiz(card) {
 }
 
 async function autoSaveProfileSilent() {
-  if (state.profileSaved || state.profileSaving) return;
-  state.profileSaving = true;
-  updateProfileBadge();
+  if (state.profileSaved) return true;
+  if (profileSavePromise) return profileSavePromise;
 
-  const user = await getUser();
-  if (!user) { state.profileSaving = false; updateProfileBadge(); return; }
+  profileSavePromise = (async () => {
+    state.profileSaving = true;
+    updateProfileBadge();
+    try {
+      const user = await getUser();
+      if (!user) return false;
+      const token = await getAccessToken();
+      if (!token) return false;
+      const res = await fetchWithTimeout('/api/save-profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({
+          answers: state.answers,
+          profileType: state.topCountries.map(k => DB[k].name).join(', '),
+          brewMethod: state.equipment || null,
+          tastes: state.answers.flavors,
+          notes: [],
+        }),
+      }, 15000);
+      if (res.ok) {
+        state.profileSaved = true;
+        return true;
+      }
+      return false;
+    } catch (e) {
+      console.error('Profile auto-save:', e);
+      return false;
+    } finally {
+      state.profileSaving = false;
+      profileSavePromise = null;
+      updateProfileBadge();
+    }
+  })();
 
-  try {
-    const token = await getAccessToken();
-    if (!token) return;
-    const res = await fetch('/api/save-profile', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-      body: JSON.stringify({
-        answers: state.answers,
-        profileType: state.topCountries.map(k => DB[k].name).join(', '),
-        brewMethod: state.equipment || null,
-        tastes: state.answers.flavors,
-        notes: [],
-      }),
-    });
-    if (res.ok) state.profileSaved = true;
-  } catch (e) { console.error('Profile auto-save:', e); }
-
-  state.profileSaving = false;
-  updateProfileBadge();
+  return profileSavePromise;
 }
 
 function updateProfileBadge() {
@@ -513,7 +540,7 @@ function renderResults(card) {
         </a>`;}).join('')}
     </div>
     <div class="result-cta">
-      <p id="profileSaveBadge" style="font-size:.82rem;color:var(--text-dim);margin:0 0 4px">Сохраняем профиль…</p>
+      <p id="profileSaveBadge" style="font-size:.82rem;color:var(--text-dim);margin:0 0 4px"></p>
       <button class="btn btn-primary" id="goToStart" style="font-size:.92rem;padding:12px 26px">С чего начать →</button>
       <button class="btn-ghost" id="goToPractice" style="font-size:.82rem">Подобрать зёрна под профиль →</button>
       <button class="btn-ghost" id="goToAccount" style="font-size:.78rem;color:var(--text-muted)">В личный кабинет →</button>
@@ -979,6 +1006,12 @@ function renderSetResults(card) {
 
   document.getElementById('saveAndOrder').addEventListener('click', async () => {
     const btn = document.getElementById('saveAndOrder');
+    const label = 'Сохранить подборку →';
+    const resetBtn = () => {
+      if (!btn || state.selectionSaved) return;
+      btn.textContent = label;
+      btn.disabled = false;
+    };
     btn.textContent = 'Сохраняем...';
     btn.disabled = true;
 
@@ -994,17 +1027,19 @@ function renderSetResults(card) {
       tastes: state.answers.flavors,
     };
 
-    let user = await getUser();
-    if (!user) {
-      sessionStorage.setItem('pendingSelection', JSON.stringify(selectionData));
-      window.location.href = '/login';
-      return;
-    }
-
     try {
+      const user = await getUser();
+      if (!user) {
+        sessionStorage.setItem('pendingSelection', JSON.stringify(selectionData));
+        // Сброс до редиректа: иначе bfcache / «Назад» оставляет кнопку на «Сохраняем...»
+        resetBtn();
+        window.location.href = '/login';
+        return;
+      }
+
       const token = await getAccessToken();
-      if (!token) throw new Error('no token');
-      const profileRes = await fetch('/api/save-profile', {
+      if (!token) throw new Error('Нет сессии — войдите снова');
+      const profileRes = await fetchWithTimeout('/api/save-profile', {
         method: 'POST',
         headers: {'Content-Type':'application/json', 'Authorization': 'Bearer ' + token},
         body: JSON.stringify({
@@ -1014,11 +1049,11 @@ function renderSetResults(card) {
           tastes: state.answers.flavors,
           notes: [],
         }),
-      });
-      if (!profileRes.ok) throw new Error(await profileRes.text());
+      }, 15000);
+      if (!profileRes.ok) throw new Error(await profileRes.text() || 'Не удалось сохранить профиль');
       const profile = await profileRes.json();
 
-      const selRes = await fetch('/api/save-selection', {
+      const selRes = await fetchWithTimeout('/api/save-selection', {
         method: 'POST',
         headers: {'Content-Type':'application/json', 'Authorization': 'Bearer ' + token},
         body: JSON.stringify({
@@ -1026,16 +1061,18 @@ function renderSetResults(card) {
           coffees: selectionData.coffees,
           format: state.setFormat,
         }),
-      });
-      if (!selRes.ok) throw new Error(await selRes.text());
+      }, 15000);
+      if (!selRes.ok) throw new Error(await selRes.text() || 'Не удалось сохранить подборку');
 
       btn.textContent = '✓ Сохранено';
       state.selectionSaved = true;
       state.phase = 'start-here';
       renderStep();
     } catch (e) {
-      alert('Ошибка сохранения: ' + e.message);
-      btn.textContent = 'Сохранить подборку →'; btn.disabled = false;
+      const msg = e?.name === 'AbortError' ? 'Превышено время ожидания. Попробуйте ещё раз.' : (e.message || String(e));
+      alert('Ошибка сохранения: ' + msg);
+    } finally {
+      resetBtn();
     }
   });
 

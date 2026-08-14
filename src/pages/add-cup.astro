@@ -15,6 +15,12 @@ import { DB, countryOrder } from '../data/countries';
       <p class="addcup-sub">Кофе из дома или заказанный вне подборок. Запись наполнит вашу Карту вкуса и откроет страны.</p>
       <div class="addcup-card" id="formCard">
         <div id="fromGuide" class="fromguide" style="display:none"></div>
+        <div id="shelfBeanPicker" class="shelf-bean-picker" style="display:none">
+          <label class="fl" for="f_shelf_bean">Зерно с полки</label>
+          <select id="f_shelf_bean">
+            <option value="">— выбрать зерно с полки —</option>
+          </select>
+        </div>
         <label class="fl">Кофе / зерно *</label>
         <input type="text" id="f_name" placeholder="напр. Эфиопия Гедео"/>
         <label class="fl">Обжарщик</label>
@@ -275,6 +281,8 @@ import { DB, countryOrder } from '../data/countries';
   .sliderrow input[type=range] { width: 100%; accent-color: var(--accent); }
   .balance-hint { font-size: .72rem; color: var(--text-muted); margin: -4px 0 10px; line-height: 1.45; }
   .field-hint { font-size: .68rem; color: var(--text-muted); margin: 4px 0 0; line-height: 1.4; }
+  .shelf-bean-picker { margin-bottom: 2px; }
+  .shelf-bean-picker .fl { margin-top: 0; }
   .shelf-add-row { margin: 10px 0 4px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); }
   .shelf-add-check { display: flex; align-items: center; gap: 8px; font-size: .8rem; font-weight: 600; color: var(--text); cursor: pointer; }
   .shelf-add-check input { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
@@ -643,11 +651,22 @@ import { DB, countryOrder } from '../data/countries';
     if (hint) hint.style.display = data?.length ? 'none' : 'block';
   }
 
-  type ShelfBean = { id: string; name: string; roaster: string | null };
+  type ShelfBean = {
+    id: string;
+    name: string;
+    roaster: string | null;
+    country: string | null;
+    process: string | null;
+    variety: string | null;
+  };
   let shelfBeans: ShelfBean[] = [];
   let shelfChoiceTouched = false;
 
   const beanKey = (name: string) => name.trim().toLowerCase().replace(/\s+/g, ' ');
+
+  function escShelfOpt(s: string) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+  }
 
   function matchShelfBean(): ShelfBean | null {
     const name = (document.getElementById('f_name') as HTMLInputElement).value.trim();
@@ -675,19 +694,64 @@ import { DB, countryOrder } from '../data/countries';
     }
   }
 
+  function syncShelfPickerFromName() {
+    const sel = document.getElementById('f_shelf_bean') as HTMLSelectElement | null;
+    if (!sel || editCupId) return;
+    const match = matchShelfBean();
+    sel.value = match ? match.id : '';
+  }
+
+  function populateShelfBeanSelect() {
+    const wrap = document.getElementById('shelfBeanPicker') as HTMLElement | null;
+    const sel = document.getElementById('f_shelf_bean') as HTMLSelectElement | null;
+    if (!wrap || !sel) return;
+    if (editCupId || !shelfBeans.length) {
+      wrap.style.display = 'none';
+      return;
+    }
+    sel.innerHTML = `<option value="">— выбрать зерно с полки —</option>` +
+      shelfBeans.map((b) => {
+        const label = b.roaster ? `${b.name} · ${b.roaster}` : b.name;
+        return `<option value="${escShelfOpt(b.id)}">${escShelfOpt(label)}</option>`;
+      }).join('');
+    wrap.style.display = '';
+    syncShelfPickerFromName();
+  }
+
+  function applyShelfBeanFromPicker() {
+    const sel = document.getElementById('f_shelf_bean') as HTMLSelectElement | null;
+    if (!sel) return;
+    const id = sel.value;
+    if (!id) {
+      updateShelfAddState();
+      return;
+    }
+    const bean = shelfBeans.find((b) => b.id === id);
+    if (!bean) return;
+    (document.getElementById('f_name') as HTMLInputElement).value = bean.name || '';
+    (document.getElementById('f_roaster') as HTMLInputElement).value = bean.roaster || '';
+    setVarietyValue(bean.variety);
+    setSelectKeepingValue('f_country', bean.country);
+    setSelectKeepingValue('f_process', bean.process);
+    updateShelfAddState();
+  }
+
   async function loadShelfBeans(userId: string) {
     const { data } = await supabase
       .from('shelf_items')
-      .select('id, name, roaster')
+      .select('id, name, roaster, country, process, variety')
       .eq('user_id', userId)
-      .eq('kind', 'bean');
+      .eq('kind', 'bean')
+      .order('name', { ascending: true });
     shelfBeans = (data as ShelfBean[]) || [];
+    populateShelfBeanSelect();
     updateShelfAddState();
   }
 
   function bindShelfAdd() {
     document.getElementById('f_name')!.addEventListener('input', updateShelfAddState);
     document.getElementById('f_to_shelf')!.addEventListener('change', () => { shelfChoiceTouched = true; });
+    document.getElementById('f_shelf_bean')?.addEventListener('change', applyShelfBeanFromPicker);
     updateShelfAddState();
   }
 
