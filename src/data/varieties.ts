@@ -8,7 +8,7 @@ export const BEAN_VARIETIES = [
   'Розовый бурбон',
   'Стармайя (Starmaya)',
   'Катурра (Caturra)',
-  'Каткаи (Catuai)',
+  'Катуаи (Catuai)',
   'SL-28',
   'SL-34',
   'Хейрлум (Heirloom)',

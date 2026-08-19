@@ -673,6 +673,7 @@ import Nav from '../components/Nav.astro';
     if (s.roaster) q.set('roaster', s.roaster);
     if (s.country) q.set('country', s.country);
     if (s.process) q.set('process', s.process);
+    if (s.variety) q.set('variety', s.variety);
     return '/add-cup?' + q.toString();
   }
 

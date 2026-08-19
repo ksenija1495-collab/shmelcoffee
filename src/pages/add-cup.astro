@@ -699,6 +699,7 @@ import { DB, countryOrder } from '../data/countries';
     if (!sel || editCupId) return;
     const match = matchShelfBean();
     sel.value = match ? match.id : '';
+    if (match) applyShelfBeanFromPicker();
   }
 
   function populateShelfBeanSelect() {
