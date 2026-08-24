@@ -355,6 +355,24 @@ import Nav from '../components/Nav.astro';
   .shelf-brew-btn { display: block; margin-top: 8px; width: 100%; font-size: .72rem; font-weight: 700; padding: 7px 10px; border-radius: 6px; border: 1px solid var(--text); background: var(--text); color: var(--bg); cursor: pointer; text-align: center; text-decoration: none; font-family: 'Inter', sans-serif; transition: all .2s; }
   .shelf-brew-btn:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
 
+  .shelf-assist { margin-bottom: 16px; }
+  .shelf-assist-h { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+  .shelf-assist-title { font-size: .92rem; font-weight: 700; color: var(--text); }
+  .shelf-assist-badge { font-size: .68rem; font-weight: 700; padding: 3px 8px; border-radius: 999px; background: rgba(90,140,90,.15); color: var(--text); }
+  .shelf-assist-desc { font-size: .78rem; color: var(--text-dim); line-height: 1.5; margin: 0 0 10px; }
+  .shelf-assist-chat { border: 1px solid var(--border); border-radius: 12px; background: var(--bg); max-height: 360px; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+  .shelf-assist-msg { font-size: .8rem; line-height: 1.55; padding: 10px 12px; border-radius: 10px; max-width: 92%; white-space: pre-wrap; }
+  .shelf-assist-msg.user { align-self: flex-end; background: var(--text); color: var(--bg); }
+  .shelf-assist-msg.bot { align-self: flex-start; background: var(--surface); border: 1px solid var(--border); color: var(--text); }
+  .shelf-assist-msg.loading { opacity: .65; font-style: italic; }
+  .shelf-assist-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 10px; }
+  .shelf-assist-chip { font-size: .72rem; padding: 6px 10px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); color: var(--text-dim); cursor: pointer; font-family: inherit; }
+  .shelf-assist-chip:hover { border-color: var(--accent); color: var(--text); }
+  .shelf-assist-form { display: flex; gap: 8px; margin-top: 10px; }
+  .shelf-assist-inp { flex: 1; min-width: 0; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); font-size: .82rem; font-family: inherit; }
+  .shelf-assist-send { flex-shrink: 0; padding: 10px 14px; border-radius: 10px; border: 0; background: var(--text); color: var(--bg); font-weight: 700; font-size: .78rem; cursor: pointer; font-family: inherit; }
+  .shelf-assist-send:disabled { opacity: .5; cursor: default; }
+
   @media (max-width: 768px) { .account-page { padding-top: 72px; } .account-header h1 { font-size: 1.4rem; } .coffee-item { flex-direction: column; align-items: flex-start; } .coffee-price { margin-top: 4px; } .tastemap-wheel { width: 200px; height: 200px; margin: 0 auto; } }
 </style>
 
@@ -364,7 +382,7 @@ import Nav from '../components/Nav.astro';
   import { DB, countryOrder } from '../data/countries';
   import { generalGuide } from '../data/generalGuide';
   import { BREW_METHODS, FAMILY_ICON } from '../data/methods';
-  import { buildProdamusBuyUrl } from '../lib/prodamusBuyUrl';
+  import { buildProdamusBuyUrl, buildProdamusShelfAssistUrl } from '../lib/prodamusBuyUrl';
   import { beanOutUrl } from '../lib/beanOutUrl';
   import { formatCupRecipe, recipeFingerprint, applyRecipeToParams } from '../lib/cupRecipe';
   import { formatTasteCharacterLine, normalizeTasteCharacter } from '../lib/tasteCharacter';
@@ -381,6 +399,7 @@ import Nav from '../components/Nav.astro';
     { auth: { flowType: 'implicit' } }
   );
   const PRODAMUS_URL = (import.meta.env.PUBLIC_PRODAMUS_URL as string) || '';
+  const PRODAMUS_SHELF_ASSIST_URL = (import.meta.env.PUBLIC_PRODAMUS_SHELF_ASSIST_URL as string) || PRODAMUS_URL;
 
   const page = document.getElementById('accountPage')!;
 
@@ -723,6 +742,148 @@ import Nav from '../components/Nav.astro';
     return last.ok ? last.balance : 0;
   }
 
+  const SHELF_ASSIST_HISTORY_KEY = 'shelf_assistant_history_v1';
+
+  async function initShelfAssistant(
+    accessToken: string,
+    shelfAssistBuyUrl: string,
+    beanCount: number,
+    guideCredits: number,
+    creditsOk: boolean,
+  ) {
+    const mount = document.getElementById('shelfAssistantMount');
+    if (!mount) return;
+
+    let access: { hasAccess: boolean; source?: string; activeUntil?: string | null } = { hasAccess: false };
+    try {
+      const res = await fetch('/api/shelf-assistant-access', {
+        headers: { Authorization: 'Bearer ' + accessToken },
+      });
+      if (res.ok) access = await res.json();
+    } catch { /* ignore */ }
+
+    const assistPaid = new URLSearchParams(window.location.search).get('assist') === '1';
+
+    if (!access.hasAccess) {
+      mount.innerHTML = `<div class="shelf-assist pro-card">
+        <div class="shelf-assist-h"><div class="shelf-assist-title">🤖 AI-ассистент на полке</div></div>
+        <p class="shelf-assist-desc">Сравнения лотов, рецепты (V60, AeroPress с байпасом), план дегустации — по твоей полке и дневнику. Подписка · 30 дней.</p>
+        <button type="button" class="btn btn-primary" data-buy-assist="1" style="font-size:.82rem">Подключить ассистента</button>
+        ${creditsOk && guideCredits > 0 ? `<p class="shelf-assist-desc" style="margin-top:8px">Пока доступен в бета-режиме при наличии оплаченных гидов — обнови страницу.</p>` : ''}
+      </div>`;
+      mount.querySelector('[data-buy-assist]')?.addEventListener('click', () => {
+        if (!shelfAssistBuyUrl) {
+          alert('Оплата не настроена. Напиши @ksenijashmel — включу вручную.');
+          return;
+        }
+        if (!window.open(shelfAssistBuyUrl, '_blank')) window.location.href = shelfAssistBuyUrl;
+      });
+      return;
+    }
+
+    const until = access.activeUntil
+      ? new Date(access.activeUntil).toLocaleDateString('ru-RU')
+      : null;
+    const badge = access.source === 'subscription' && until
+      ? `до ${until}`
+      : access.source === 'beta_credits'
+      ? 'бета'
+      : 'активен';
+
+    mount.innerHTML = `<div class="shelf-assist pro-card">
+      <div class="shelf-assist-h">
+        <div class="shelf-assist-title">🤖 AI-ассистент</div>
+        <span class="shelf-assist-badge">${esc(badge)}</span>
+      </div>
+      <p class="shelf-assist-desc">Спроси про сравнения, рецепты и дегустацию — знаю твою полку (${beanCount} зёрен) и недавние чашки.</p>
+      ${assistPaid ? `<div class="paid-banner" style="margin-bottom:10px">✅ Подписка активирована. Задай первый вопрос ниже.</div>` : ''}
+      <div class="shelf-assist-chips">
+        <button type="button" class="shelf-assist-chip" data-assist-prompt="С чем сегодня сравнить мои китайские лоты с полки и зачем?">Китай: с чем сравнить</button>
+        <button type="button" class="shelf-assist-chip" data-assist-prompt="Дай рецепт AeroPress с байпасом для Catimor natural с полки — конкретные граммы и температуру.">AeroPress + байпас</button>
+        <button type="button" class="shelf-assist-chip" data-assist-prompt="Составь план дегустации на 5 дней по моей полке — сначала solo, потом сравнения.">План на неделю</button>
+      </div>
+      <div class="shelf-assist-chat" id="shelfAssistChat"></div>
+      <form class="shelf-assist-form" id="shelfAssistForm">
+        <input class="shelf-assist-inp" id="shelfAssistInput" placeholder="Например: какой лот заварить сегодня в V60?" autocomplete="off"/>
+        <button type="submit" class="shelf-assist-send" id="shelfAssistSend">→</button>
+      </form>
+    </div>`;
+
+    const chat = document.getElementById('shelfAssistChat')!;
+    const form = document.getElementById('shelfAssistForm') as HTMLFormElement;
+    const input = document.getElementById('shelfAssistInput') as HTMLInputElement;
+    const sendBtn = document.getElementById('shelfAssistSend') as HTMLButtonElement;
+
+    type Turn = { role: 'user' | 'assistant'; content: string };
+    let history: Turn[] = [];
+    try {
+      const raw = sessionStorage.getItem(SHELF_ASSIST_HISTORY_KEY);
+      if (raw) history = JSON.parse(raw);
+    } catch { history = []; }
+
+    const persist = () => {
+      try { sessionStorage.setItem(SHELF_ASSIST_HISTORY_KEY, JSON.stringify(history.slice(-12))); } catch { /* ignore */ }
+    };
+
+    const renderMsg = (role: 'user' | 'assistant', text: string, extraClass = '') => {
+      const el = document.createElement('div');
+      el.className = `shelf-assist-msg ${role === 'user' ? 'user' : 'bot'}${extraClass ? ' ' + extraClass : ''}`;
+      el.textContent = text;
+      chat.appendChild(el);
+      chat.scrollTop = chat.scrollHeight;
+      return el;
+    };
+
+    history.forEach((t) => renderMsg(t.role, t.content));
+
+    const ask = async (text: string) => {
+      const message = text.trim();
+      if (!message || sendBtn.disabled) return;
+      renderMsg('user', message);
+      history.push({ role: 'user', content: message });
+      persist();
+      input.value = '';
+      sendBtn.disabled = true;
+      const loading = renderMsg('assistant', 'Думаю…', 'loading');
+
+      try {
+        const res = await fetch('/api/shelf-assistant', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer ' + accessToken,
+          },
+          body: JSON.stringify({ message, history: history.slice(0, -1) }),
+        });
+        loading.remove();
+        if (res.status === 402) {
+          renderMsg('assistant', 'Нужна подписка на ассистента. Обнови страницу или напиши @ksenijashmel.');
+          return;
+        }
+        if (!res.ok) throw new Error(await res.text());
+        const data = await res.json();
+        const reply = String(data.reply || '').trim();
+        renderMsg('assistant', reply || 'Пустой ответ — попробуй переформулировать.');
+        history.push({ role: 'assistant', content: reply });
+        persist();
+      } catch (e: any) {
+        loading.remove();
+        renderMsg('assistant', 'Ошибка: ' + (e?.message || 'не удалось получить ответ'));
+      } finally {
+        sendBtn.disabled = false;
+        input.focus();
+      }
+    };
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      ask(input.value);
+    });
+    mount.querySelectorAll('[data-assist-prompt]').forEach((btn) => {
+      btn.addEventListener('click', () => ask((btn as HTMLElement).dataset.assistPrompt || ''));
+    });
+  }
+
   async function init() {
     try {
     const { data: { user }, error: authErr } = await supabase.auth.getUser();
@@ -778,6 +939,7 @@ import Nav from '../components/Nav.astro';
     );
     const shelf = shelfRes.data || [];
     const buyUrl = buildProdamusBuyUrl(PRODAMUS_URL, user, window.location.origin);
+    const shelfAssistBuyUrl = buildProdamusShelfAssistUrl(PRODAMUS_SHELF_ASSIST_URL, user, window.location.origin);
     const paidBanner = isPaidReturn
       ? credits > 0
         ? `<div class="paid-banner">✅ Оплата прошла. У тебя <b>${credits}</b> ${guideWord(credits)} — нажми «Создать гид», чтобы получить персональный рецепт.</div>`
@@ -965,7 +1127,7 @@ import Nav from '../components/Nav.astro';
       <section class="acc-panel" data-panel="disco"><div class="panel-h">🧭 Карта открытий</div>${discoPanel}</section>
       <section class="acc-panel" data-panel="diary"><div class="panel-h"><span>📔 Моё кофе</span><a href="/add-cup" class="add-cup-btn">+ Добавить чашку</a></div>${diaryPanel}</section>
       <section class="acc-panel" data-panel="recipes"><div class="panel-h"><span>📝 Рецепты</span><a href="/add-cup" class="add-cup-btn">+ Новая чашка</a></div>${recipesPanel}</section>
-      <section class="acc-panel" data-panel="shelf"><div class="panel-h"><span>🪵 Моя полка${shelfHasStatus ? ` <span class="shelf-low-count"${lowCount ? '' : ' style="display:none"'}>${lowCount} заканчивается</span>` : ''}</span><span style="display:flex;gap:6px;flex-wrap:wrap"><a href="/add-shelf?kind=bean" class="add-cup-btn">+ Зерно</a><a href="/add-shelf?mode=photo" class="add-cup-btn">📷 С фото</a><a href="/add-shelf?kind=equipment" class="add-cup-btn">+ Оборудование</a></span></div><div id="shelfImportBanner" class="paid-banner" style="display:none"></div>${shelfPanel}</section>
+      <section class="acc-panel" data-panel="shelf"><div class="panel-h"><span>🪵 Моя полка${shelfHasStatus ? ` <span class="shelf-low-count"${lowCount ? '' : ' style="display:none"'}>${lowCount} заканчивается</span>` : ''}</span><span style="display:flex;gap:6px;flex-wrap:wrap"><a href="/add-shelf?kind=bean" class="add-cup-btn">+ Зерно</a><a href="/add-shelf?mode=photo" class="add-cup-btn">📷 С фото</a><a href="/add-shelf?kind=equipment" class="add-cup-btn">+ Оборудование</a></span></div><div id="shelfImportBanner" class="paid-banner" style="display:none"></div><div id="shelfAssistantMount"></div>${shelfPanel}</section>
       <section class="acc-panel" data-panel="selections"><div class="panel-h">☕ Мои подборки</div>${selectionsPanel}</section>
       <section class="acc-panel" data-panel="guides"><div class="panel-h">📖 Гиды</div>${paidBanner}${guidesPanel}</section>
       <section class="acc-panel" data-panel="community"><div class="panel-h">🌐 Сообщество</div>${communityJoin}<div class="profile-card" id="communityCard"><div class="profile-label" style="min-width:0">Загружаем статистику…</div></div>${twinSoon}</section>
@@ -1008,6 +1170,9 @@ import Nav from '../components/Nav.astro';
       if (empty) empty.style.display = q && !visible ? 'block' : 'none';
     }
     document.getElementById('shelfSearch')?.addEventListener('input', applyShelfSearch);
+
+    const beanCount = shelf.filter((s: any) => s.kind === 'bean').length;
+    await initShelfAssistant(accessToken, shelfAssistBuyUrl, beanCount, credits, creditsKnown);
 
     page.querySelectorAll('.disco-chip[data-k]').forEach(ch => { ch.addEventListener('click', () => showCountry((ch as HTMLElement).getAttribute('data-k')!)); });
     document.getElementById('logoutBtn')?.addEventListener('click', async () => { await supabase.auth.signOut(); window.location.href = '/'; });

@@ -6,6 +6,7 @@ import {
   prodamusPaymentFields,
   prodamusSubmitPayload,
 } from '../../lib/prodamusParse';
+import { isShelfAssistantProduct } from '../../lib/shelfAssistantAccess';
 
 export const prerender = false;
 
@@ -99,7 +100,18 @@ export const POST: APIRoute = async ({ request, url }) => {
   const sum =
     parseFloat(str(payment.sum || payment.order_sum || payment.amount) || String(UNIT_PRICE)) ||
     UNIT_PRICE;
-  const credits = 1;
+  const orderLabel = [
+    payment.order_content,
+    payment.products,
+    payment.product,
+    params.order_name,
+    params.products,
+  ]
+    .map(str)
+    .filter(Boolean)
+    .join(' ');
+  const shelfAssistSum = parseFloat(import.meta.env.PRODAMUS_SHELF_ASSIST_SUM || '290') || 290;
+  const isShelfAssist = isShelfAssistantProduct(sum, orderLabel, shelfAssistSum);
 
   const supabase = createClient(
     import.meta.env.PUBLIC_SUPABASE_URL,
@@ -131,6 +143,30 @@ export const POST: APIRoute = async ({ request, url }) => {
       return new Response('already_processed', { status: 200 });
     }
   }
+
+  if (isShelfAssist) {
+    const { error } = await supabase.rpc('grant_shelf_assistant', { p_user: uid, p_days: 30 });
+    if (error) {
+      console.error('[prodamus-webhook] grant_shelf_assistant failed', error.message, {
+        prodamusOrderId,
+        uid,
+      });
+      return new Response(error.message, { status: 500 });
+    }
+
+    if (prodamusOrderId) {
+      await supabase.from('prodamus_orders').insert({
+        order_id: prodamusOrderId,
+        user_id: uid,
+        credits: 0,
+      });
+    }
+
+    console.info('[prodamus-webhook] shelf_assistant ok', { prodamusOrderId, uid, email });
+    return new Response('ok', { status: 200 });
+  }
+
+  const credits = 1;
 
   const { error } = await supabase.rpc('add_guide_credits', { p_user: uid, p_amount: credits });
   if (error) {
