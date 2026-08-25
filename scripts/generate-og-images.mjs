@@ -172,6 +172,7 @@ function walk(dir) {
 
 /* Обзорные страницы блога — те же карточки, чтобы превью выглядели одинаково */
 const sections = [
+  { file: 'home.png', title: 'Личный кабинет для дегустации кофе', label: 'Полка · Дневник · Карта вкуса', accent: '#a87c4f' },
   { file: 'blog.png', title: 'Блог о кофе', label: 'Specialty от зерна до чашки', accent: '#a87c4f' },
   { file: 'blog-c1.png', title: 'Основы specialty coffee', label: 'Обжарка, дрип-пакеты, старт', accent: CLUSTERS.C1.accent },
   { file: 'blog-c2.png', title: 'Методы заваривания', label: 'V60, аэропресс, кемекс, cold brew', accent: CLUSTERS.C2.accent },

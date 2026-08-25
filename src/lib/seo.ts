@@ -1,6 +1,6 @@
 export const SITE_URL = 'https://shmelcoffee.com';
-export const SITE_NAME = 'Shmelco Coffee Guide';
-export const DEFAULT_OG_IMAGE = `${SITE_URL}/og/blog.png`;
+export const SITE_NAME = 'Shmelco';
+export const DEFAULT_OG_IMAGE = `${SITE_URL}/og/home.png`;
 
 export const CLUSTER_SEO: Record<string, { name: string; pillarSlug: string; ogImage: string }> = {
   C1: { name: 'Основы specialty coffee', pillarSlug: 'specialty-coffee', ogImage: `${SITE_URL}/og/blog-c1.png` },
