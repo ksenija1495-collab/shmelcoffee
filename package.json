@@ -10,7 +10,9 @@
     "prebuild": "node scripts/blog-sitemap-dates.mjs && node scripts/generate-og-images.mjs",
     "build": "astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "stats:weekly": "node scripts/send-weekly-stats.mjs",
+    "stats:weekly:dry": "node scripts/send-weekly-stats.mjs https://shmelcoffee.com --dry"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.7.2",
