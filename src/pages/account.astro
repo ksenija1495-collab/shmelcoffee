@@ -419,6 +419,32 @@ import Nav from '../components/Nav.astro';
   const isFetchError = (msg?: string | null) =>
     !!msg && /fetch failed|failed to fetch|network|ENOTFOUND|NXDOMAIN/i.test(msg);
 
+  function fetchWithTimeout(url: string, options: RequestInit = {}, ms = 12_000): Promise<Response> {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), ms);
+    return fetch(url, { ...options, signal: ctrl.signal }).finally(() => clearTimeout(timer));
+  }
+
+  async function getAccountUser() {
+    const { data: { user }, error } = await supabase.auth.getUser();
+    if (user) return user;
+    if (error) {
+      const { data: { session } } = await supabase.auth.refreshSession();
+      if (session?.user) return session.user;
+    }
+    return null;
+  }
+
+  async function getAccessToken() {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.access_token) {
+      const expiresAtMs = (session.expires_at || 0) * 1000;
+      if (!expiresAtMs || expiresAtMs > Date.now() + 30_000) return session.access_token;
+    }
+    const { data: refreshed } = await supabase.auth.refreshSession();
+    return refreshed.session?.access_token || '';
+  }
+
   function renderChampionRecipesBlock(): string {
     const byBrew = new Map<string, typeof CHAMPION_PICKER_ITEMS>();
     for (const item of CHAMPION_PICKER_ITEMS) {
@@ -723,7 +749,7 @@ import Nav from '../components/Nav.astro';
   async function fetchCredits(token: string): Promise<{ balance: number; ok: boolean }> {
     if (!token) return { balance: 0, ok: false };
     try {
-      const res = await fetch('/api/guide-credits', { headers: { Authorization: 'Bearer ' + token } });
+      const res = await fetchWithTimeout('/api/guide-credits', { headers: { Authorization: 'Bearer ' + token } }, 10_000);
       if (!res.ok) return { balance: 0, ok: false };
       const data = await res.json();
       return { balance: data.balance ?? 0, ok: true };
@@ -756,9 +782,9 @@ import Nav from '../components/Nav.astro';
 
     let access: { hasAccess: boolean; source?: string; activeUntil?: string | null } = { hasAccess: false };
     try {
-      const res = await fetch('/api/shelf-assistant-access', {
+      const res = await fetchWithTimeout('/api/shelf-assistant-access', {
         headers: { Authorization: 'Bearer ' + accessToken },
-      });
+      }, 10_000);
       if (res.ok) access = await res.json();
     } catch { /* ignore */ }
 
@@ -886,11 +912,7 @@ import Nav from '../components/Nav.astro';
 
   async function init() {
     try {
-    const { data: { user }, error: authErr } = await supabase.auth.getUser();
-    if (authErr && isFetchError(authErr.message)) {
-      showLoadError('Сервер данных временно недоступен. Если через 10 минут не заработает — напишите @ksenijashmel.');
-      return;
-    }
+    const user = await getAccountUser();
     if (!user) { window.location.href = '/login'; return; }
 
     const { data: profileCheck, error: profileErr } = await supabase.from('taste_profiles').select('id').eq('user_id', user.id).limit(1);
@@ -903,25 +925,21 @@ import Nav from '../components/Nav.astro';
       if (!count) { window.location.href = '/quiz'; return; }
     }
 
-    const { data: { session } } = await supabase.auth.getSession();
-    const accessToken = session?.access_token || '';
+    const accessToken = await getAccessToken();
 
     const isPaidReturn = new URLSearchParams(window.location.search).get('paid') === '1';
-    let creditsResult = await fetchCredits(accessToken);
-    if (isPaidReturn && creditsResult.ok && creditsResult.balance === 0) {
-      creditsResult = { balance: await pollCredits(accessToken), ok: true };
-    }
+    const creditsResult = await fetchCredits(accessToken);
     const credits = creditsResult.balance;
     const creditsKnown = creditsResult.ok;
 
-    const [profilesRes, selectionsRes, guidesRes, cupsRes, shelfRes] = await Promise.all([
+    const [profilesRes, selectionsRes, guidesRes, cupsRes, shelfRes, recipesResult] = await Promise.all([
       supabase.from('taste_profiles').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
       supabase.from('coffee_selections').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
       supabase.from('guides').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
       supabase.from('cups').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
       supabase.from('shelf_items').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
+      fetchSavedBrewRecipes(supabase),
     ]);
-    const recipesResult = await fetchSavedBrewRecipes(supabase);
 
     const loadErr = [profilesRes, selectionsRes, guidesRes, cupsRes, shelfRes].find(r => r.error)?.error;
     if (loadErr && isFetchError(loadErr.message)) {
@@ -1133,6 +1151,78 @@ import Nav from '../components/Nav.astro';
       <section class="acc-panel" data-panel="community"><div class="panel-h">🌐 Сообщество</div>${communityJoin}<div class="profile-card" id="communityCard"><div class="profile-label" style="min-width:0">Загружаем статистику…</div></div>${twinSoon}</section>
     `;
 
+    const MOBILE_ACC_TABS = new Set(['profile', 'diary', 'shelf', 'add-cup']);
+    function syncAccountNav(name: string) {
+      document.querySelectorAll('.mobile-acc-nav a[data-acc-tab]').forEach((a) => {
+        const tab = a.getAttribute('data-acc-tab');
+        a.classList.toggle('active', MOBILE_ACC_TABS.has(name) && tab === name);
+      });
+    }
+
+    const moreBtn = document.getElementById('accMoreBtn');
+    const moreMenu = document.getElementById('accMoreMenu');
+    function placeMoreMenu() {
+      if (!moreBtn || !moreMenu || moreMenu.hidden) return;
+      const r = moreBtn.getBoundingClientRect();
+      const w = moreMenu.offsetWidth;
+      moreMenu.style.top = `${r.bottom + 6}px`;
+      moreMenu.style.left = `${Math.max(8, Math.min(r.right - w, window.innerWidth - w - 8))}px`;
+    }
+    moreBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (!moreMenu) return;
+      moreMenu.hidden = !moreMenu.hidden;
+      placeMoreMenu();
+    });
+    if (!(window as any).__accDocClickBound) {
+      (window as any).__accDocClickBound = true;
+      const closeMoreMenu = () => {
+        const menu = document.getElementById('accMoreMenu');
+        if (menu) menu.hidden = true;
+      };
+      document.addEventListener('click', closeMoreMenu);
+      window.addEventListener('scroll', closeMoreMenu, { passive: true });
+      window.addEventListener('resize', closeMoreMenu);
+    }
+    moreMenu?.addEventListener('click', (e) => e.stopPropagation());
+
+    const tabs = Array.from(page.querySelectorAll('.acc-tab')) as HTMLElement[];
+    const moreItems = Array.from(page.querySelectorAll('.acc-more-item')) as HTMLElement[];
+    const panels = Array.from(page.querySelectorAll('.acc-panel')) as HTMLElement[];
+    function activateTab(name: string) {
+      tabs.forEach(t => {
+        const tab = t.getAttribute('data-tab');
+        if (tab === 'more') t.classList.toggle('active', MORE_TABS.has(name));
+        else t.classList.toggle('active', tab === name);
+      });
+      moreItems.forEach(m => m.classList.toggle('active', m.getAttribute('data-tab') === name));
+      panels.forEach(p => p.classList.toggle('active', p.getAttribute('data-panel') === name));
+      syncAccountNav(name);
+      if (moreMenu) moreMenu.hidden = true;
+      try { localStorage.setItem('acc_tab', name); } catch (e) {}
+      const url = new URL(location.href);
+      if (name === 'profile') url.searchParams.delete('tab');
+      else url.searchParams.set('tab', name);
+      history.replaceState({}, '', url.pathname + url.search);
+    }
+    tabs.filter(t => t.getAttribute('data-tab') !== 'more').forEach(t => t.addEventListener('click', () => activateTab(t.getAttribute('data-tab')!)));
+    moreItems.forEach(m => m.addEventListener('click', () => activateTab(m.getAttribute('data-tab')!)));
+    let startTab = 'profile';
+    const urlTab = new URL(location.href).searchParams.get('tab');
+    const tabExists = urlTab && (page.querySelector('.acc-tab[data-tab="' + urlTab + '"]') || page.querySelector('.acc-more-item[data-tab="' + urlTab + '"]'));
+    if (tabExists) startTab = urlTab!;
+    else {
+      try { const sv = localStorage.getItem('acc_tab'); if (sv && (page.querySelector('.acc-tab[data-tab="' + sv + '"]') || page.querySelector('.acc-more-item[data-tab="' + sv + '"]'))) startTab = sv; } catch (e) {}
+    }
+    activateTab(startTab);
+
+    const beanCount = shelf.filter((s: any) => s.kind === 'bean').length;
+    void initShelfAssistant(accessToken, shelfAssistBuyUrl, beanCount, credits, creditsKnown);
+
+    if (isPaidReturn && creditsKnown && credits === 0) {
+      pollCredits(accessToken).then((newBal) => { if (newBal > 0) init(); });
+    }
+
     renderTasteWheel(prefFams);
     loadCommunity();
 
@@ -1170,9 +1260,6 @@ import Nav from '../components/Nav.astro';
       if (empty) empty.style.display = q && !visible ? 'block' : 'none';
     }
     document.getElementById('shelfSearch')?.addEventListener('input', applyShelfSearch);
-
-    const beanCount = shelf.filter((s: any) => s.kind === 'bean').length;
-    await initShelfAssistant(accessToken, shelfAssistBuyUrl, beanCount, credits, creditsKnown);
 
     page.querySelectorAll('.disco-chip[data-k]').forEach(ch => { ch.addEventListener('click', () => showCountry((ch as HTMLElement).getAttribute('data-k')!)); });
     document.getElementById('logoutBtn')?.addEventListener('click', async () => { await supabase.auth.signOut(); window.location.href = '/'; });
@@ -1238,71 +1325,6 @@ import Nav from '../components/Nav.astro';
         }
       });
     });
-
-    const MOBILE_ACC_TABS = new Set(['profile', 'diary', 'shelf', 'add-cup']);
-    function syncAccountNav(name: string) {
-      document.querySelectorAll('.mobile-acc-nav a[data-acc-tab]').forEach((a) => {
-        const tab = a.getAttribute('data-acc-tab');
-        a.classList.toggle('active', MOBILE_ACC_TABS.has(name) && tab === name);
-      });
-    }
-
-    const moreBtn = document.getElementById('accMoreBtn');
-    const moreMenu = document.getElementById('accMoreMenu');
-    function placeMoreMenu() {
-      if (!moreBtn || !moreMenu || moreMenu.hidden) return;
-      const r = moreBtn.getBoundingClientRect();
-      const w = moreMenu.offsetWidth;
-      moreMenu.style.top = `${r.bottom + 6}px`;
-      moreMenu.style.left = `${Math.max(8, Math.min(r.right - w, window.innerWidth - w - 8))}px`;
-    }
-    moreBtn?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      if (!moreMenu) return;
-      moreMenu.hidden = !moreMenu.hidden;
-      placeMoreMenu();
-    });
-    if (!(window as any).__accDocClickBound) {
-      (window as any).__accDocClickBound = true;
-      const closeMoreMenu = () => {
-        const menu = document.getElementById('accMoreMenu');
-        if (menu) menu.hidden = true;
-      };
-      document.addEventListener('click', closeMoreMenu);
-      window.addEventListener('scroll', closeMoreMenu, { passive: true });
-      window.addEventListener('resize', closeMoreMenu);
-    }
-    moreMenu?.addEventListener('click', (e) => e.stopPropagation());
-
-    const tabs = Array.from(page.querySelectorAll('.acc-tab')) as HTMLElement[];
-    const moreItems = Array.from(page.querySelectorAll('.acc-more-item')) as HTMLElement[];
-    const panels = Array.from(page.querySelectorAll('.acc-panel')) as HTMLElement[];
-    function activateTab(name: string) {
-      tabs.forEach(t => {
-        const tab = t.getAttribute('data-tab');
-        if (tab === 'more') t.classList.toggle('active', MORE_TABS.has(name));
-        else t.classList.toggle('active', tab === name);
-      });
-      moreItems.forEach(m => m.classList.toggle('active', m.getAttribute('data-tab') === name));
-      panels.forEach(p => p.classList.toggle('active', p.getAttribute('data-panel') === name));
-      syncAccountNav(name);
-      if (moreMenu) moreMenu.hidden = true;
-      try { localStorage.setItem('acc_tab', name); } catch (e) {}
-      const url = new URL(location.href);
-      if (name === 'profile') url.searchParams.delete('tab');
-      else url.searchParams.set('tab', name);
-      history.replaceState({}, '', url.pathname + url.search);
-    }
-    tabs.filter(t => t.getAttribute('data-tab') !== 'more').forEach(t => t.addEventListener('click', () => activateTab(t.getAttribute('data-tab')!)));
-    moreItems.forEach(m => m.addEventListener('click', () => activateTab(m.getAttribute('data-tab')!)));
-    let startTab = 'profile';
-    const urlTab = new URL(location.href).searchParams.get('tab');
-    const tabExists = urlTab && (page.querySelector('.acc-tab[data-tab="' + urlTab + '"]') || page.querySelector('.acc-more-item[data-tab="' + urlTab + '"]'));
-    if (tabExists) startTab = urlTab!;
-    else {
-      try { const sv = localStorage.getItem('acc_tab'); if (sv && (page.querySelector('.acc-tab[data-tab="' + sv + '"]') || page.querySelector('.acc-more-item[data-tab="' + sv + '"]'))) startTab = sv; } catch (e) {}
-    }
-    activateTab(startTab);
 
     const importedN = Number(new URL(location.href).searchParams.get('imported') || 0);
     if (importedN > 0) {

@@ -20,9 +20,19 @@ export async function fetchSavedBrewRecipes(supabase: SupabaseClient): Promise<{
   const token = await authToken(supabase);
   if (!token) return { ok: false, recipes: [], error: 'unauthorized' };
 
-  const res = await fetch('/api/saved-brew-recipe', {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 12_000);
+  let res: Response;
+  try {
+    res = await fetch('/api/saved-brew-recipe', {
+      headers: { Authorization: `Bearer ${token}` },
+      signal: ctrl.signal,
+    });
+  } catch {
+    return { ok: false, recipes: [], error: 'timeout' };
+  } finally {
+    clearTimeout(timer);
+  }
   if (res.status === 503) {
     const body = await res.json().catch(() => ({}));
     return { ok: false, recipes: [], error: body.error || 'migration_required' };
