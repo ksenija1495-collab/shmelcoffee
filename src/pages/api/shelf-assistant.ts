@@ -52,7 +52,7 @@ ${context}`;
   const openai = getOpenAI();
   const completion = await openai.chat.completions.create({
     model: 'gpt-4o-mini',
-    temperature: 0.55,
+    temperature: 0.45,
     max_tokens: 1400,
     messages: [
       { role: 'system', content: sys },

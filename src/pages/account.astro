@@ -365,6 +365,24 @@ import Nav from '../components/Nav.astro';
   .shelf-assist-msg.user { align-self: flex-end; background: var(--text); color: var(--bg); }
   .shelf-assist-msg.bot { align-self: flex-start; background: var(--surface); border: 1px solid var(--border); color: var(--text); }
   .shelf-assist-msg.loading { opacity: .65; font-style: italic; }
+  .shelf-assist-turn { display: flex; flex-direction: column; gap: 4px; max-width: 92%; align-self: flex-start; }
+  .shelf-assist-turn.user-turn { align-self: flex-end; max-width: 92%; }
+  .shelf-assist-actions { display: flex; flex-wrap: wrap; gap: 6px; padding-left: 2px; }
+  .shelf-assist-act {
+    font-size: .68rem; padding: 4px 8px; border-radius: 999px; border: 1px solid var(--border);
+    background: var(--surface); color: var(--text-dim); cursor: pointer; font-family: inherit;
+  }
+  .shelf-assist-act:hover { border-color: var(--accent); color: var(--text); }
+  .shelf-assist-act.on { border-color: var(--accent); color: var(--text); font-weight: 600; }
+  .shelf-assist-pair-form {
+    display: flex; flex-direction: column; gap: 6px; margin-top: 6px; padding: 10px;
+    border: 1px dashed var(--border); border-radius: 10px; background: var(--surface);
+  }
+  .shelf-assist-pair-form select, .shelf-assist-pair-form input {
+    width: 100%; padding: 7px 9px; border-radius: 8px; border: 1px solid var(--border);
+    font-size: .76rem; font-family: inherit; background: var(--bg); color: var(--text);
+  }
+  .shelf-assist-pair-row { display: flex; gap: 6px; flex-wrap: wrap; }
   .shelf-assist-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 10px; }
   .shelf-assist-chip { font-size: .72rem; padding: 6px 10px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); color: var(--text-dim); cursor: pointer; font-family: inherit; }
   .shelf-assist-chip:hover { border-color: var(--accent); color: var(--text); }
@@ -776,6 +794,7 @@ import Nav from '../components/Nav.astro';
     beanCount: number,
     guideCredits: number,
     creditsOk: boolean,
+    beanNameOptions: string[],
   ) {
     const mount = document.getElementById('shelfAssistantMount');
     if (!mount) return;
@@ -830,9 +849,13 @@ import Nav from '../components/Nav.astro';
       </div>
       <div class="shelf-assist-chat" id="shelfAssistChat"></div>
       <form class="shelf-assist-form" id="shelfAssistForm">
-        <input class="shelf-assist-inp" id="shelfAssistInput" placeholder="Например: какой лот заварить сегодня в V60?" autocomplete="off"/>
+        <input class="shelf-assist-inp" id="shelfAssistInput" placeholder="Например: с чем сравнить Китай Тяньюй с другой страной?" autocomplete="off"/>
         <button type="submit" class="shelf-assist-send" id="shelfAssistSend">→</button>
       </form>
+      <div class="shelf-assist-pair-row" style="margin-top:8px">
+        <button type="button" class="shelf-assist-act" id="shelfAssistPairBtn">✓ Отметить удачную пару</button>
+      </div>
+      <div id="shelfAssistPairForm" class="shelf-assist-pair-form" hidden></div>
     </div>`;
 
     const chat = document.getElementById('shelfAssistChat')!;
@@ -851,26 +874,141 @@ import Nav from '../components/Nav.astro';
       try { sessionStorage.setItem(SHELF_ASSIST_HISTORY_KEY, JSON.stringify(history.slice(-12))); } catch { /* ignore */ }
     };
 
-    const renderMsg = (role: 'user' | 'assistant', text: string, extraClass = '') => {
-      const el = document.createElement('div');
-      el.className = `shelf-assist-msg ${role === 'user' ? 'user' : 'bot'}${extraClass ? ' ' + extraClass : ''}`;
-      el.textContent = text;
-      chat.appendChild(el);
-      chat.scrollTop = chat.scrollHeight;
-      return el;
+    const postFeedback = async (payload: Record<string, unknown>) => {
+      try {
+        await fetch('/api/shelf-assistant-feedback', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer ' + accessToken,
+          },
+          body: JSON.stringify(payload),
+        });
+      } catch { /* ignore */ }
     };
 
-    history.forEach((t) => renderMsg(t.role, t.content));
+    const renderUserMsg = (text: string) => {
+      const wrap = document.createElement('div');
+      wrap.className = 'shelf-assist-turn user-turn';
+      const el = document.createElement('div');
+      el.className = 'shelf-assist-msg user';
+      el.textContent = text;
+      wrap.appendChild(el);
+      chat.appendChild(wrap);
+      chat.scrollTop = chat.scrollHeight;
+    };
+
+    const renderBotMsg = (text: string, userMsg: string) => {
+      const wrap = document.createElement('div');
+      wrap.className = 'shelf-assist-turn';
+
+      const el = document.createElement('div');
+      el.className = 'shelf-assist-msg bot';
+      el.textContent = text;
+      wrap.appendChild(el);
+
+      const actions = document.createElement('div');
+      actions.className = 'shelf-assist-actions';
+
+      const mkBtn = (label: string, rating: number) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'shelf-assist-act';
+        btn.textContent = label;
+        btn.addEventListener('click', async () => {
+          actions.querySelectorAll('.shelf-assist-act').forEach((b) => b.classList.remove('on'));
+          btn.classList.add('on');
+          await postFeedback({
+            kind: 'message_rating',
+            rating,
+            userMessage: userMsg,
+            assistantReply: text,
+          });
+        });
+        return btn;
+      };
+
+      actions.appendChild(mkBtn('👍', 1));
+      actions.appendChild(mkBtn('👎', -1));
+
+      const pairBtn = document.createElement('button');
+      pairBtn.type = 'button';
+      pairBtn.className = 'shelf-assist-act';
+      pairBtn.textContent = '✓ Пара зашла';
+      pairBtn.addEventListener('click', () => openPairForm('', ''));
+      actions.appendChild(pairBtn);
+
+      wrap.appendChild(actions);
+      chat.appendChild(wrap);
+      chat.scrollTop = chat.scrollHeight;
+    };
+
+    const pairFormEl = document.getElementById('shelfAssistPairForm')!;
+    const pairBtnTop = document.getElementById('shelfAssistPairBtn')!;
+
+    const openPairForm = (prefA = '', prefB = '') => {
+      if (!beanNameOptions.length) {
+        alert('Добавь зёрна на полку или запиши чашки в дневник.');
+        return;
+      }
+      const opts = beanNameOptions.map((n) => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
+      pairFormEl.hidden = false;
+      pairFormEl.innerHTML = `
+        <div style="font-size:.74rem;font-weight:600;color:var(--text)">Удачная пара для дегустации</div>
+        <select id="pairBeanA"><option value="">Лот A</option>${opts}</select>
+        <select id="pairBeanB"><option value="">Лот B</option>${opts}</select>
+        <input id="pairNote" placeholder="Коротко: что почувствовала (необязательно)" maxlength="200"/>
+        <div class="shelf-assist-pair-row">
+          <button type="button" class="shelf-assist-act" id="pairSaveBtn">Сохранить</button>
+          <button type="button" class="shelf-assist-act" id="pairCancelBtn">Отмена</button>
+        </div>`;
+      const selA = pairFormEl.querySelector('#pairBeanA') as HTMLSelectElement;
+      const selB = pairFormEl.querySelector('#pairBeanB') as HTMLSelectElement;
+      if (prefA) selA.value = prefA;
+      if (prefB) selB.value = prefB;
+      pairFormEl.querySelector('#pairCancelBtn')?.addEventListener('click', () => {
+        pairFormEl.hidden = true;
+        pairFormEl.innerHTML = '';
+      });
+      pairFormEl.querySelector('#pairSaveBtn')?.addEventListener('click', async () => {
+        const beanA = selA.value.trim();
+        const beanB = selB.value.trim();
+        const note = (pairFormEl.querySelector('#pairNote') as HTMLInputElement).value.trim();
+        if (!beanA || !beanB || beanA === beanB) {
+          alert('Выбери два разных лота.');
+          return;
+        }
+        await postFeedback({ kind: 'pairing_success', beanA, beanB, note });
+        pairFormEl.hidden = true;
+        pairFormEl.innerHTML = '<div style="font-size:.74rem;color:var(--text-dim)">✓ Пара сохранена — учту в следующих советах</div>';
+        setTimeout(() => { pairFormEl.hidden = true; pairFormEl.innerHTML = ''; }, 2500);
+      });
+    };
+
+    pairBtnTop.addEventListener('click', () => openPairForm());
+
+    history.forEach((t) => {
+      if (t.role === 'user') renderUserMsg(t.content);
+      else renderBotMsg(t.content, '');
+    });
 
     const ask = async (text: string) => {
       const message = text.trim();
       if (!message || sendBtn.disabled) return;
-      renderMsg('user', message);
+      renderUserMsg(message);
       history.push({ role: 'user', content: message });
       persist();
       input.value = '';
       sendBtn.disabled = true;
-      const loading = renderMsg('assistant', 'Думаю…', 'loading');
+
+      const loadingWrap = document.createElement('div');
+      loadingWrap.className = 'shelf-assist-turn';
+      const loading = document.createElement('div');
+      loading.className = 'shelf-assist-msg bot loading';
+      loading.textContent = 'Думаю…';
+      loadingWrap.appendChild(loading);
+      chat.appendChild(loadingWrap);
+      chat.scrollTop = chat.scrollHeight;
 
       try {
         const res = await fetch('/api/shelf-assistant', {
@@ -881,20 +1019,21 @@ import Nav from '../components/Nav.astro';
           },
           body: JSON.stringify({ message, history: history.slice(0, -1) }),
         });
-        loading.remove();
+        loadingWrap.remove();
         if (res.status === 402) {
-          renderMsg('assistant', 'Нужна подписка на ассистента. Обнови страницу или напиши @ksenijashmel.');
+          renderBotMsg('Нужна подписка на ассистента. Обнови страницу или напиши @ksenijashmel.', message);
           return;
         }
         if (!res.ok) throw new Error(await res.text());
         const data = await res.json();
         const reply = String(data.reply || '').trim();
-        renderMsg('assistant', reply || 'Пустой ответ — попробуй переформулировать.');
-        history.push({ role: 'assistant', content: reply });
+        const finalReply = reply || 'Пустой ответ — попробуй переформулировать.';
+        renderBotMsg(finalReply, message);
+        history.push({ role: 'assistant', content: finalReply });
         persist();
       } catch (e: any) {
-        loading.remove();
-        renderMsg('assistant', 'Ошибка: ' + (e?.message || 'не удалось получить ответ'));
+        loadingWrap.remove();
+        renderBotMsg('Ошибка: ' + (e?.message || 'не удалось получить ответ'), message);
       } finally {
         sendBtn.disabled = false;
         input.focus();
@@ -1217,7 +1356,11 @@ import Nav from '../components/Nav.astro';
     activateTab(startTab);
 
     const beanCount = shelf.filter((s: any) => s.kind === 'bean').length;
-    void initShelfAssistant(accessToken, shelfAssistBuyUrl, beanCount, credits, creditsKnown);
+    const beanNameOptions = [...new Set([
+      ...shelf.filter((s: any) => s.kind === 'bean').map((s: any) => String(s.name || '').trim()),
+      ...cups.map((c: any) => String(c.name || '').trim()),
+    ].filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ru'));
+    void initShelfAssistant(accessToken, shelfAssistBuyUrl, beanCount, credits, creditsKnown, beanNameOptions);
 
     if (isPaidReturn && creditsKnown && credits === 0) {
       pollCredits(accessToken).then((newBal) => { if (newBal > 0) init(); });
