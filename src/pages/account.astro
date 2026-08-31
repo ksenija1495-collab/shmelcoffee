@@ -448,6 +448,7 @@ import Nav from '../components/Nav.astro';
   import { renderFlightsPanel, bindFlightsPanel } from '../lib/accountFlightsPanel';
   import { renderReferencePanel } from '../lib/accountReferencePanel';
   import { bestDiaryRecipeForBean } from '../lib/tastingFlights';
+  import { filterAvailableShelfBeans } from '../lib/shelfAvailability';
 
   const supabase = createClient(
     import.meta.env.PUBLIC_SUPABASE_URL,
@@ -1282,9 +1283,10 @@ import Nav from '../components/Nav.astro';
 
     bindFlightsPanel(page, supabase, user.id, shelf, init);
 
-    const beanCount = shelf.filter((s: any) => s.kind === 'bean').length;
+    const availableBeans = filterAvailableShelfBeans(shelf.filter((s: any) => s.kind === 'bean'));
+    const beanCount = availableBeans.length;
     const beanNameOptions = [...new Set([
-      ...shelf.filter((s: any) => s.kind === 'bean').map((s: any) => String(s.name || '').trim()),
+      ...availableBeans.map((s: any) => String(s.name || '').trim()),
       ...cups.map((c: any) => String(c.name || '').trim()),
     ].filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ru'));
     void initShelfAssistant(accessToken, shelfAssistBuyUrl, beanCount, 0, false, beanNameOptions);

@@ -10,6 +10,7 @@ import {
   FLIGHT_BREW_PRESETS,
 } from './tastingFlights';
 import { formatCupRecipe } from './cupRecipe';
+import { filterAvailableShelfBeans } from './shelfAvailability';
 
 const esc = (s: unknown) =>
   String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
@@ -55,7 +56,7 @@ export function renderFlightsPanel(
 ): string {
   if (!flightsAvailable) return renderFlightsMigrationBox();
 
-  const beans = shelf.filter((s) => s.kind === 'bean');
+  const beans = filterAvailableShelfBeans(shelf.filter((s) => s.kind === 'bean'));
   const pairs = beans.length >= 2
     ? suggestPairings(
         beans.map((s) => ({
@@ -163,7 +164,7 @@ export function bindFlightsPanel(
   shelf: any[],
   onRefresh: () => void,
 ): void {
-  const beans = shelf.filter((s) => s.kind === 'bean');
+  const beans = filterAvailableShelfBeans(shelf.filter((s) => s.kind === 'bean'));
   const byId = new Map(beans.map((s) => [s.id, s]));
   const byName = new Map(beans.map((s) => [String(s.name).trim().toLowerCase(), s]));
 

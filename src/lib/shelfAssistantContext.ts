@@ -13,6 +13,7 @@ import {
   suggestPairings,
   type SavedPair,
 } from './shelfAssistantPairings';
+import { filterAvailableShelfBeans } from './shelfAvailability';
 
 const FLAVOR_LABELS: Record<string, string> = {
   fruity: 'фруктовые',
@@ -59,7 +60,8 @@ export async function buildShelfAssistantContext(
   ]);
 
   const profile = profileRes.data;
-  const shelf = shelfRes.data ?? [];
+  const shelfAll = shelfRes.data ?? [];
+  const shelf = filterAvailableShelfBeans(shelfAll);
   const cups = (cupsRes.data ?? []) as DiaryCup[];
   const savedPairs = feedbackRes.error ? [] : ((feedbackRes.data ?? []) as SavedPair[]);
   const inferredPairs = inferDiaryPairs(cups);
@@ -129,6 +131,7 @@ ${cupsBlock}
 Правила ответа:
 - Главный источник — дневник и предрасчитанные пары, не квиз.
 - Опирайся только на полку, дневник и список лотов выше; не выдумывай пачки.
+- Не предлагай лоты, которых нет на полке в наличии (статус «закончилось» / out — их нет в списке полки выше).
 - Если просят сравнение — назови 2 конкретных лота и зачем; предпочитай предрасчитанные пары.
 - Не предлагай пары, где один лот уже ≤3★ в дневнике, если есть альтернатива.
 - Если пользователь просит «с другой страной» — только cross-origin, не два лота одной страны.
