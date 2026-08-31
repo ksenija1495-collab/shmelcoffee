@@ -11,15 +11,24 @@ export type WeeklyUserStats = {
   weekLabel: string;
   totalRegistered: number;
   newThisWeek: number;
+  newThisWeekPct: number;
   activeLast7Days: number;
+  activeLast7DaysPct: number;
   activeLast30Days: number;
+  activeLast30DaysPct: number;
+  activePrevWeek: number;
   everActive: number;
   quizOnly: number;
   inactiveNeverEngaged: number;
   churnedThisWeek: number;
+  churnedThisWeekPct: number;
   activeDefinition: string;
   churnDefinition: string;
 };
+
+export function pct(n: number, total: number): number {
+  return total > 0 ? Math.round((n / total) * 100) : 0;
+}
 
 type ActivityRow = { user_id: string; created_at: string };
 
@@ -94,6 +103,7 @@ export async function computeWeeklyUserStats(admin: SupabaseClient): Promise<Wee
   let newThisWeek = 0;
   let activeLast7Days = 0;
   let activeLast30Days = 0;
+  let activePrevWeek = 0;
   let everActive = 0;
   let quizOnly = 0;
   let inactiveNeverEngaged = 0;
@@ -106,13 +116,14 @@ export async function computeWeeklyUserStats(admin: SupabaseClient): Promise<Wee
     const last = lastActivity.get(u.id);
     const active7 = wasActiveInWindow(last, weekAgo, now + 1);
     const active30 = wasActiveInWindow(last, monthAgo, now + 1);
-    const activePrevWeek = wasActiveInWindow(last, twoWeeksAgo, weekAgo);
+    const wasActivePrevWeek = wasActiveInWindow(last, twoWeeksAgo, weekAgo);
 
     if (last) everActive += 1;
     if (active7) activeLast7Days += 1;
     if (active30) activeLast30Days += 1;
+    if (wasActivePrevWeek) activePrevWeek += 1;
 
-    if (activePrevWeek && !active7) churnedThisWeek += 1;
+    if (wasActivePrevWeek && !active7) churnedThisWeek += 1;
 
     const hasQuiz = profileUsers.has(u.id);
     if (hasQuiz && !last) quizOnly += 1;
@@ -131,12 +142,17 @@ export async function computeWeeklyUserStats(admin: SupabaseClient): Promise<Wee
     weekLabel,
     totalRegistered: users.length,
     newThisWeek,
+    newThisWeekPct: pct(newThisWeek, users.length),
     activeLast7Days,
+    activeLast7DaysPct: pct(activeLast7Days, users.length),
     activeLast30Days,
+    activeLast30DaysPct: pct(activeLast30Days, users.length),
+    activePrevWeek,
     everActive,
     quizOnly,
     inactiveNeverEngaged,
     churnedThisWeek,
+    churnedThisWeekPct: pct(churnedThisWeek, activePrevWeek),
     activeDefinition: ACTIVE_USER_DEFINITION,
     churnDefinition: CHURN_DEFINITION,
   };
@@ -151,13 +167,13 @@ export function formatWeeklyUserStatsTelegram(stats: WeeklyUserStats): string {
     `📅 ${esc(stats.weekLabel)} (сб 9:00 МСК)`,
     '',
     `👥 Всего зарегистрировано: <b>${stats.totalRegistered}</b>`,
-    `🆕 Новых за 7 дней: <b>${stats.newThisWeek}</b>`,
+    `🆕 Новых за 7 дней: <b>${stats.newThisWeek}</b> (<b>${stats.newThisWeekPct}%</b> от всех зарег.)`,
     '',
-    `✅ Активных за 7 дней: <b>${stats.activeLast7Days}</b>`,
-    `✅ Активных за 30 дней: <b>${stats.activeLast30Days}</b>`,
+    `✅ Активных за 7 дней: <b>${stats.activeLast7Days}</b> (<b>${stats.activeLast7DaysPct}%</b> от всех зарег.)`,
+    `✅ Активных за 30 дней: <b>${stats.activeLast30Days}</b> (<b>${stats.activeLast30DaysPct}%</b> от всех зарег.)`,
     `<i>Активный = ${esc(stats.activeDefinition)}</i>`,
     '',
-    `📉 Отвалились на этой неделе: <b>${stats.churnedThisWeek}</b>`,
+    `📉 Отвалились на этой неделе: <b>${stats.churnedThisWeek}</b> (<b>${stats.churnedThisWeekPct}%</b> от активных на прошлой неделе)`,
     `<i>Отвал = ${esc(stats.churnDefinition)}</i>`,
     '',
     '📋 Справочно:',
