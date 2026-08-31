@@ -92,11 +92,10 @@ import { DB, countryOrder } from '../data/countries';
         <div id="recipeHint" class="recipe-hint" style="display:none">Подставлен рецепт — поправь под то, как заварил на самом деле.</div>
         <div id="recipeActions" class="recipe-actions">
           <button type="button" class="recipe-act-btn" id="saveBaseRecipeBtn">⭐ Сохранить в мои рецепты</button>
-          <button type="button" class="recipe-act-btn" id="brewAgainBtn">+ Заварить так же</button>
         </div>
         <label class="fl">Баланс вкуса</label>
-        <p class="balance-hint">Слайдер — насколько сильно. Под ним — характер: можно выбрать несколько типов.</p>
-        <div id="tasteSection"></div>
+        <p class="balance-hint">Слайдер — сила. Теги — характер, можно несколько.</p>
+        <div id="tasteSection" class="taste-panel"></div>
         <label class="fl">Вкус и ароматы — что чувствуешь в чашке</label>
         <p class="note-cat-hint">Колесо вкусов — нажми сектор или выбери подсказку в списке ниже</p>
         <div id="selectedNotes" class="note-selected"></div>
@@ -283,7 +282,7 @@ import { DB, countryOrder } from '../data/countries';
   .sliderrow .top { display: flex; justify-content: space-between; font-size: .82rem; margin-bottom: 3px; }
   .sliderrow .val { color: var(--accent); font-weight: 700; }
   .sliderrow input[type=range] { width: 100%; accent-color: var(--accent); }
-  .balance-hint { font-size: .72rem; color: var(--text-muted); margin: -4px 0 10px; line-height: 1.45; }
+  .balance-hint { font-size: .72rem; color: var(--text-muted); margin: -4px 0 12px; line-height: 1.45; }
   .field-hint { font-size: .68rem; color: var(--text-muted); margin: 4px 0 0; line-height: 1.4; }
   .shelf-bean-picker { margin-bottom: 2px; }
   .shelf-bean-picker .fl { margin-top: 0; }
@@ -296,29 +295,31 @@ import { DB, countryOrder } from '../data/countries';
   .brew-time-inp, .pour-inp.brew-time-inp { font-variant-numeric: tabular-nums; letter-spacing: .02em; }
   .pour-ml-inp { font-variant-numeric: tabular-nums; text-align: center; }
   .brew-time-hint { margin-top: 6px; }
-  .taste-dim-block {
-    margin: 16px 0 0; padding: 14px 12px 12px; border: 1px solid var(--border); border-radius: 12px;
-    background: var(--bg);
+  .taste-panel {
+    padding: 2px 14px 6px; border: 1px solid var(--border); border-radius: 14px; background: var(--bg);
   }
-  .taste-dim-block--body { margin-top: 12px; }
-  .taste-dim-top { display: flex; justify-content: space-between; font-size: .82rem; margin-bottom: 6px; font-weight: 600; }
-  .taste-dim-top .val { color: var(--accent); font-weight: 700; }
-  .taste-dim-block input[type=range] { width: 100%; accent-color: var(--accent); margin-bottom: 10px; }
-  .char-block {
-    margin: 0; padding: 10px 0 0; border: none; border-top: 1px dashed var(--border); border-radius: 0;
-    background: transparent;
+  .taste-row { padding: 14px 0; }
+  .taste-row--body { padding-bottom: 10px; }
+  .taste-sep { height: 1px; background: var(--border); }
+  .taste-row-head {
+    display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 8px;
   }
-  .char-block-h { font-size: .78rem; font-weight: 700; color: var(--text); margin-bottom: 2px; }
-  .char-block-sub { font-size: .7rem; color: var(--text-muted); margin-bottom: 8px; line-height: 1.4; }
-  .char-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+  .taste-row-label { font-size: .84rem; font-weight: 600; color: var(--text); }
+  .taste-row-val {
+    font-size: .88rem; color: var(--accent); font-weight: 700; font-variant-numeric: tabular-nums;
+    min-width: 1.1em; text-align: right;
+  }
+  .taste-row input[type=range] { width: 100%; accent-color: var(--accent); margin: 0 0 8px; display: block; }
+  .taste-row-hint { font-size: .68rem; color: var(--text-muted); margin: 0 0 10px; line-height: 1.4; }
+  .taste-chips { display: flex; flex-wrap: wrap; gap: 6px; }
   .char-chip {
-    padding: 5px 10px; border-radius: 16px; border: 1px solid var(--border); background: var(--bg);
-    font-size: .74rem; cursor: pointer; transition: .12s; font-family: 'Inter', sans-serif; color: var(--text);
-    text-align: left; line-height: 1.25;
+    padding: 6px 12px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface);
+    font-size: .76rem; cursor: pointer; transition: .12s; font-family: 'Inter', sans-serif; color: var(--text);
+    line-height: 1.2;
   }
-  .char-chip small { display: block; font-size: .62rem; color: var(--text-muted); font-weight: 500; margin-top: 1px; }
+  .char-chip--skip { color: var(--text-muted); background: transparent; border-style: dashed; }
   .char-chip.on { background: var(--accent); color: #fff; border-color: var(--accent); }
-  .char-chip.on small { color: rgba(255,255,255,.85); }
+  .char-chip.on.char-chip--skip { background: var(--text-muted); border-color: var(--text-muted); border-style: solid; }
   .note-wheel-wrap { margin: 4px 0 12px; text-align: center; }
   .note-wheel-svg {
     width: 100%; max-width: min(520px, 92vw); height: auto; margin: 0 auto; display: block;
@@ -1001,20 +1002,8 @@ import { DB, countryOrder } from '../data/countries';
     await loadSavedRecipes();
   }
 
-  function brewAgainFromForm() {
-    const recipe = collectRecipeFromForm();
-    if (!recipeHasData(recipe)) {
-      alert('Сначала заполните рецепт');
-      return;
-    }
-    const brew = (document.getElementById('f_brew') as HTMLSelectElement).value;
-    const q = applyRecipeToParams(recipe as any, brew || null);
-    window.location.href = '/add-cup?' + q.toString();
-  }
-
   function bindRecipeActions() {
     document.getElementById('saveBaseRecipeBtn')!.addEventListener('click', saveBaseRecipeFromForm);
-    document.getElementById('brewAgainBtn')!.addEventListener('click', brewAgainFromForm);
     const champDetails = document.getElementById('champRecipesDetails') as HTMLDetailsElement;
     champDetails.addEventListener('toggle', () => {
       if (champDetails.open) renderChampRecipesPanel();
@@ -1173,27 +1162,28 @@ import { DB, countryOrder } from '../data/countries';
 
   function buildTasteSection() {
     const box = document.getElementById('tasteSection')!;
-    const charDimsHtml = TASTE_CHARACTER_DIMS.map((dim) => {
+    const charDimsHtml = TASTE_CHARACTER_DIMS.map((dim, i) => {
       const cfg = TASTE_CHARACTER[dim];
-      const chips = cfg.options.map((o) =>
-        `<button type="button" class="char-chip" data-dim="${dim}" data-id="${escNote(o.id)}"><span>${escNote(o.label)}</span><small>${escNote(o.desc)}</small></button>`
-      ).join('');
-      return `<div class="taste-dim-block" data-dim-block="${dim}">
-        <div class="taste-dim-top"><span>${escNote(cfg.label)}</span><span class="val" id="v_${dim}">${sel[dim]}</span></div>
+      const chips = cfg.options.map((o) => {
+        const skip = o.id === 'none' ? ' char-chip--skip' : '';
+        const title = o.id === 'none' ? '' : ` title="${escNote(o.desc)}"`;
+        return `<button type="button" class="char-chip${skip}" data-dim="${dim}" data-id="${escNote(o.id)}"${title}>${escNote(o.label)}</button>`;
+      }).join('');
+      const sep = i > 0 ? '<div class="taste-sep"></div>' : '';
+      return `${sep}<section class="taste-row" data-dim-block="${dim}">
+        <div class="taste-row-head"><span class="taste-row-label">${escNote(cfg.label)}</span><span class="taste-row-val" id="v_${dim}">${sel[dim]}</span></div>
         <input type="range" min="0" max="5" value="${sel[dim]}" data-k="${dim}" aria-label="${escNote(cfg.label)}">
-        <div class="char-block">
-          <div class="char-block-h">Характер — ${escNote(cfg.label.toLowerCase())}</div>
-          <div class="char-block-sub">${escNote(cfg.hint)} Можно несколько.</div>
-          <div class="char-chips">${chips}</div>
-        </div>
-      </div>`;
+        <p class="taste-row-hint">${escNote(cfg.hint)}</p>
+        <div class="taste-chips">${chips}</div>
+      </section>`;
     }).join('');
 
     box.innerHTML = charDimsHtml + `
-      <div class="taste-dim-block taste-dim-block--body">
-        <div class="taste-dim-top"><span>Тело</span><span class="val" id="v_body">${sel.body}</span></div>
+      <div class="taste-sep"></div>
+      <section class="taste-row taste-row--body">
+        <div class="taste-row-head"><span class="taste-row-label">Тело</span><span class="taste-row-val" id="v_body">${sel.body}</span></div>
         <input type="range" min="0" max="5" value="${sel.body}" data-k="body" aria-label="Тело">
-      </div>`;
+      </section>`;
 
     box.querySelectorAll('input[type=range]').forEach((inp) => {
       inp.addEventListener('input', (e: Event) => {
