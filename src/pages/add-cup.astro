@@ -31,7 +31,11 @@ import { DB, countryOrder } from '../data/countries';
           <input type="text" id="f_variety_custom" placeholder="Какой сорт? напр. Sidra, Pink Bourbon"/>
         </div>
         <div class="row2">
-          <div><label class="fl">Страна</label><select id="f_country"></select><p class="field-hint">Открывает страну на карте — можно подставить из названия кофе</p></div>
+          <div><label class="fl">Страна</label><select id="f_country"></select>
+            <div id="countryCustomRow" class="variety-custom" style="display:none">
+              <input type="text" id="f_country_custom" placeholder="Напр. Гавайи, Панама, Уганда"/>
+            </div>
+            <p class="field-hint">Не нашла в списке — выбери «Другая страна…» и введи вручную</p></div>
           <div><label class="fl">Обработка</label><select id="f_process"></select></div>
         </div>
         <div class="shelf-add-row" id="shelfAddRow">
@@ -384,6 +388,13 @@ import { DB, countryOrder } from '../data/countries';
   import { normalizePour, pourHasData } from '../lib/brewPour';
   import { brewMethodForForm } from '../lib/brewMethodMap';
   import { bindVarietyOther, readVarietyValue, setVarietyValue } from '../lib/beanVarietyField';
+  import {
+    BEAN_COUNTRY_OTHER,
+    bindCountryOther,
+    countriesForSelect,
+    readCountryValue,
+    setCountryValue,
+  } from '../lib/beanCountryField';
   import { tableHasColumn } from '../lib/supabaseSchema';
   import { bindBrewTimeInput, readBrewTimeInput, setBrewTimeInputValue } from '../lib/brewTime';
   import { TASTE_CHARACTER, TASTE_CHARACTER_DIMS } from '../data/tasteCharacter';
@@ -412,6 +423,8 @@ import { DB, countryOrder } from '../data/countries';
   };
   const params = new URLSearchParams(location.search);
   const editCupId = params.get('edit');
+  const flightId = params.get('flight_id');
+  const flightSlotRaw = params.get('flight_slot');
   let selectedTemplateId: string | null = params.get('template') || null;
   let savedRecipesCache: { id: string; name: string; brew_method?: string | null; recipe: unknown }[] = [];
   let recipesTableOk = false;
@@ -429,19 +442,13 @@ import { DB, countryOrder } from '../data/countries';
 
   function guessCountryFromName() {
     const selCountry = document.getElementById('f_country') as HTMLSelectElement;
-    if (selCountry.value) return;
+    if (selCountry.value && selCountry.value !== BEAN_COUNTRY_OTHER) return;
+    const custom = (document.getElementById('f_country_custom') as HTMLInputElement)?.value.trim();
+    if (selCountry.value === BEAN_COUNTRY_OTHER && custom) return;
     const name = (document.getElementById('f_name') as HTMLInputElement).value.trim();
     if (!name) return;
     const key = resolveCountryKey(null, name);
-    if (key) setSelect('f_country', countryNameForKey(key)!);
-  }
-
-  function readCountryValue(): string | null {
-    const sel = document.getElementById('f_country') as HTMLSelectElement;
-    if (sel.value) return sel.value;
-    const name = (document.getElementById('f_name') as HTMLInputElement).value.trim();
-    const key = resolveCountryKey(null, name);
-    return key ? countryNameForKey(key) : null;
+    if (key) setCountryValue(countryNameForKey(key));
   }
 
   function fill(id:string, arr:readonly string[], ph:string){
@@ -732,7 +739,7 @@ import { DB, countryOrder } from '../data/countries';
     (document.getElementById('f_name') as HTMLInputElement).value = bean.name || '';
     (document.getElementById('f_roaster') as HTMLInputElement).value = bean.roaster || '';
     setVarietyValue(bean.variety);
-    setSelectKeepingValue('f_country', bean.country);
+    setCountryValue(bean.country);
     setSelectKeepingValue('f_process', bean.process);
     updateShelfAddState();
   }
@@ -1032,7 +1039,7 @@ import { DB, countryOrder } from '../data/countries';
     (document.getElementById('f_name') as HTMLInputElement).value = cup.name || '';
     (document.getElementById('f_roaster') as HTMLInputElement).value = cup.roaster || '';
     setVarietyValue(cup.variety);
-    setSelectKeepingValue('f_country', cup.country);
+    setCountryValue(cup.country);
     setSelectKeepingValue('f_process', cup.process);
     setSelectKeepingValue('f_brew', cup.brew_method);
     sel.acidity = cup.acidity ?? 3;
@@ -1257,7 +1264,7 @@ import { DB, countryOrder } from '../data/countries';
     (document.getElementById('f_name') as HTMLInputElement).value = g('name');
     (document.getElementById('f_roaster') as HTMLInputElement).value = g('roaster');
     setVarietyValue(g('variety'));
-    setSelect('f_country', g('country'));
+    if (g('country')) setCountryValue(g('country'));
     setSelect('f_process', g('process'));
     setSelect('f_brew', g('brew'));
     (document.getElementById('r_coffee_g') as HTMLInputElement).value = g('coffee_g');
@@ -1297,7 +1304,13 @@ import { DB, countryOrder } from '../data/countries';
     maybeOpenRecipePickerFromParams();
     if (g('from_shelf') === '1') {
       const el = document.getElementById('fromGuide')!;
-      el.innerHTML = `<div class="fg-h">🫘 Зерно на полке</div><div class="fg-note">Когда заваришь — сохрани чашку. Так откроется страна на <a href="/account?tab=disco" style="color:var(--accent);font-weight:600">карте открытий</a>.</div>`;
+      el.innerHTML = `<div class="fg-h">🫘 Зерно на полке</div><div class="fg-note">Когда заваришь — сохрани чашку. Она попадёт в <a href="/account?tab=diary" style="color:var(--accent);font-weight:600">дневник</a> и откроет страну в профиле.</div>`;
+      el.style.display = 'block';
+    }
+    if (g('from_flight') === '1') {
+      const focus = g('focus');
+      const el = document.getElementById('fromGuide')!;
+      el.innerHTML = `<div class="fg-h">🔬 Чашка для сравнения</div><div class="fg-note">Заваривай по пресету — так различия будут во вкусе, а не в параметрах.${focus ? ` На что смотреть: <b>${focus.replace(/</g, '&lt;')}</b>.` : ''}</div>`;
       el.style.display = 'block';
     }
     if (g('from') === 'guide') {
@@ -1316,7 +1329,8 @@ import { DB, countryOrder } from '../data/countries';
   function build(){
     fill('f_variety', BEAN_VARIETIES, '— не знаю / смесь');
     bindVarietyOther();
-    fill('f_country', countryOrder.map((k:string)=>(DB as any)[k].name), 'выберите страну');
+    fill('f_country', countriesForSelect(), 'выберите страну');
+    bindCountryOther();
     fill('f_process', PROCESSES, 'выберите обработку');
     fill('f_brew', BREWS, 'выберите метод');
     initPours();
@@ -1362,6 +1376,10 @@ import { DB, countryOrder } from '../data/countries';
     if (await tableHasColumn(supabase, 'cups', 'taste_character')) {
       payload.taste_character = readTasteCharacterFromForm();
     }
+    if (flightId && await tableHasColumn(supabase, 'cups', 'flight_id')) {
+      payload.flight_id = flightId;
+      payload.flight_slot = flightSlotRaw != null && flightSlotRaw !== '' ? parseInt(flightSlotRaw, 10) : null;
+    }
     if (editCupId) {
       /* select() обязателен: без него update по чужой или отфильтрованной строке
          возвращает 204 без ошибки, и правка теряется молча. */
@@ -1383,6 +1401,10 @@ import { DB, countryOrder } from '../data/countries';
     if(error){ msg.className='addcup-msg error'; msg.textContent='Ошибка: '+error.message; btn.disabled=false; btn.textContent='Сохранить чашку'; return; }
     const toShelf = document.getElementById('f_to_shelf') as HTMLInputElement | null;
     if (toShelf && toShelf.checked && !toShelf.disabled) await addBeanToShelf(user.id, payload);
+    if (flightId) {
+      window.location.href = '/account?tab=flights';
+      return;
+    }
     const country = readCountryValue();
     let href = `/cup?id=${data.id}&new=1`;
     if (country) href += `&opened_country=${encodeURIComponent(country)}`;

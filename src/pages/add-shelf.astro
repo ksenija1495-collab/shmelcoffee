@@ -34,7 +34,13 @@ import { DB, countryOrder } from '../data/countries';
           <label class="fl">Обжарщик</label>
           <input type="text" id="f_roaster" placeholder="напр. Tasty Coffee"/>
           <div class="row2">
-            <div><label class="fl">Страна</label><select id="f_country"></select></div>
+            <div>
+              <label class="fl">Страна</label>
+              <select id="f_country"></select>
+              <div id="countryCustomRow" class="variety-custom" style="display:none">
+                <input type="text" id="f_country_custom" placeholder="Напр. Гавайи, Панама, Уганда"/>
+              </div>
+            </div>
             <div><label class="fl">Обработка</label><select id="f_process"></select></div>
           </div>
           <div id="brewPreview" class="brew-preview" hidden></div>
@@ -146,6 +152,15 @@ import { DB, countryOrder } from '../data/countries';
   import { DB, countryOrder } from '../data/countries';
   import { BEAN_VARIETIES } from '../data/varieties';
   import { bindVarietyOther, readVarietyValue } from '../lib/beanVarietyField';
+  import {
+    BEAN_COUNTRY_OTHER,
+    bindCountryOther,
+    countriesForSelect,
+    readCountryFromSelect,
+    readCountryValue,
+    resolveCountryForForm,
+    setCountryValue,
+  } from '../lib/beanCountryField';
   import { PROCESS_OPTIONS } from '../data/processing';
   import { recommendBrew, renderBrewRecHtml } from '../lib/brewRecommend';
 
@@ -156,7 +171,7 @@ import { DB, countryOrder } from '../data/countries';
   );
 
   const PROCESSES = PROCESS_OPTIONS;
-  const COUNTRIES = countryOrder.map((k: string) => (DB as any)[k].name);
+  const COUNTRIES = countriesForSelect();
   const CATEGORIES = ['Воронка','Кофемолка','Весы','Чайник с тонким носиком','Эспрессо-машина','Гейзерная','Френч-пресс','Аэропресс','Кемекс','Турка','Капсульная','Другое'];
   let kind = 'bean';
   let mode: 'manual' | 'photo' = 'manual';
@@ -194,7 +209,7 @@ import { DB, countryOrder } from '../data/countries';
     return {
       name: (document.getElementById('f_name') as HTMLInputElement).value.trim(),
       variety: readVarietyValue(),
-      country: (document.getElementById('f_country') as HTMLSelectElement).value || null,
+      country: readCountryValue(),
       process: (document.getElementById('f_process') as HTMLSelectElement).value || null,
     };
   }
@@ -288,7 +303,9 @@ import { DB, countryOrder } from '../data/countries';
     box.hidden = false;
     box.innerHTML = `
       <div class="parse-review-h">Проверь перед сохранением · ${beans.length}</div>
-      <div id="parseRows">${beans.map((b, i) => `
+      <div id="parseRows">      ${beans.map((b, i) => {
+        const { select: countrySel, custom: countryCustom } = resolveCountryForForm(b.country);
+        return `
         <div class="parse-row" data-i="${i}">
           <div class="parse-row-top">
             <input type="checkbox" class="parse-on" checked/>
@@ -301,10 +318,11 @@ import { DB, countryOrder } from '../data/countries';
           <div class="parse-grid">
             <input type="text" class="parse-roaster" value="${esc(b.roaster || '')}" placeholder="Обжарщик"/>
             <input type="text" class="parse-variety" value="${esc(b.variety || '')}" placeholder="Сорт / смесь"/>
-            <select class="parse-country">${optHtml(COUNTRIES, b.country, 'страна')}</select>
+            <select class="parse-country">${optHtml(COUNTRIES, countrySel, 'страна')}</select>
+            <input type="text" class="parse-country-custom" value="${esc(countryCustom)}" placeholder="Своя страна" style="display:${countrySel === BEAN_COUNTRY_OTHER ? 'block' : 'none'}"/>
             <select class="parse-process">${optHtml(PROCESSES, b.process, 'обработка')}</select>
           </div>
-        </div>`).join('')}</div>
+        </div>`;}).join('')}</div>
       <button type="button" class="btn btn-primary sf-save" id="bulkSaveBtn">Добавить выбранные на полку</button>
       <div id="bulkMsg" class="sf-msg"></div>`;
 
@@ -312,6 +330,13 @@ import { DB, countryOrder } from '../data/countries';
       cb.addEventListener('change', () => {
         const row = (cb as HTMLElement).closest('.parse-row')!;
         row.classList.toggle('off', !(cb as HTMLInputElement).checked);
+      });
+    });
+    box.querySelectorAll('.parse-country').forEach((sel) => {
+      sel.addEventListener('change', () => {
+        const row = sel.closest('.parse-row')!;
+        const custom = row.querySelector('.parse-country-custom') as HTMLInputElement | null;
+        if (custom) custom.style.display = (sel as HTMLSelectElement).value === BEAN_COUNTRY_OTHER ? 'block' : 'none';
       });
     });
     document.getElementById('bulkSaveBtn')!.addEventListener('click', bulkSave);
@@ -361,7 +386,10 @@ import { DB, countryOrder } from '../data/countries';
       name: (r.querySelector('.parse-name') as HTMLInputElement).value.trim(),
       roaster: (r.querySelector('.parse-roaster') as HTMLInputElement).value.trim() || null,
       variety: (r.querySelector('.parse-variety') as HTMLInputElement).value.trim() || null,
-      country: (r.querySelector('.parse-country') as HTMLSelectElement).value || null,
+      country: readCountryFromSelect(
+        r.querySelector('.parse-country') as HTMLSelectElement,
+        r.querySelector('.parse-country-custom') as HTMLInputElement,
+      ),
       process: (r.querySelector('.parse-process') as HTMLSelectElement).value || null,
       source: 'photo_import',
     })).filter((b) => b.name);
@@ -386,6 +414,7 @@ import { DB, countryOrder } from '../data/countries';
     fill('f_variety', BEAN_VARIETIES, '— не знаю / смесь');
     bindVarietyOther();
     fill('f_country', COUNTRIES, 'выберите страну');
+    bindCountryOther();
     fill('f_process', PROCESSES, 'выберите обработку');
     fill('f_category', CATEGORIES, 'выберите категорию');
     document.querySelectorAll('.kind-btn').forEach(b => b.addEventListener('click', () => setKind((b as HTMLElement).dataset.kind!)));
@@ -394,7 +423,7 @@ import { DB, countryOrder } from '../data/countries';
     setKind(params.get('kind') === 'equipment' ? 'equipment' : 'bean');
     setMode(params.get('mode') === 'photo' ? 'photo' : 'manual');
     const preCountry = params.get('country');
-    if (preCountry) setSelect('f_country', preCountry);
+    if (preCountry) setCountryValue(preCountry);
 
     const fileInp = document.getElementById('f_photo') as HTMLInputElement;
     fileInp.addEventListener('change', () => {
@@ -423,7 +452,7 @@ import { DB, countryOrder } from '../data/countries';
     });
     document.getElementById('parseBtn')!.addEventListener('click', parseList);
 
-    ['f_name', 'f_country', 'f_process', 'f_variety', 'f_variety_custom'].forEach((id) => {
+    ['f_name', 'f_country', 'f_country_custom', 'f_process', 'f_variety', 'f_variety_custom'].forEach((id) => {
       document.getElementById(id)?.addEventListener('input', updateBrewPreview);
       document.getElementById(id)?.addEventListener('change', updateBrewPreview);
     });
@@ -453,7 +482,7 @@ import { DB, countryOrder } from '../data/countries';
         user_id: user.id, kind, name,
         variety: kind === 'bean' ? readVarietyValue() : null,
         roaster: kind === 'bean' ? ((document.getElementById('f_roaster') as HTMLInputElement).value.trim() || null) : null,
-        country: kind === 'bean' ? ((document.getElementById('f_country') as HTMLSelectElement).value || null) : null,
+        country: kind === 'bean' ? readCountryValue() : null,
         process: kind === 'bean' ? ((document.getElementById('f_process') as HTMLSelectElement).value || null) : null,
         category: kind === 'equipment' ? ((document.getElementById('f_category') as HTMLSelectElement).value || null) : null,
         photo_url, source: 'manual',

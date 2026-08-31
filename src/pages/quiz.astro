@@ -542,8 +542,7 @@ function renderResults(card) {
     <div class="result-cta">
       <p id="profileSaveBadge" style="font-size:.82rem;color:var(--text-dim);margin:0 0 4px"></p>
       <button class="btn btn-primary" id="goToStart" style="font-size:.92rem;padding:12px 26px">С чего начать →</button>
-      <button class="btn-ghost" id="goToPractice" style="font-size:.82rem">Подобрать зёрна под профиль →</button>
-      <button class="btn-ghost" id="goToAccount" style="font-size:.78rem;color:var(--text-muted)">В личный кабинет →</button>
+      <button class="btn-ghost" id="goToAccount" style="font-size:.82rem">В личный кабинет →</button>
       <button class="btn-ghost" id="backToQuiz" style="font-size:.78rem;color:var(--text-muted)">← Пройти заново</button>
     </div>
   `;
@@ -561,14 +560,10 @@ function renderResults(card) {
   });
   document.getElementById('goToAccount').addEventListener('click', async () => {
     const ok = await ensureProfileSaved();
-    if (ok) window.location.href = '/account';
+    if (ok) window.location.href = '/account?tab=flights';
   });
   document.getElementById('backToQuiz').addEventListener('click', () => {
     state = { phase:'quiz', step:0, answers:{flavors:[],acidity:null,body:null,sweetness:null}, topCountries:[], wantPractice:null, equipment:null, setFormat:null, setSize:null, profileSaved:false, profileSaving:false, selectionSaved:false };
-    renderStep();
-  });
-  document.getElementById('goToPractice').addEventListener('click', () => {
-    state.phase = 'practice-choice';
     renderStep();
   });
 }
@@ -639,37 +634,36 @@ function renderOfframp(card) {
 
 /* ═══ PHASE: START HERE ═══ */
 function renderStartHere(card) {
-  const top = state.topCountries[0];
-  const m = DB[top];
-  const countryEnc = encodeURIComponent(m.name);
+  const top = state.topCountries;
+  const primary = DB[top[0]];
   card.innerHTML = `
     <div class="start-here">
-      <h3>${m.flag} С чего начать</h3>
-      <p>Профиль сохранён. Выбери первое действие — так откроется страна на карте и профиль станет точнее.</p>
+      <h3>${primary.flag} Профиль сохранён</h3>
+      <p>Страны для исследования: <b>${top.map(k => DB[k].name).join(', ')}</b>. Добавь зерно на полку и создай первое сравнение — так начнёшь отличать вкусы.</p>
       <div class="start-here-grid">
-        <a class="start-card primary" id="startCup" href="/add-cup?country=${countryEnc}&name=${countryEnc}">
-          <div class="start-card-icon">☕</div>
-          <div class="start-card-title">Только что заварила</div>
-          <div class="start-card-desc">Записать чашку в дневник</div>
-        </a>
-        <a class="start-card" id="startShelf" href="/add-shelf?kind=bean&country=${countryEnc}">
+        <a class="start-card primary" href="/add-shelf?kind=bean&country=${encodeURIComponent(primary.name)}">
           <div class="start-card-icon">🫘</div>
-          <div class="start-card-title">У меня уже есть зерно</div>
-          <div class="start-card-desc">Добавить на полку</div>
+          <div class="start-card-title">Добавить зерно на полку</div>
+          <div class="start-card-desc">Если уже есть дома</div>
+        </a>
+        <a class="start-card" href="/account?tab=flights&new=1">
+          <div class="start-card-icon">🔬</div>
+          <div class="start-card-title">Первое сравнение</div>
+          <div class="start-card-desc">Два лота — один рецепт</div>
+        </a>
+        <a class="start-card" href="/add-cup?country=${encodeURIComponent(primary.name)}&name=${encodeURIComponent(primary.name)}">
+          <div class="start-card-icon">☕</div>
+          <div class="start-card-title">Записать чашку</div>
+          <div class="start-card-desc">Если только что заварила</div>
         </a>
       </div>
       <div class="start-links">
-        <button type="button" id="startPractice">Подобрать зёрна →</button>
-        <a href="/account">В кабинет</a>
+        <a href="/account?tab=flights">В кабинет</a>
         <a href="/passport">Паспорт вкуса</a>
+        <a href="/account?tab=reference">Справочник</a>
       </div>
-      <p style="font-size:.72rem;color:var(--text-muted);margin-top:14px;line-height:1.45">🎁 Первый персональный гид — бесплатно (появится в кабинете после записи чашки или зерна).</p>
     </div>
   `;
-  document.getElementById('startPractice')?.addEventListener('click', () => {
-    state.phase = 'practice-choice';
-    renderStep();
-  });
 }
 
 /* ═══ PHASE: GUIDE UPSELL (legacy — redirect to start) ═══ */

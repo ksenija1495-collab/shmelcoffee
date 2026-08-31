@@ -25,11 +25,8 @@ import Layout from '../../layouts/Layout.astro';
 
   let handled = false;
 
-  async function postLoginPath(user: { id: string }) {
-    const { data } = await supabase.from('taste_profiles').select('id').eq('user_id', user.id).limit(1);
-    if (data?.length) return '/account';
-    const { count } = await supabase.from('coffee_selections').select('id', { count: 'exact', head: true }).eq('user_id', user.id);
-    return count ? '/account' : '/quiz';
+  async function postLoginPath(_user: { id: string }) {
+    return '/account?tab=flights';
   }
 
   function showSaveError() {
