@@ -3,6 +3,8 @@ import {
   getAvailableComparisonGoals,
   goalById,
   suggestPairingsForGoal,
+  suggestPartnersForAnchor,
+  type AnchoredPartnerSuggestion,
   type ComparisonGoalId,
 } from './comparisonGoals';
 import type { SavedPair } from './shelfAssistantPairings';
@@ -97,41 +99,53 @@ export function renderFlightsPanel(
     : '';
 
   const pairPicker = initialPair && goals.length
-    ? `<div class="flight-pair-pick" id="flightPairPick">
-        <div class="flight-pair-names" id="flightPairNames">${esc(initialPair.a)} × ${esc(initialPair.b)}</div>
-        <div class="flight-pair-reason" id="flightPairReason">${esc(initialPair.reason)}</div>
+    ? `<div class="flight-pair-pick" id="flightGoalPick">
+        <div class="flight-pair-names" id="flightGoalPairNames">${esc(initialPair.a)} × ${esc(initialPair.b)}</div>
+        <div class="flight-pair-reason" id="flightGoalPairReason">${esc(initialPair.reason)}</div>
         <div class="flight-pair-actions">
-          <button type="button" class="flight-pair-btn primary" id="flightPairAccept">Принять пару</button>
-          <button type="button" class="flight-pair-btn" id="flightPairNext" ${initialPairs.length < 2 ? 'disabled' : ''}>↻ Другая</button>
+          <button type="button" class="flight-pair-btn primary" id="flightGoalAccept">Принять пару</button>
+          <button type="button" class="flight-pair-btn" id="flightGoalNext" ${initialPairs.length < 2 ? 'disabled' : ''}>↻ Другая</button>
         </div>
-        <div class="flight-pair-counter" id="flightPairCounter">${initialPairs.length > 1 ? `1 из ${initialPairs.length}` : ''}</div>
+        <div class="flight-pair-counter" id="flightGoalPairCounter">${initialPairs.length > 1 ? `1 из ${initialPairs.length}` : ''}</div>
       </div>`
     : goals.length
-    ? `<p class="flight-hint">Для выбранной цели не нашлось пар — выбери лоты вручную ниже.</p>`
+    ? `<p class="flight-hint" id="flightGoalPickEmpty">Для выбранной цели не нашлось пар — выбери лоты вручную ниже.</p>`
     : '';
 
   const createBlock = `<details class="flight-create" id="flightCreateForm" ${openCreate || !flights.length ? 'open' : ''}>
     <summary>+ Новое сравнение</summary>
     <div class="flight-create-body profile-card">
+      <label class="flight-label" style="margin-top:0">Моё зерно</label>
+      <select id="flightBeanA" class="flight-inp"><option value="">— выберите зерно —</option>${beanOptions}</select>
+      <div class="flight-pair-pick" id="flightAnchorPick" hidden>
+        <p class="flight-mode-hint">С чем сравнить <b id="flightAnchorName"></b>?</p>
+        <div class="flight-pair-names" id="flightPairNames"></div>
+        <div class="flight-pair-reason" id="flightPairReason"></div>
+        <div class="flight-auto-goal" id="flightAutoGoal"></div>
+        <div class="flight-pair-actions">
+          <button type="button" class="flight-pair-btn primary" id="flightPairAccept">Принять</button>
+          <button type="button" class="flight-pair-btn" id="flightPairNext">↻ Другой лот</button>
+        </div>
+        <div class="flight-pair-counter" id="flightPairCounter"></div>
+      </div>
+      <p class="flight-mode-hint" id="flightGoalModeHint">Или выбери цель — подберём пару целиком:</p>
       ${goals.length ? `<p class="flight-label" style="margin-top:0">Что хочешь научиться отличать?</p>
       <div class="flight-goal-chips" id="flightGoalChips">${goalChips}</div>
       ${pairPicker}` : ''}
       <label class="flight-label">Способ заварки</label>
       <select id="flightBrew" class="flight-inp">${brewOptions}</select>
-      <label class="flight-label">Лот A</label>
-      <select id="flightBeanA" class="flight-inp"><option value="">— выберите зерно —</option>${beanOptions}</select>
       <label class="flight-label">Лот B</label>
       <select id="flightBeanB" class="flight-inp"><option value="">— выберите зерно —</option>${beanOptions}</select>
       <label class="flight-label">Цель сравнения</label>
       <input id="flightFocus" class="flight-inp" value="${esc(goalById(defaultGoal).focusDefault)}" placeholder="На что смотреть в чашке…" maxlength="240"/>
-      ${beans.length < 2 ? `<p class="flight-hint">Добавь минимум 2 зерна на <a href="/add-shelf?kind=bean">полку</a>, чтобы сравнивать.</p>` : ''}
+      ${beans.length < 2 ? `<p class="flight-hint">Добавь минимум 2 зерна в <a href="/add-shelf?kind=bean">зерно</a>, чтобы сравнивать.</p>` : ''}
       <button type="button" class="btn btn-primary" id="flightCreateBtn" style="margin-top:12px;font-size:.82rem" ${beans.length < 2 ? 'disabled' : ''}>Создать сравнение</button>
     </div>
   </details>`;
 
   const list = flights.length
     ? flights.map((f) => renderFlightCard(f, cups)).join('')
-    : `<div class="empty-state">Сравнения помогают <b>отличать</b> вкусы. Выбери цель, прими пару с полки — и заваривай по одному рецепту.</div>`;
+    : `<div class="empty-state">Сравнения помогают <b>отличать</b> вкусы. Выбери цель, прими пару из зерна — и заваривай по одному рецепту.</div>`;
 
   return `${createBlock}<div class="flight-list">${list}</div>`;
 }
@@ -208,51 +222,139 @@ export function bindFlightsPanel(
     root.querySelector('.flight-goal-chip.on') as HTMLElement | null
   )?.dataset.flightGoal as ComparisonGoalId || 'countries';
 
-  let pairIndex = 0;
-  let currentPairs = suggestPairingsForGoal(shelfBeans, cups, savedPairs, currentGoal);
+  let goalPairIndex = 0;
+  let goalPairs = suggestPairingsForGoal(shelfBeans, cups, savedPairs, currentGoal);
+  let anchorPartners: AnchoredPartnerSuggestion[] = [];
+  let partnerIndex = 0;
+  let anchorMode = false;
 
   const focusInp = root.querySelector('#flightFocus') as HTMLInputElement | null;
   const selA = root.querySelector('#flightBeanA') as HTMLSelectElement | null;
   const selB = root.querySelector('#flightBeanB') as HTMLSelectElement | null;
+  const anchorPick = root.querySelector('#flightAnchorPick') as HTMLElement | null;
+  const anchorNameEl = root.querySelector('#flightAnchorName');
   const pairNames = root.querySelector('#flightPairNames');
   const pairReason = root.querySelector('#flightPairReason');
+  const autoGoalEl = root.querySelector('#flightAutoGoal');
   const pairCounter = root.querySelector('#flightPairCounter');
   const pairNext = root.querySelector('#flightPairNext') as HTMLButtonElement | null;
-  const pairPick = root.querySelector('#flightPairPick');
+  const goalPick = root.querySelector('#flightGoalPick') as HTMLElement | null;
+  const goalModeHint = root.querySelector('#flightGoalModeHint') as HTMLElement | null;
+  const goalPairNames = root.querySelector('#flightGoalPairNames');
+  const goalPairReason = root.querySelector('#flightGoalPairReason');
+  const goalPairCounter = root.querySelector('#flightGoalPairCounter');
+  const goalPairNext = root.querySelector('#flightGoalNext') as HTMLButtonElement | null;
 
-  const applyPairToForm = (pair: { a: string; b: string }) => {
-    const itemA = byName.get(pair.a.toLowerCase());
-    const itemB = byName.get(pair.b.toLowerCase());
-    if (itemA && selA) selA.value = itemA.id;
-    if (itemB && selB) selB.value = itemB.id;
-  };
-
-  const renderPairCard = () => {
-    if (!pairNames || !pairReason) return;
-    const pair = currentPairs[pairIndex];
-    if (!pair) {
-      if (pairPick) (pairPick as HTMLElement).style.display = 'none';
-      return;
-    }
-    if (pairPick) (pairPick as HTMLElement).style.display = '';
-    pairNames.textContent = `${pair.a} × ${pair.b}`;
-    pairReason.textContent = pair.reason;
-    if (pairCounter) {
-      pairCounter.textContent = currentPairs.length > 1 ? `${pairIndex + 1} из ${currentPairs.length}` : '';
-    }
-    if (pairNext) pairNext.disabled = currentPairs.length < 2;
-  };
-
-  const setGoal = (goalId: ComparisonGoalId) => {
+  const setGoalUi = (goalId: ComparisonGoalId) => {
     currentGoal = goalId;
-    pairIndex = 0;
-    currentPairs = suggestPairingsForGoal(shelfBeans, cups, savedPairs, goalId);
     root.querySelectorAll('.flight-goal-chip').forEach((chip) => {
       chip.classList.toggle('on', (chip as HTMLElement).dataset.flightGoal === goalId);
     });
-    if (focusInp) focusInp.value = goalById(goalId).focusDefault;
-    renderPairCard();
   };
+
+  const applyPartnerToForm = (partner: AnchoredPartnerSuggestion) => {
+    const itemB = byName.get(partner.b.toLowerCase());
+    if (itemB && selB) selB.value = itemB.id;
+    setGoalUi(partner.goalId);
+    if (focusInp) focusInp.value = goalById(partner.goalId).focusDefault;
+  };
+
+  const renderAnchorPartner = () => {
+    const partner = anchorPartners[partnerIndex];
+    if (!anchorPick) return;
+    if (!partner) {
+      anchorPick.hidden = false;
+      if (anchorNameEl && selA?.value) {
+        const itemA = byId.get(selA.value);
+        if (itemA) anchorNameEl.textContent = itemA.name;
+      }
+      if (pairNames) pairNames.textContent = 'Подходящих лотов не нашлось';
+      if (pairReason) pairReason.textContent = 'Попробуй другую цель ниже или выбери лот B вручную.';
+      if (autoGoalEl) autoGoalEl.textContent = '';
+      if (pairNext) pairNext.disabled = true;
+      return;
+    }
+    anchorPick.hidden = false;
+    if (anchorNameEl) anchorNameEl.textContent = partner.a;
+    if (pairNames) pairNames.textContent = `${partner.a} × ${partner.b}`;
+    if (pairReason) pairReason.textContent = partner.reason;
+    const g = goalById(partner.goalId);
+    if (autoGoalEl) autoGoalEl.innerHTML = `🎯 Цель: <b>${g.emoji} ${esc(g.label)}</b> — ${esc(g.focusDefault)}`;
+    if (pairCounter) {
+      pairCounter.textContent = anchorPartners.length > 1
+        ? `${partnerIndex + 1} из ${anchorPartners.length}`
+        : '';
+    }
+    if (pairNext) pairNext.disabled = anchorPartners.length < 2;
+    applyPartnerToForm(partner);
+  };
+
+  const loadAnchorPartners = (goalFilter?: ComparisonGoalId) => {
+    const idA = selA?.value;
+    if (!idA) {
+      anchorMode = false;
+      anchorPartners = [];
+      partnerIndex = 0;
+      if (anchorPick) anchorPick.hidden = true;
+      if (goalModeHint) goalModeHint.hidden = false;
+      if (goalPick) goalPick.hidden = false;
+      return;
+    }
+    const itemA = byId.get(idA);
+    if (!itemA) return;
+    anchorMode = true;
+    anchorPartners = suggestPartnersForAnchor(
+      itemA.name,
+      shelfBeans,
+      cups,
+      savedPairs,
+      goalFilter ? { goalId: goalFilter } : undefined,
+    );
+    partnerIndex = 0;
+    if (goalModeHint) goalModeHint.hidden = true;
+    if (goalPick) goalPick.hidden = true;
+    renderAnchorPartner();
+  };
+
+  const renderGoalPairCard = () => {
+    if (!goalPairNames || !goalPairReason) return;
+    const pair = goalPairs[goalPairIndex];
+    if (!pair) {
+      if (goalPick) goalPick.hidden = true;
+      return;
+    }
+    if (goalPick) goalPick.hidden = false;
+    goalPairNames.textContent = `${pair.a} × ${pair.b}`;
+    goalPairReason.textContent = pair.reason;
+    if (goalPairCounter) {
+      goalPairCounter.textContent = goalPairs.length > 1 ? `${goalPairIndex + 1} из ${goalPairs.length}` : '';
+    }
+    if (goalPairNext) goalPairNext.disabled = goalPairs.length < 2;
+  };
+
+  const setGoal = (goalId: ComparisonGoalId, opts?: { skipAnchorReload?: boolean }) => {
+    if (anchorMode && selA?.value && !opts?.skipAnchorReload) {
+      setGoalUi(goalId);
+      loadAnchorPartners(goalId);
+      return;
+    }
+    setGoalUi(goalId);
+    goalPairIndex = 0;
+    goalPairs = suggestPairingsForGoal(shelfBeans, cups, savedPairs, goalId);
+    if (focusInp) focusInp.value = goalById(goalId).focusDefault;
+    renderGoalPairCard();
+  };
+
+  selA?.addEventListener('change', () => {
+    if (selA.value) loadAnchorPartners();
+    else {
+      anchorMode = false;
+      if (anchorPick) anchorPick.hidden = true;
+      if (goalModeHint) goalModeHint.hidden = false;
+      if (goalPick) goalPick.hidden = false;
+      setGoal(currentGoal);
+    }
+  });
 
   root.querySelectorAll('[data-flight-goal]').forEach((chip) => {
     chip.addEventListener('click', () => {
@@ -261,19 +363,34 @@ export function bindFlightsPanel(
   });
 
   root.querySelector('#flightPairAccept')?.addEventListener('click', () => {
-    const pair = currentPairs[pairIndex];
-    if (!pair) return;
-    applyPairToForm(pair);
-    (root.querySelector('#flightCreateForm') as HTMLDetailsElement)?.setAttribute('open', '');
+    const partner = anchorPartners[partnerIndex];
+    if (!partner) return;
+    applyPartnerToForm(partner);
   });
 
   root.querySelector('#flightPairNext')?.addEventListener('click', () => {
-    if (currentPairs.length < 2) return;
-    pairIndex = (pairIndex + 1) % currentPairs.length;
-    renderPairCard();
+    if (anchorPartners.length < 2) return;
+    partnerIndex = (partnerIndex + 1) % anchorPartners.length;
+    renderAnchorPartner();
   });
 
-  renderPairCard();
+  root.querySelector('#flightGoalAccept')?.addEventListener('click', () => {
+    const pair = goalPairs[goalPairIndex];
+    if (!pair) return;
+    const itemA = byName.get(pair.a.toLowerCase());
+    const itemB = byName.get(pair.b.toLowerCase());
+    if (itemA && selA) selA.value = itemA.id;
+    if (itemB && selB) selB.value = itemB.id;
+    loadAnchorPartners(currentGoal);
+  });
+
+  root.querySelector('#flightGoalNext')?.addEventListener('click', () => {
+    if (goalPairs.length < 2) return;
+    goalPairIndex = (goalPairIndex + 1) % goalPairs.length;
+    renderGoalPairCard();
+  });
+
+  renderGoalPairCard();
 
   root.querySelector('#flightCreateBtn')?.addEventListener('click', async () => {
     const brew = (root.querySelector('#flightBrew') as HTMLSelectElement)?.value || 'AeroPress';
@@ -281,7 +398,7 @@ export function bindFlightsPanel(
     const idB = (root.querySelector('#flightBeanB') as HTMLSelectElement)?.value;
     const focus = (root.querySelector('#flightFocus') as HTMLInputElement)?.value.trim() || null;
     if (!idA || !idB || idA === idB) {
-      alert('Выбери два разных лота с полки.');
+      alert('Выбери два разных лота из зерна.');
       return;
     }
     const sA = byId.get(idA);

@@ -4,7 +4,7 @@ import Layout from '../layouts/Layout.astro';
 import Nav from '../components/Nav.astro';
 ---
 
-<Layout title="Личный кабинет — Shmelco" description="Сравнения, дневник, полка, профиль и справочник">
+<Layout title="Личный кабинет — Shmelco" description="Зерно, сравнения, дневник, профиль и справочник">
   <Nav />
   <div class="container">
     <div class="account-page" id="accountPage">
@@ -440,14 +440,31 @@ import Nav from '../components/Nav.astro';
   .flight-pair-btn.primary { background: var(--text); color: var(--bg); border-color: var(--text); font-weight: 600; }
   .flight-pair-btn:disabled { opacity: .45; cursor: default; }
   .flight-pair-counter { font-size: .68rem; color: var(--text-muted); margin-top: 6px; }
+  .flight-auto-goal { font-size: .74rem; color: var(--text-dim); margin: 6px 0 10px; line-height: 1.45; }
+  .flight-auto-goal b { color: var(--text); font-weight: 600; }
+  .flight-mode-hint { font-size: .72rem; color: var(--text-muted); margin: 10px 0 6px; line-height: 1.45; }
   .flight-focus-line { font-size: .76rem; color: var(--text-dim); margin: -6px 0 12px; line-height: 1.45; }
   .flight-focus-lbl { font-weight: 600; color: var(--text-muted); }
   .ref-links-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; }
   .ref-link-card { display: block; padding: 12px; border-radius: 10px; border: 1px solid var(--border); text-decoration: none; color: var(--text); font-size: .82rem; font-weight: 600; transition: .15s; }
   .ref-link-card:hover { border-color: var(--accent); color: var(--accent); }
   .ref-country-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin-bottom: 8px; }
-  .ref-country-card { display: flex; flex-direction: column; gap: 2px; padding: 12px; border-radius: 10px; border: 1px solid var(--border); text-decoration: none; color: inherit; transition: .15s; }
+  .ref-country-card { display: flex; flex-direction: column; gap: 2px; padding: 12px; border-radius: 10px; border: 1px solid var(--border); text-decoration: none; color: inherit; transition: .15s; background: var(--surface); cursor: pointer; font-family: inherit; text-align: left; width: 100%; }
   .ref-country-card:hover { border-color: var(--accent); }
+  .ref-link-btn { width: 100%; background: var(--surface); cursor: pointer; font-family: inherit; text-align: left; }
+  .ref-back { display: inline-flex; align-items: center; gap: 4px; margin-bottom: 12px; padding: 6px 0; border: 0; background: none; color: var(--accent); font-weight: 600; font-size: .82rem; cursor: pointer; font-family: inherit; }
+  .ref-view-hint { font-size: .78rem; color: var(--text-muted); margin: 0 0 10px; }
+  .ref-wheel-wrap { max-width: 420px; margin: 0 auto; }
+  .ref-wheel-svg { width: 100%; height: auto; display: block; }
+  .ref-country-detail .ref-country-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .ref-country-detail .ref-country-lead { font-size: .84rem; line-height: 1.55; margin-bottom: 10px; }
+  .ref-ext-link { display: inline-block; margin-top: 12px; font-size: .78rem; color: var(--accent); font-weight: 600; }
+  .equip-section { margin-bottom: 14px; }
+  .equip-h { font-size: .78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 8px; }
+  .equip-chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .equip-chip { font-size: .76rem; font-weight: 600; padding: 6px 11px; border-radius: 999px; border: 1px solid var(--border); background: var(--bg); color: var(--text); }
+  .equip-add { font-size: .76rem; font-weight: 700; padding: 6px 10px; border-radius: 999px; border: 1px dashed var(--border); color: var(--text-dim); text-decoration: none; }
+  .equip-empty { font-size: .78rem; color: var(--text-muted); line-height: 1.45; margin: 0; }
   .ref-flag { font-size: 1.4rem; }
   .ref-name { font-weight: 700; font-size: .84rem; }
   .ref-flavors { font-size: .68rem; color: var(--text-muted); line-height: 1.35; }
@@ -473,7 +490,7 @@ import Nav from '../components/Nav.astro';
   import { recommendBrew, renderBrewRecHtml, formatBrewRecCompact } from '../lib/brewRecommend';
   import { isVarietyBlend } from '../lib/varietyBlend';
   import { renderFlightsPanel, bindFlightsPanel } from '../lib/accountFlightsPanel';
-  import { renderReferencePanel } from '../lib/accountReferencePanel';
+  import { renderReferencePanel, bindReferencePanel, resetReferenceToHome } from '../lib/accountReferencePanel';
   import { bestDiaryRecipeForBean } from '../lib/tastingFlights';
   import { filterAvailableShelfBeans } from '../lib/shelfAvailability';
 
@@ -806,15 +823,29 @@ import Nav from '../components/Nav.astro';
     return '/add-cup?' + q.toString();
   }
 
+  function renderEquipmentSection(equipItems: any[]): string {
+    if (!equipItems.length) {
+      return `<div class="equip-section profile-card"><div class="equip-h">⚙️ Моё оборудование</div><p class="equip-empty">V60, AeroPress, Moka pot… — чтобы IVAN и рецепты знали, чем ты завариваешь.</p><a href="/add-shelf?kind=equipment" class="add-cup-btn" style="display:inline-block;margin-top:8px;text-decoration:none">+ Оборудование</a></div>`;
+    }
+    const chips = equipItems.map((e) =>
+      `<span class="equip-chip" title="${esc(e.name)}">${esc(e.category || e.name)}</span>`,
+    ).join('');
+    return `<div class="equip-section profile-card"><div class="equip-h">⚙️ Моё оборудование</div><div class="equip-chips">${chips}<a href="/add-shelf?kind=equipment" class="equip-add">+</a></div></div>`;
+  }
+
   function renderChecklist(userId: string, latestProfile: any, cups: any[], shelf: any[], flights: any[], openedSize: number) {
-    const doneQuiz = !!latestProfile;
-    const doneActivity = cups.length > 0 || shelf.length > 0;
+    const hasBean = shelf.some((s: any) => s.kind === 'bean');
+    const hasEquip = shelf.some((s: any) => s.kind === 'equipment');
+    const hasCup = cups.length > 0;
     const doneFlight = flights.length > 0;
-    if (doneQuiz && doneActivity && doneFlight) return '';
+    const doneQuiz = !!latestProfile;
+    if (hasBean && hasEquip && hasCup && doneFlight) return '';
     const items = [
-      { done: doneQuiz, label: 'Пройти тест вкуса (необязательно)', href: '/quiz' },
-      { done: doneActivity, label: 'Добавить зерно на полку', href: '/add-shelf?kind=bean' },
-      { done: doneFlight, label: 'Создать первое сравнение', href: '/account?tab=flights&new=1' },
+      { done: hasBean, label: 'Добавить зерно', href: '/add-shelf?kind=bean' },
+      { done: hasEquip, label: 'Добавить оборудование (V60, AP…)', href: '/add-shelf?kind=equipment' },
+      { done: hasCup, label: 'Записать первую чашку', href: '/add-cup' },
+      { done: doneFlight, label: 'Пройти первое сравнение', href: '/account?tab=flights&new=1' },
+      { done: doneQuiz, label: 'Тест вкуса (необязательно)', href: '/quiz' },
     ];
     return `<div class="onboard-checklist"><div class="onboard-checklist-h">С чего начать</div>${items.map((it) =>
       `<div class="ob-item${it.done ? ' done' : ''}"><span>${it.done ? '☑' : '☐'}</span><span>${it.label}</span>${!it.done ? `<a href="${it.href}">→</a>` : ''}</div>`
@@ -876,8 +907,8 @@ import Nav from '../components/Nav.astro';
 
     if (!access.hasAccess) {
       mount.innerHTML = `<div class="shelf-assist pro-card">
-        <div class="shelf-assist-h"><div class="shelf-assist-title">🤖 IVAN — ассистент на полке</div></div>
-        <p class="shelf-assist-desc">Сравнения лотов, рецепты (V60, AeroPress с байпасом), план дегустации — по твоей полке и дневнику. Подписка · 30 дней.</p>
+        <div class="shelf-assist-h"><div class="shelf-assist-title">🤖 IVAN — ассистент в зерне</div></div>
+        <p class="shelf-assist-desc">Сравнения лотов, рецепты (V60, AeroPress с байпасом), план дегустации — по твоему зерну и дневнику. Подписка · 30 дней.</p>
         <button type="button" class="btn btn-primary" data-buy-assist="1" style="font-size:.82rem">Подключить IVAN</button>
         ${creditsOk && guideCredits > 0 ? `<p class="shelf-assist-desc" style="margin-top:8px">Пока доступен в бета-режиме при наличии оплаченных гидов — обнови страницу.</p>` : ''}
       </div>`;
@@ -905,13 +936,13 @@ import Nav from '../components/Nav.astro';
         <div class="shelf-assist-title">🤖 IVAN</div>
         <span class="shelf-assist-badge">${esc(badge)}</span>
       </div>
-      <p class="shelf-assist-desc">Спроси IVAN про сравнения, рецепты и дегустацию — знает твою полку (${beanCount} зёрен) и недавние чашки.</p>
+      <p class="shelf-assist-desc">Спроси IVAN про сравнения, рецепты и дегустацию — знает твоё зерно (${beanCount} лотов) и недавние чашки.</p>
       ${assistPaid ? `<div class="paid-banner" style="margin-bottom:10px">✅ Подписка активирована. Задай первый вопрос IVAN ниже.</div>` : ''}
       <div class="shelf-assist-chips">
         <button type="button" class="shelf-assist-chip shelf-assist-chip--primary" data-assist-prompt="Предложи сегодня исследование по моей коллекции — что заварить или с чем сравнить, с рецептом и зачем.">Исследование сегодня</button>
-        <button type="button" class="shelf-assist-chip" data-assist-prompt="С чем сегодня сравнить мои китайские лоты с полки и зачем?">Китай: с чем сравнить</button>
-        <button type="button" class="shelf-assist-chip" data-assist-prompt="Дай рецепт AeroPress с байпасом для лота с полки — конкретные граммы и температуру.">AeroPress + байпас</button>
-        <button type="button" class="shelf-assist-chip" data-assist-prompt="Составь план дегустации на 5 дней по моей полке — сначала solo, потом сравнения.">План на неделю</button>
+        <button type="button" class="shelf-assist-chip" data-assist-prompt="С чем сегодня сравнить мои китайские лоты из зерна и зачем?">Китай: с чем сравнить</button>
+        <button type="button" class="shelf-assist-chip" data-assist-prompt="Дай рецепт AeroPress с байпасом для лота из зерна — конкретные граммы и температуру.">AeroPress + байпас</button>
+        <button type="button" class="shelf-assist-chip" data-assist-prompt="Составь план дегустации на 5 дней по моему зерну — сначала solo, потом сравнения.">План на неделю</button>
       </div>
       <div class="shelf-assist-chat" id="shelfAssistChat"></div>
       <form class="shelf-assist-form" id="shelfAssistForm">
@@ -1185,7 +1216,8 @@ import Nav from '../components/Nav.astro';
 
     const pathPanel = `<div class="sub-h">🧭 Мой путь</div><div class="profile-card"><div class="disco-top"><div class="disco-ring">${ringSVG(openedKeys.size, countryOrder.length)}</div><div><div class="disco-count">${openedKeys.size} / ${countryOrder.length}</div><div class="profile-label" style="min-width:0">стран открыто в дневнике</div></div></div>${quizCountryNames.length ? `<div class="profile-label" style="min-width:0;margin-top:14px">Из теста — начни с:</div><div class="path-quiz-countries">${quizCountryNames.map((n: string) => `<span class="profile-tag">${esc(n)}</span>`).join('')}</div>` : ''}${recommendedFirst.length ? `<div class="disco-subtitle">Ещё не пробовала — под профиль</div><div class="disco-rec">${recommendedFirst.map((k: string) => { const c: any = DB[k]; return `<a class="disco-rec-card" href="/add-shelf?kind=bean&country=${encodeURIComponent(c.name)}"><span class="drc-flag">${c.flag}</span><span class="drc-name">${c.name}</span><span class="drc-why">${c.flavors.slice(0, 3).join(' · ')}</span><span class="drc-cta">На полку →</span></a>`; }).join('')}</div>` : ''}<div class="disco-subtitle">Карта стран</div><div class="disco-grid">${countryOrder.map((k: string) => { const c: any = DB[k]; const open = openedKeys.has(k); return `<span class="disco-chip ${open ? 'open' : 'closed'}" data-k="${k}">${c.flag} ${c.name}${open ? ' ✓' : ''}</span>`; }).join('')}</div><div id="discoInfo" class="info-panel"></div></div><p style="font-size:.78rem;color:var(--text-muted);margin-top:12px"><a href="${COMMUNITY_TG}" target="_blank" rel="noopener" style="color:var(--accent);font-weight:600">Telegram-сообщество</a> · <a href="/account?tab=reference" style="color:var(--accent);font-weight:600">Справочник</a></p>`;
 
-    const profilePanel = `${renderChecklist(user.id, latestProfile, cups, shelf, flights, openedKeys.size)}${profileCard}${tasteCard ? `<div class="sub-h">🗺️ Карта вкуса</div>${tasteCard}` : ''}${pathPanel}`;
+    const checklist = renderChecklist(user.id, latestProfile, cups, shelf, flights, openedKeys.size);
+    const profilePanel = `${profileCard}${tasteCard ? `<div class="sub-h">🗺️ Карта вкуса</div>${tasteCard}` : ''}${pathPanel}`;
 
     const flightsPanel = renderFlightsPanel(flights, shelf, cups, flightsAvailable, openCreateFlight, savedPairs);
     const referencePanel = renderReferencePanel();
@@ -1219,32 +1251,29 @@ import Nav from '../components/Nav.astro';
     const shelfSorted = shelfHasStatus
       ? [...shelf].sort((a: any, b: any) => shelfStatusRank(a) - shelfStatusRank(b))
       : shelf;
-    const lowCount = shelfHasStatus ? shelf.filter((s: any) => s.kind === 'bean' && s.status === 'low').length : 0;
-    const shelfSearch = shelf.length
+    const beanItems = shelfSorted.filter((s: any) => s.kind === 'bean');
+    const equipItems = shelfSorted.filter((s: any) => s.kind === 'equipment');
+    const equipSection = renderEquipmentSection(equipItems);
+    const lowCount = shelfHasStatus ? beanItems.filter((s: any) => s.status === 'low').length : 0;
+    const shelfSearch = beanItems.length
       ? `<div class="shelf-search-wrap"><input type="search" id="shelfSearch" class="shelf-search" placeholder="Поиск: страна, сорт, обжарщик, обработка…" autocomplete="off"/><div id="shelfSearchEmpty" class="empty-state shelf-search-empty">Ничего не нашлось</div></div>`
       : '';
-    const shelfPanel = shelf.length
-      ? `${shelfSearch}<div class="shelf-grid" id="shelfGrid">${shelfSorted.map((s: any) => {
+    const renderBeanCard = (s: any) => {
           const st = shelfStatus(s);
-          const statusBtn = shelfHasStatus && s.kind === 'bean'
+          const statusBtn = shelfHasStatus
             ? `<button type="button" class="shelf-status st-${st}" data-shelf-status="${s.id}" data-status="${st}" title="Нажми, чтобы отметить запас">${SHELF_STATUS[st].label}</button>`
             : '';
-          const hasGeneratedCover = s.kind === 'bean' && !s.photo_url;
+          const hasGeneratedCover = !s.photo_url;
           const cover = s.photo_url
             ? `<img src="${esc(s.photo_url)}" class="shelf-photo" alt=""/>`
-            : s.kind === 'bean'
-            ? shelfBeanCover(s)
-            : `<div class="shelf-noimg">⚙️</div>`;
-          /* Обложка уже показывает страну, сорт и обработку — в подписи остаётся только обжарщик. */
-          const blend = s.kind === 'bean' && isVarietyBlend(s.variety, s.name);
-          const meta = s.kind !== 'bean'
-            ? esc(s.category || 'оборудование')
-            : hasGeneratedCover
+            : shelfBeanCover(s);
+          const blend = isVarietyBlend(s.variety, s.name);
+          const meta = hasGeneratedCover
             ? (esc(s.roaster) || 'зерно')
             : ([s.roaster, s.variety, s.process].filter(Boolean).map(esc).join(' · ') || 'зерно');
           const blendTag = blend ? `<div class="shelf-blend-tag">смесь сортов</div>` : '';
-          const diaryBest = s.kind === 'bean' ? bestDiaryRecipeForBean(cups, { name: s.name, roaster: s.roaster }) : null;
-          const brewRec = s.kind === 'bean' && !diaryBest ? recommendBrew(s) : null;
+          const diaryBest = bestDiaryRecipeForBean(cups, { name: s.name, roaster: s.roaster });
+          const brewRec = !diaryBest ? recommendBrew(s) : null;
           const diaryRecLine = diaryBest ? formatCupRecipe(diaryBest.recipe) : '';
           const diaryBrewHref = diaryBest ? (() => {
             const q = applyRecipeToParams(diaryBest.recipe as any, diaryBest.brew_method);
@@ -1261,28 +1290,30 @@ import Nav from '../components/Nav.astro';
             : brewRec
             ? `<details class="shelf-brew-tip"><summary>☕ ${esc(formatBrewRecCompact(brewRec))}</summary>${renderBrewRecHtml(brewRec)}</details>`
             : '';
-          const searchBlob = [s.name, s.roaster, s.country, s.process, s.variety, s.category, s.kind === 'equipment' ? 'оборудование' : 'зерно']
+          const searchBlob = [s.name, s.roaster, s.country, s.process, s.variety]
             .filter(Boolean).join(' ').toLowerCase();
-          return `<div class="shelf-card${s.kind === 'bean' ? ` shelf-st-${st}` : ''}" data-shelf-q="${esc(searchBlob)}">${cover}<div class="shelf-body"><div class="shelf-name">${esc(s.name)}</div><div class="shelf-meta">${meta}</div>${blendTag}${statusBtn}${brewTip}${s.kind === 'bean' ? `<a class="shelf-brew-btn" href="${diaryBrewHref}">☕ Заварила →</a>` : ''}</div><button class="shelf-del" data-shelf-del="${s.id}" title="удалить">×</button></div>`;
-        }).join('')}</div>${shelfHasStatus ? '' : shelfStatusMigrationBox()}`
-      : `<div class="empty-state">Полка пуста. <a href="/add-shelf?kind=bean">+ Зерно</a> · <a href="/add-shelf?kind=equipment">+ Оборудование</a></div>`;
+          return `<div class="shelf-card shelf-st-${st}" data-shelf-q="${esc(searchBlob)}">${cover}<div class="shelf-body"><div class="shelf-name">${esc(s.name)}</div><div class="shelf-meta">${meta}</div>${blendTag}${statusBtn}${brewTip}<a class="shelf-brew-btn" href="${diaryBrewHref}">☕ Заварила →</a></div><button class="shelf-del" data-shelf-del="${s.id}" title="удалить">×</button></div>`;
+        };
+    const beansBlock = beanItems.length
+      ? `${shelfSearch}<div class="shelf-grid" id="shelfGrid">${beanItems.map(renderBeanCard).join('')}</div>${shelfHasStatus ? '' : shelfStatusMigrationBox()}`
+      : `<div class="empty-state">Зерно пока не добавлено. <a href="/add-shelf?kind=bean">+ Зерно</a> · <a href="/add-shelf?mode=photo">📷 С фото</a></div>`;
 
     page.innerHTML = `
       <div class="account-header"><div><h1>Личный кабинет</h1><div class="account-email">${user.email || ''}</div></div><div style="display:flex;align-items:center;gap:10px"><button class="logout-btn" id="logoutBtn">Выйти</button></div></div>
 
       <div class="acc-tabs" id="accTabs">
+        <button class="acc-tab" data-tab="shelf">🫘 Зерно</button>
         <button class="acc-tab" data-tab="flights">🔬 Сравнения</button>
         <button class="acc-tab" data-tab="diary">📔 Дневник</button>
-        <button class="acc-tab" data-tab="shelf">🪵 Полка</button>
-        <button class="acc-tab" data-tab="profile">👤 Профиль</button>
         <button class="acc-tab" data-tab="reference">📚 Справочник</button>
+        <button class="acc-tab" data-tab="profile">👤 Профиль</button>
       </div>
 
+      <section class="acc-panel" data-panel="shelf"><div class="panel-h"><span>🫘 Зерно${shelfHasStatus ? ` <span class="shelf-low-count"${lowCount ? '' : ' style="display:none"'}">${lowCount} заканчивается</span>` : ''}</span><span style="display:flex;gap:6px;flex-wrap:wrap"><a href="/add-shelf?kind=bean" class="add-cup-btn">+ Зерно</a><a href="/add-shelf?mode=photo" class="add-cup-btn">📷 С фото</a></span></div>${checklist}${equipSection}<div id="shelfImportBanner" class="paid-banner" style="display:none"></div><div id="shelfAssistantMount"></div>${beansBlock}</section>
       <section class="acc-panel" data-panel="flights"><div class="panel-h"><span>🔬 Сравнения</span><a href="/account?tab=flights&new=1" class="add-cup-btn">+ Новое</a></div>${flightsPanel}</section>
       <section class="acc-panel" data-panel="diary"><div class="panel-h"><span>📔 Дневник</span><a href="/add-cup" class="add-cup-btn">+ Чашка</a></div>${diaryPanel}</section>
-      <section class="acc-panel" data-panel="shelf"><div class="panel-h"><span>🪵 Полка${shelfHasStatus ? ` <span class="shelf-low-count"${lowCount ? '' : ' style="display:none"'}">${lowCount} заканчивается</span>` : ''}</span><span style="display:flex;gap:6px;flex-wrap:wrap"><a href="/add-shelf?kind=bean" class="add-cup-btn">+ Зерно</a><a href="/add-shelf?mode=photo" class="add-cup-btn">📷 С фото</a><a href="/add-shelf?kind=equipment" class="add-cup-btn">+ Оборудование</a></span></div><div id="shelfImportBanner" class="paid-banner" style="display:none"></div><div id="shelfAssistantMount"></div>${shelfPanel}</section>
-      <section class="acc-panel" data-panel="profile"><div class="panel-h">👤 Профиль</div>${profilePanel}</section>
       <section class="acc-panel" data-panel="reference"><div class="panel-h">📚 Справочник</div>${referencePanel}</section>
+      <section class="acc-panel" data-panel="profile"><div class="panel-h">👤 Профиль</div>${profilePanel}</section>
     `;
 
     const MOBILE_ACC_TABS = new Set(['flights', 'diary', 'shelf', 'profile']);
@@ -1296,17 +1327,20 @@ import Nav from '../components/Nav.astro';
     const tabs = Array.from(page.querySelectorAll('.acc-tab')) as HTMLElement[];
     const panels = Array.from(page.querySelectorAll('.acc-panel')) as HTMLElement[];
     function activateTab(name: string) {
+      const prev = tabs.find((t) => t.classList.contains('active'))?.getAttribute('data-tab');
+      if (prev === 'reference' && name !== 'reference') resetReferenceToHome(page);
       tabs.forEach(t => t.classList.toggle('active', t.getAttribute('data-tab') === name));
       panels.forEach(p => p.classList.toggle('active', p.getAttribute('data-panel') === name));
       syncAccountNav(name);
       try { localStorage.setItem('acc_tab', name); } catch (e) {}
       const url = new URL(location.href);
-      if (name === 'flights') url.searchParams.delete('tab');
+      if (name === 'shelf') url.searchParams.delete('tab');
       else url.searchParams.set('tab', name);
       history.replaceState({}, '', url.pathname + url.search);
     }
     tabs.forEach(t => t.addEventListener('click', () => activateTab(t.getAttribute('data-tab')!)));
-    let startTab = 'flights';
+    bindReferencePanel(page);
+    let startTab = 'shelf';
     const urlTab = new URL(location.href).searchParams.get('tab');
     if (urlTab && page.querySelector('.acc-tab[data-tab="' + urlTab + '"]')) startTab = urlTab;
     else {
@@ -1392,7 +1426,7 @@ import Nav from '../components/Nav.astro';
       const banner = document.getElementById('shelfImportBanner');
       if (banner) {
         banner.style.display = '';
-        banner.textContent = `✓ На полку добавлено ${importedN} ${importedN === 1 ? 'лот' : importedN < 5 ? 'лота' : 'лотов'} из фото. Смеси сортов помечены отдельно — у каждой карточки есть совет по заварке.`;
+        banner.textContent = `✓ В зерно добавлено ${importedN} ${importedN === 1 ? 'лот' : importedN < 5 ? 'лота' : 'лотов'} из фото. Смеси сортов помечены отдельно — у каждой карточки есть совет по заварке.`;
       }
       const url = new URL(location.href);
       url.searchParams.delete('imported');
@@ -1429,7 +1463,7 @@ import Nav from '../components/Nav.astro';
       window.addEventListener('popstate', () => {
         const root = document.getElementById('accountPage');
         if (!root?.querySelector('.acc-tab')) return;
-        const tabName = new URL(location.href).searchParams.get('tab') || 'profile';
+        const tabName = new URL(location.href).searchParams.get('tab') || 'shelf';
         const btn = root.querySelector('.acc-tab[data-tab="' + tabName + '"]') as HTMLElement | null
           || root.querySelector('.acc-more-item[data-tab="' + tabName + '"]') as HTMLElement | null;
         if (btn) activateTab(tabName);

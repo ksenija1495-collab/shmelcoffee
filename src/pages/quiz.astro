@@ -560,7 +560,7 @@ function renderResults(card) {
   });
   document.getElementById('goToAccount').addEventListener('click', async () => {
     const ok = await ensureProfileSaved();
-    if (ok) window.location.href = '/account?tab=flights';
+    if (ok) window.location.href = '/account';
   });
   document.getElementById('backToQuiz').addEventListener('click', () => {
     state = { phase:'quiz', step:0, answers:{flavors:[],acidity:null,body:null,sweetness:null}, topCountries:[], wantPractice:null, equipment:null, setFormat:null, setSize:null, profileSaved:false, profileSaving:false, selectionSaved:false };
@@ -639,12 +639,17 @@ function renderStartHere(card) {
   card.innerHTML = `
     <div class="start-here">
       <h3>${primary.flag} Профиль сохранён</h3>
-      <p>Страны для исследования: <b>${top.map(k => DB[k].name).join(', ')}</b>. Добавь зерно на полку и создай первое сравнение — так начнёшь отличать вкусы.</p>
+      <p>Страны для исследования: <b>${top.map(k => DB[k].name).join(', ')}</b>. Добавь зерно, оборудование и пройди первое сравнение — так начнёшь отличать вкусы.</p>
       <div class="start-here-grid">
         <a class="start-card primary" href="/add-shelf?kind=bean&country=${encodeURIComponent(primary.name)}">
           <div class="start-card-icon">🫘</div>
-          <div class="start-card-title">Добавить зерно на полку</div>
+          <div class="start-card-title">Добавить зерно</div>
           <div class="start-card-desc">Если уже есть дома</div>
+        </a>
+        <a class="start-card" href="/add-shelf?kind=equipment">
+          <div class="start-card-icon">⚙️</div>
+          <div class="start-card-title">Добавить оборудование</div>
+          <div class="start-card-desc">V60, AeroPress, Moka…</div>
         </a>
         <a class="start-card" href="/account?tab=flights&new=1">
           <div class="start-card-icon">🔬</div>
@@ -658,7 +663,7 @@ function renderStartHere(card) {
         </a>
       </div>
       <div class="start-links">
-        <a href="/account?tab=flights">В кабинет</a>
+        <a href="/account">В кабинет</a>
         <a href="/passport">Паспорт вкуса</a>
         <a href="/account?tab=reference">Справочник</a>
       </div>

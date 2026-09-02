@@ -172,6 +172,51 @@ export function suggestPairingsForGoal(
   return out.sort((x, y) => y.score - x.score).slice(0, opts?.limit ?? 8);
 }
 
+export type AnchoredPartnerSuggestion = PairSuggestion & { goalId: ComparisonGoalId };
+
+export function inferBestGoalForPair(
+  a: ShelfBean,
+  b: ShelfBean,
+  savedPairs: SavedPair[] = [],
+): ComparisonGoalId {
+  const savedKeys = new Set(savedPairs.map((p) => pairKey(p.bean_a, p.bean_b)));
+  const priority: ComparisonGoalId[] = [
+    'saved',
+    'countries',
+    'process',
+    'variety',
+    'acidity',
+    'sweetness_body',
+  ];
+  for (const goalId of priority) {
+    if (pairMatchesGoal(a, b, goalId, savedKeys)) return goalId;
+  }
+  return 'countries';
+}
+
+export function suggestPartnersForAnchor(
+  anchorName: string,
+  shelf: ShelfBean[],
+  cups: DiaryCup[],
+  savedPairs: SavedPair[] = [],
+  opts?: { limit?: number; goalId?: ComparisonGoalId },
+): AnchoredPartnerSuggestion[] {
+  const anchor = shelf.find((s) => s.name === anchorName);
+  if (!anchor) return [];
+
+  const out: AnchoredPartnerSuggestion[] = [];
+  for (const other of shelf) {
+    if (other.name === anchor.name) continue;
+    const scored = scoreShelfPair(anchor, other, shelf, cups, savedPairs);
+    if (scored.score < 1) continue;
+    const goalId = inferBestGoalForPair(anchor, other, savedPairs);
+    if (opts?.goalId && goalId !== opts.goalId) continue;
+    out.push({ ...scored, a: anchor.name, b: other.name, goalId });
+  }
+
+  return out.sort((x, y) => y.score - x.score).slice(0, opts?.limit ?? 12);
+}
+
 export function goalById(id: ComparisonGoalId): ComparisonGoal {
   return COMPARISON_GOALS.find((g) => g.id === id) ?? COMPARISON_GOALS[0];
 }
