@@ -421,7 +421,27 @@ import Nav from '../components/Nav.astro';
   .flight-label { display: block; font-size: .72rem; font-weight: 600; color: var(--text-muted); margin: 10px 0 4px; text-transform: uppercase; letter-spacing: .04em; }
   .flight-inp { width: 100%; padding: 9px 11px; border: 1px solid var(--border); border-radius: 10px; font-size: .82rem; background: var(--bg); color: var(--text); font-family: inherit; }
   .flight-hint, .flight-suggest { font-size: .78rem; color: var(--text-muted); margin-top: 8px; line-height: 1.45; }
-  .flight-suggest-btn { background: none; border: 0; color: var(--accent); font-weight: 600; cursor: pointer; font-family: inherit; font-size: inherit; padding: 0; text-decoration: underline; }
+  .flight-goal-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 12px; }
+  .flight-goal-chip {
+    font-size: .72rem; padding: 6px 11px; border-radius: 999px; border: 1px solid var(--border);
+    background: var(--surface); color: var(--text-dim); cursor: pointer; font-family: inherit;
+  }
+  .flight-goal-chip.on { border-color: var(--accent); background: rgba(168,124,79,.1); color: var(--text); font-weight: 600; }
+  .flight-pair-pick {
+    margin: 0 0 12px; padding: 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg);
+  }
+  .flight-pair-names { font-weight: 700; font-size: .88rem; margin-bottom: 4px; }
+  .flight-pair-reason { font-size: .74rem; color: var(--text-muted); line-height: 1.45; margin-bottom: 10px; }
+  .flight-pair-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+  .flight-pair-btn {
+    font-size: .74rem; padding: 7px 12px; border-radius: 999px; border: 1px solid var(--border);
+    background: var(--surface); cursor: pointer; font-family: inherit; color: var(--text);
+  }
+  .flight-pair-btn.primary { background: var(--text); color: var(--bg); border-color: var(--text); font-weight: 600; }
+  .flight-pair-btn:disabled { opacity: .45; cursor: default; }
+  .flight-pair-counter { font-size: .68rem; color: var(--text-muted); margin-top: 6px; }
+  .flight-focus-line { font-size: .76rem; color: var(--text-dim); margin: -6px 0 12px; line-height: 1.45; }
+  .flight-focus-lbl { font-weight: 600; color: var(--text-muted); }
   .ref-links-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; }
   .ref-link-card { display: block; padding: 12px; border-radius: 10px; border: 1px solid var(--border); text-decoration: none; color: var(--text); font-size: .82rem; font-weight: 600; transition: .15s; }
   .ref-link-card:hover { border-color: var(--accent); color: var(--accent); }
@@ -1105,12 +1125,13 @@ import Nav from '../components/Nav.astro';
 
     const accessToken = await getAccessToken();
 
-    const [profilesRes, flightsRes, cupsRes, shelfRes, recipesResult] = await Promise.all([
+    const [profilesRes, flightsRes, cupsRes, shelfRes, recipesResult, pairFeedbackRes] = await Promise.all([
       supabase.from('taste_profiles').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
       supabase.from('tasting_flights').select('*').eq('user_id', user.id).order('updated_at', { ascending: false }),
       supabase.from('cups').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
       supabase.from('shelf_items').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
       fetchSavedBrewRecipes(supabase),
+      supabase.from('shelf_assistant_feedback').select('bean_a, bean_b, note').eq('user_id', user.id).eq('kind', 'pairing_success').order('created_at', { ascending: false }).limit(12),
     ]);
 
     const loadErr = [profilesRes, cupsRes, shelfRes].find(r => r.error)?.error;
@@ -1127,6 +1148,7 @@ import Nav from '../components/Nav.astro';
     const recipesUnavailable = recipesResult.error === 'migration_required' || (
       !recipesResult.ok && Boolean(recipesResult.error?.includes('saved_brew_recipes'))
     );
+    const savedPairs = pairFeedbackRes.error ? [] : (pairFeedbackRes.data || []);
     const shelf = shelfRes.data || [];
     const shelfAssistBuyUrl = buildProdamusShelfAssistUrl(PRODAMUS_SHELF_ASSIST_URL, user, window.location.origin);
     const openCreateFlight = new URLSearchParams(window.location.search).get('new') === '1';
@@ -1165,7 +1187,7 @@ import Nav from '../components/Nav.astro';
 
     const profilePanel = `${renderChecklist(user.id, latestProfile, cups, shelf, flights, openedKeys.size)}${profileCard}${tasteCard ? `<div class="sub-h">🗺️ Карта вкуса</div>${tasteCard}` : ''}${pathPanel}`;
 
-    const flightsPanel = renderFlightsPanel(flights, shelf, cups, flightsAvailable, openCreateFlight);
+    const flightsPanel = renderFlightsPanel(flights, shelf, cups, flightsAvailable, openCreateFlight, savedPairs);
     const referencePanel = renderReferencePanel();
 
     const brewMethods = [...new Set(cups.map((c: any) => c.brew_method).filter(Boolean))].sort() as string[];
@@ -1292,7 +1314,7 @@ import Nav from '../components/Nav.astro';
     }
     activateTab(startTab);
 
-    bindFlightsPanel(page, supabase, user.id, shelf, init);
+    bindFlightsPanel(page, supabase, user.id, shelf, cups, savedPairs, init);
 
     const availableBeans = filterAvailableShelfBeans(shelf.filter((s: any) => s.kind === 'bean'));
     const beanCount = availableBeans.length;

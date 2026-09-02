@@ -40,12 +40,92 @@ function varietyFamily(variety?: string | null, name?: string | null): string {
   if (/катуаи|catuai|катурра|caturra/.test(t)) return 'caturra-catuai';
   if (/стармай|starmaya/.test(t)) return 'starmaya';
   if (/гейш|geisha/.test(t)) return 'geisha';
-  if (/sl28|sl34|бурбон|bourbon/.test(t)) return 'dense';
+  if (/sl28|sl34|бурбон|bourbon|батиан|batian/.test(t)) return 'dense';
   return 'other';
 }
 
-function pairKey(a: string, b: string): string {
+export function pairKey(a: string, b: string): string {
   return [a, b].sort().join('\0');
+}
+
+export function scoreShelfPair(
+  A: ShelfBean,
+  B: ShelfBean,
+  _shelf: ShelfBean[],
+  cups: DiaryCup[],
+  savedPairs: SavedPair[] = [],
+): PairSuggestion {
+  const lowRated = new Set(
+    cups.filter((c) => (c.rating ?? 0) <= 3).map((c) => c.name.toLowerCase()),
+  );
+  const topCountries = new Set(
+    cups
+      .filter((c) => (c.rating ?? 0) >= 4)
+      .map((c) => resolveCountryKey(c.country, c.name))
+      .filter(Boolean) as string[],
+  );
+  const savedKeys = new Set(savedPairs.map((p) => pairKey(p.bean_a, p.bean_b)));
+
+  const ckA = resolveCountryKey(A.country, A.name);
+  const ckB = resolveCountryKey(B.country, B.name);
+  const pkA = processKind(A.process, A.name);
+  const pkB = processKind(B.process, B.name);
+  const vfA = varietyFamily(A.variety, A.name);
+  const vfB = varietyFamily(B.variety, B.name);
+
+  let score = 0;
+  const reasons: string[] = [];
+
+  if (ckA && ckB && ckA !== ckB) {
+    score += 4;
+    reasons.push('разные страны — контраст терруара');
+  } else if (ckA && ckB && ckA === ckB) {
+    score -= 2;
+    if (pkA !== pkB) {
+      score += 2;
+      reasons.push('одна страна, но разная обработка');
+    } else if (vfA !== vfB) {
+      score += 1;
+      reasons.push('одна страна, разные сорта');
+    } else {
+      reasons.push('одна страна и похожий профиль — слабее для сравнения');
+    }
+  }
+
+  if (pkA !== pkB && (pkA === 'anaerobic' || pkB === 'anaerobic' || pkA === 'natural' || pkB === 'natural')) {
+    score += 2;
+    reasons.push('контраст обработки (чистое vs фермент)');
+  }
+
+  if (vfA !== vfB) {
+    score += 1;
+    reasons.push('разные сорта');
+  }
+
+  if (ckA && topCountries.has(ckA)) score += 1;
+  if (ckB && topCountries.has(ckB)) score += 1;
+
+  if (lowRated.has(A.name.toLowerCase()) || lowRated.has(B.name.toLowerCase())) {
+    score -= 3;
+    reasons.push('один из лотов уже получал ≤3★');
+  }
+
+  if (savedKeys.has(pairKey(A.name, B.name))) {
+    score += 5;
+    reasons.push('пользователь уже отмечал эту пару');
+  }
+
+  const axis = `${ckA || ''}-${ckB || ''}`;
+  if (/china.*brazil|brazil.*china/.test(axis)) {
+    score += 2;
+    reasons.push('Китай × Бразилия — чай/орех vs фрукт/сладость');
+  }
+  if (/china.*indonesia|indonesia.*china/.test(axis)) {
+    score += 1;
+    reasons.push('Азия vs Азия, но разная логика обработки');
+  }
+
+  return { a: A.name, b: B.name, score, reason: reasons.slice(0, 3).join('; ') || 'пара с полки' };
 }
 
 function countrySnippet(countryKey: string | null): string {
@@ -68,99 +148,17 @@ export function suggestPairings(
 ): PairSuggestion[] {
   if (shelf.length < 2) return [];
 
-  const lowRated = new Set(
-    cups
-      .filter((c) => (c.rating ?? 0) <= 3)
-      .map((c) => c.name.toLowerCase()),
-  );
-
-  const topCountries = new Set(
-    cups
-      .filter((c) => (c.rating ?? 0) >= 4)
-      .map((c) => resolveCountryKey(c.country, c.name))
-      .filter(Boolean) as string[],
-  );
-
-  const savedKeys = new Set(savedPairs.map((p) => pairKey(p.bean_a, p.bean_b)));
-
   const out: PairSuggestion[] = [];
 
   for (let i = 0; i < shelf.length; i++) {
     for (let j = i + 1; j < shelf.length; j++) {
-      const A = shelf[i];
-      const B = shelf[j];
-      const ckA = resolveCountryKey(A.country, A.name);
-      const ckB = resolveCountryKey(B.country, B.name);
-      const pkA = processKind(A.process, A.name);
-      const pkB = processKind(B.process, B.name);
-      const vfA = varietyFamily(A.variety, A.name);
-      const vfB = varietyFamily(B.variety, B.name);
-
-      let score = 0;
-      const reasons: string[] = [];
-
-      if (ckA && ckB && ckA !== ckB) {
-        score += 4;
-        reasons.push('разные страны — контраст терруара');
-      } else if (ckA && ckB && ckA === ckB) {
-        score -= 2;
-        if (pkA !== pkB) {
-          score += 2;
-          reasons.push('одна страна, но разная обработка');
-        } else if (vfA !== vfB) {
-          score += 1;
-          reasons.push('одна страна, разные сорта');
-        } else {
-          reasons.push('одна страна и похожий профиль — слабее для сравнения');
-        }
-      }
-
-      if (pkA !== pkB && (pkA === 'anaerobic' || pkB === 'anaerobic' || pkA === 'natural' || pkB === 'natural')) {
-        score += 2;
-        reasons.push('контраст обработки (чистое vs фермент)');
-      }
-
-      if (vfA !== vfB) {
-        score += 1;
-        reasons.push('разные сорта');
-      }
-
-      if (ckA && topCountries.has(ckA)) score += 1;
-      if (ckB && topCountries.has(ckB)) score += 1;
-
-      if (lowRated.has(A.name.toLowerCase()) || lowRated.has(B.name.toLowerCase())) {
-        score -= 3;
-        reasons.push('один из лотов уже получал ≤3★');
-      }
-
-      if (savedKeys.has(pairKey(A.name, B.name))) {
-        score += 5;
-        reasons.push('пользователь уже отмечал эту пару');
-      }
-
-      // Комплементарные оси из практики
-      const axis = `${ckA || ''}-${ckB || ''}`;
-      if (/china.*brazil|brazil.*china/.test(axis)) {
-        score += 2;
-        reasons.push('Китай × Бразилия — чай/орех vs фрукт/сладость');
-      }
-      if (/china.*indonesia|indonesia.*china/.test(axis)) {
-        score += 1;
-        reasons.push('Азия vs Азия, но разная логика обработки');
-      }
-
-      if (score < 2) continue;
-
-      out.push({
-        a: A.name,
-        b: B.name,
-        score,
-        reason: reasons.slice(0, 3).join('; '),
-      });
+      const scored = scoreShelfPair(shelf[i], shelf[j], shelf, cups, savedPairs);
+      if (scored.score < 2) continue;
+      out.push(scored);
     }
   }
 
-  return out.sort((x, y) => y.score - x.score).slice(0, 3);
+  return out.sort((x, y) => y.score - x.score).slice(0, 8);
 }
 
 export function formatPairSuggestions(pairs: PairSuggestion[]): string {
