@@ -46,7 +46,7 @@ export const POST: APIRoute = async ({ request }) => {
 
   const context = await buildShelfAssistantContext(admin, auth.user.id);
 
-  const sys = `Ты — персональный дегустационный ассистент Shmelco Coffee Guide на полке пользователя.
+  const sys = `Ты — IVAN, персональный дегустационный ассистент Shmelco на полке пользователя. Представляйся как IVAN. Отвечай по-русски, конкретно: лоты с полки, метод, граммы, температура, зачем сравнение.
 ${context}`;
 
   const openai = getOpenAI();

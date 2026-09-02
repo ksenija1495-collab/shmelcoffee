@@ -360,7 +360,13 @@ import Nav from '../components/Nav.astro';
   .shelf-assist-title { font-size: .92rem; font-weight: 700; color: var(--text); }
   .shelf-assist-badge { font-size: .68rem; font-weight: 700; padding: 3px 8px; border-radius: 999px; background: rgba(90,140,90,.15); color: var(--text); }
   .shelf-assist-desc { font-size: .78rem; color: var(--text-dim); line-height: 1.5; margin: 0 0 10px; }
-  .shelf-assist-chat { border: 1px solid var(--border); border-radius: 12px; background: var(--bg); max-height: 360px; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+  .shelf-assist-chat {
+    border: 1px solid var(--border); border-radius: 12px; background: var(--bg);
+    max-height: 360px; overflow-y: auto; padding: 12px;
+    display: none; flex-direction: column; gap: 10px;
+  }
+  .shelf-assist-chat.has-messages { display: flex; }
+  .shelf-assist-pair-form[hidden] { display: none !important; }
   .shelf-assist-msg { font-size: .8rem; line-height: 1.55; padding: 10px 12px; border-radius: 10px; max-width: 92%; white-space: pre-wrap; }
   .shelf-assist-msg.user { align-self: flex-end; background: var(--text); color: var(--bg); }
   .shelf-assist-msg.bot { align-self: flex-start; background: var(--surface); border: 1px solid var(--border); color: var(--text); }
@@ -386,6 +392,7 @@ import Nav from '../components/Nav.astro';
   .shelf-assist-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 10px; }
   .shelf-assist-chip { font-size: .72rem; padding: 6px 10px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); color: var(--text-dim); cursor: pointer; font-family: inherit; }
   .shelf-assist-chip:hover { border-color: var(--accent); color: var(--text); }
+  .shelf-assist-chip--primary { border-color: var(--accent); background: rgba(168,124,79,.08); color: var(--text); font-weight: 600; }
   .shelf-assist-form { display: flex; gap: 8px; margin-top: 10px; }
   .shelf-assist-inp { flex: 1; min-width: 0; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); font-size: .82rem; font-family: inherit; }
   .shelf-assist-send { flex-shrink: 0; padding: 10px 14px; border-radius: 10px; border: 0; background: var(--text); color: var(--bg); font-weight: 700; font-size: .78rem; cursor: pointer; font-family: inherit; }
@@ -849,9 +856,9 @@ import Nav from '../components/Nav.astro';
 
     if (!access.hasAccess) {
       mount.innerHTML = `<div class="shelf-assist pro-card">
-        <div class="shelf-assist-h"><div class="shelf-assist-title">🤖 AI-ассистент на полке</div></div>
+        <div class="shelf-assist-h"><div class="shelf-assist-title">🤖 IVAN — ассистент на полке</div></div>
         <p class="shelf-assist-desc">Сравнения лотов, рецепты (V60, AeroPress с байпасом), план дегустации — по твоей полке и дневнику. Подписка · 30 дней.</p>
-        <button type="button" class="btn btn-primary" data-buy-assist="1" style="font-size:.82rem">Подключить ассистента</button>
+        <button type="button" class="btn btn-primary" data-buy-assist="1" style="font-size:.82rem">Подключить IVAN</button>
         ${creditsOk && guideCredits > 0 ? `<p class="shelf-assist-desc" style="margin-top:8px">Пока доступен в бета-режиме при наличии оплаченных гидов — обнови страницу.</p>` : ''}
       </div>`;
       mount.querySelector('[data-buy-assist]')?.addEventListener('click', () => {
@@ -875,19 +882,20 @@ import Nav from '../components/Nav.astro';
 
     mount.innerHTML = `<div class="shelf-assist pro-card">
       <div class="shelf-assist-h">
-        <div class="shelf-assist-title">🤖 AI-ассистент</div>
+        <div class="shelf-assist-title">🤖 IVAN</div>
         <span class="shelf-assist-badge">${esc(badge)}</span>
       </div>
-      <p class="shelf-assist-desc">Спроси про сравнения, рецепты и дегустацию — знаю твою полку (${beanCount} зёрен) и недавние чашки.</p>
-      ${assistPaid ? `<div class="paid-banner" style="margin-bottom:10px">✅ Подписка активирована. Задай первый вопрос ниже.</div>` : ''}
+      <p class="shelf-assist-desc">Спроси IVAN про сравнения, рецепты и дегустацию — знает твою полку (${beanCount} зёрен) и недавние чашки.</p>
+      ${assistPaid ? `<div class="paid-banner" style="margin-bottom:10px">✅ Подписка активирована. Задай первый вопрос IVAN ниже.</div>` : ''}
       <div class="shelf-assist-chips">
+        <button type="button" class="shelf-assist-chip shelf-assist-chip--primary" data-assist-prompt="Предложи сегодня исследование по моей коллекции — что заварить или с чем сравнить, с рецептом и зачем.">Исследование сегодня</button>
         <button type="button" class="shelf-assist-chip" data-assist-prompt="С чем сегодня сравнить мои китайские лоты с полки и зачем?">Китай: с чем сравнить</button>
-        <button type="button" class="shelf-assist-chip" data-assist-prompt="Дай рецепт AeroPress с байпасом для Catimor natural с полки — конкретные граммы и температуру.">AeroPress + байпас</button>
+        <button type="button" class="shelf-assist-chip" data-assist-prompt="Дай рецепт AeroPress с байпасом для лота с полки — конкретные граммы и температуру.">AeroPress + байпас</button>
         <button type="button" class="shelf-assist-chip" data-assist-prompt="Составь план дегустации на 5 дней по моей полке — сначала solo, потом сравнения.">План на неделю</button>
       </div>
       <div class="shelf-assist-chat" id="shelfAssistChat"></div>
       <form class="shelf-assist-form" id="shelfAssistForm">
-        <input class="shelf-assist-inp" id="shelfAssistInput" placeholder="Например: с чем сравнить Китай Тяньюй с другой страной?" autocomplete="off"/>
+        <input class="shelf-assist-inp" id="shelfAssistInput" placeholder="Спроси IVAN…" autocomplete="off"/>
         <button type="submit" class="shelf-assist-send" id="shelfAssistSend">→</button>
       </form>
       <div class="shelf-assist-pair-row" style="margin-top:8px">
@@ -926,6 +934,7 @@ import Nav from '../components/Nav.astro';
     };
 
     const renderUserMsg = (text: string) => {
+      chat.classList.add('has-messages');
       const wrap = document.createElement('div');
       wrap.className = 'shelf-assist-turn user-turn';
       const el = document.createElement('div');
@@ -1029,6 +1038,7 @@ import Nav from '../components/Nav.astro';
       if (t.role === 'user') renderUserMsg(t.content);
       else renderBotMsg(t.content, '');
     });
+    if (history.length) chat.classList.add('has-messages');
 
     const ask = async (text: string) => {
       const message = text.trim();
@@ -1038,6 +1048,7 @@ import Nav from '../components/Nav.astro';
       persist();
       input.value = '';
       sendBtn.disabled = true;
+      chat.classList.add('has-messages');
 
       const loadingWrap = document.createElement('div');
       loadingWrap.className = 'shelf-assist-turn';
