@@ -459,12 +459,17 @@ import Nav from '../components/Nav.astro';
   .ref-country-detail .ref-country-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
   .ref-country-detail .ref-country-lead { font-size: .84rem; line-height: 1.55; margin-bottom: 10px; }
   .ref-ext-link { display: inline-block; margin-top: 12px; font-size: .78rem; color: var(--accent); font-weight: 600; }
-  .equip-section { margin-bottom: 14px; }
-  .equip-h { font-size: .78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 8px; }
+  .equip-section { margin-bottom: 14px; padding: 0 2px; }
+  .equip-h { font-size: .78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 6px; }
   .equip-chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-  .equip-chip { font-size: .76rem; font-weight: 600; padding: 6px 11px; border-radius: 999px; border: 1px solid var(--border); background: var(--bg); color: var(--text); }
-  .equip-add { font-size: .76rem; font-weight: 700; padding: 6px 10px; border-radius: 999px; border: 1px dashed var(--border); color: var(--text-dim); text-decoration: none; }
-  .equip-empty { font-size: .78rem; color: var(--text-muted); line-height: 1.45; margin: 0; }
+  .equip-tag {
+    font-size: .76rem; font-weight: 600; padding: 7px 12px; border-radius: 999px;
+    border: 1px solid var(--border); background: var(--surface); color: var(--text-dim);
+    cursor: pointer; font-family: inherit; transition: .15s;
+  }
+  .equip-tag:hover { border-color: var(--accent); color: var(--text); }
+  .equip-tag.on { border-color: var(--accent); background: rgba(168,124,79,.14); color: var(--text); }
+  .equip-empty { font-size: .72rem; color: var(--text-muted); line-height: 1.4; margin: 0 0 8px; }
   .ref-flag { font-size: 1.4rem; }
   .ref-name { font-weight: 700; font-size: .84rem; }
   .ref-flavors { font-size: .68rem; color: var(--text-muted); line-height: 1.35; }
@@ -493,6 +498,7 @@ import Nav from '../components/Nav.astro';
   import { renderReferencePanel, bindReferencePanel, resetReferenceToHome } from '../lib/accountReferencePanel';
   import { bestDiaryRecipeForBean } from '../lib/tastingFlights';
   import { filterAvailableShelfBeans } from '../lib/shelfAvailability';
+  import { EQUIPMENT_TAGS, findEquipmentItemForTag, equipmentItemMatchesTag } from '../lib/equipmentTags';
 
   const supabase = createClient(
     import.meta.env.PUBLIC_SUPABASE_URL,
@@ -824,13 +830,11 @@ import Nav from '../components/Nav.astro';
   }
 
   function renderEquipmentSection(equipItems: any[]): string {
-    if (!equipItems.length) {
-      return `<div class="equip-section profile-card"><div class="equip-h">⚙️ Моё оборудование</div><p class="equip-empty">V60, AeroPress, Moka pot… — чтобы IVAN и рецепты знали, чем ты завариваешь.</p><a href="/add-shelf?kind=equipment" class="add-cup-btn" style="display:inline-block;margin-top:8px;text-decoration:none">+ Оборудование</a></div>`;
-    }
-    const chips = equipItems.map((e) =>
-      `<span class="equip-chip" title="${esc(e.name)}">${esc(e.category || e.name)}</span>`,
-    ).join('');
-    return `<div class="equip-section profile-card"><div class="equip-h">⚙️ Моё оборудование</div><div class="equip-chips">${chips}<a href="/add-shelf?kind=equipment" class="equip-add">+</a></div></div>`;
+    const tags = EQUIPMENT_TAGS.map((t) => {
+      const on = equipItems.some((e) => equipmentItemMatchesTag(e, t));
+      return `<button type="button" class="equip-tag${on ? ' on' : ''}" data-equip-tag="${t.id}" aria-pressed="${on}">${esc(t.label)}</button>`;
+    }).join('');
+    return `<div class="equip-section" id="equipSection"><div class="equip-h">⚙️ Чем завариваешь</div><div class="equip-chips">${tags}</div></div>`;
   }
 
   function renderChecklist(userId: string, latestProfile: any, cups: any[], shelf: any[], flights: any[], openedSize: number) {
@@ -842,7 +846,7 @@ import Nav from '../components/Nav.astro';
     if (hasBean && hasEquip && hasCup && doneFlight) return '';
     const items = [
       { done: hasBean, label: 'Добавить зерно', href: '/add-shelf?kind=bean' },
-      { done: hasEquip, label: 'Добавить оборудование (V60, AP…)', href: '/add-shelf?kind=equipment' },
+      { done: hasEquip, label: 'Отметить оборудование (V60, AP…)', href: '/account?tab=shelf#equipSection' },
       { done: hasCup, label: 'Записать первую чашку', href: '/add-cup' },
       { done: doneFlight, label: 'Пройти первое сравнение', href: '/account?tab=flights&new=1' },
       { done: doneQuiz, label: 'Тест вкуса (необязательно)', href: '/quiz' },
@@ -1347,6 +1351,11 @@ import Nav from '../components/Nav.astro';
       try { const sv = localStorage.getItem('acc_tab'); if (sv && page.querySelector('.acc-tab[data-tab="' + sv + '"]')) startTab = sv; } catch (e) {}
     }
     activateTab(startTab);
+    if (location.hash === '#equipSection') {
+      requestAnimationFrame(() => {
+        document.getElementById('equipSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    }
 
     bindFlightsPanel(page, supabase, user.id, shelf, cups, savedPairs, init);
 
@@ -1399,6 +1408,29 @@ import Nav from '../components/Nav.astro';
     document.getElementById('logoutBtn')?.addEventListener('click', async () => { await supabase.auth.signOut(); window.location.href = '/'; });
 
     page.querySelectorAll('[data-shelf-del]').forEach(b => b.addEventListener('click', async () => { await supabase.from('shelf_items').delete().eq('id', (b as HTMLElement).dataset.shelfDel); init(); }));
+
+    page.querySelectorAll('[data-equip-tag]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const tagId = (btn as HTMLElement).dataset.equipTag!;
+        const tag = EQUIPMENT_TAGS.find((t) => t.id === tagId);
+        if (!tag) return;
+        const equipNow = shelf.filter((s: any) => s.kind === 'equipment');
+        const existing = findEquipmentItemForTag(equipNow, tagId);
+        (btn as HTMLButtonElement).disabled = true;
+        if (existing?.id) {
+          await supabase.from('shelf_items').delete().eq('id', existing.id).eq('user_id', user.id);
+        } else {
+          await supabase.from('shelf_items').insert({
+            user_id: user.id,
+            kind: 'equipment',
+            name: tag.name,
+            category: tag.category,
+          });
+        }
+        (btn as HTMLButtonElement).disabled = false;
+        init();
+      });
+    });
     page.querySelectorAll('[data-shelf-status]').forEach(b => b.addEventListener('click', async () => {
       const btn = b as HTMLButtonElement;
       const prev = btn.dataset.status || 'ok';

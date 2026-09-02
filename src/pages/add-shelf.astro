@@ -10,7 +10,7 @@ import { DB, countryOrder } from '../data/countries';
   <div class="container">
     <div class="shelf-form-page">
       <a href="/account?tab=shelf" class="sf-back">← В кабинет</a>
-      <h1 id="sfTitle">Добавить на полку</h1>
+      <h1 id="sfTitle">Добавить зерно</h1>
       <p class="sf-sub">Одно зерно вручную — или фото списка заказа, чека, скрина корзины.</p>
 
       <div class="mode-toggle" id="modeToggle">
@@ -19,10 +19,6 @@ import { DB, countryOrder } from '../data/countries';
       </div>
 
       <div class="sf-card" id="sfFormCard">
-        <div class="kind-toggle">
-          <button type="button" class="kind-btn" data-kind="bean">🫘 Зерно</button>
-          <button type="button" class="kind-btn" data-kind="equipment">⚙️ Оборудование</button>
-        </div>
         <label class="fl">Название *</label>
         <input type="text" id="f_name" placeholder="напр. Эфиопия Гедео / Воронка V60"/>
         <div id="beanFields">
@@ -44,10 +40,6 @@ import { DB, countryOrder } from '../data/countries';
             <div><label class="fl">Обработка</label><select id="f_process"></select></div>
           </div>
           <div id="brewPreview" class="brew-preview" hidden></div>
-        </div>
-        <div id="equipFields" style="display:none">
-          <label class="fl">Категория</label>
-          <select id="f_category"></select>
         </div>
         <label class="fl">Фото пачки (необязательно)</label>
         <input type="file" id="f_photo" accept="image/*"/>
@@ -172,7 +164,6 @@ import { DB, countryOrder } from '../data/countries';
 
   const PROCESSES = PROCESS_OPTIONS;
   const COUNTRIES = countriesForSelect();
-  const CATEGORIES = ['Воронка','Кофемолка','Весы','Чайник с тонким носиком','Эспрессо-машина','Гейзерная','Френч-пресс','Аэропресс','Кемекс','Турка','Капсульная','Другое'];
   let kind = 'bean';
   let mode: 'manual' | 'photo' = 'manual';
   let photoFile: File | null = null;
@@ -256,12 +247,11 @@ import { DB, countryOrder } from '../data/countries';
   }
 
   function setKind(k: string) {
-    kind = k;
-    document.querySelectorAll('.kind-btn').forEach(b => b.classList.toggle('on', (b as HTMLElement).dataset.kind === k));
-    (document.getElementById('beanFields') as HTMLElement).style.display = k === 'bean' ? 'block' : 'none';
-    (document.getElementById('equipFields') as HTMLElement).style.display = k === 'equipment' ? 'block' : 'none';
+    kind = 'bean';
+    document.querySelectorAll('.kind-btn').forEach(b => b.classList.toggle('on', (b as HTMLElement).dataset.kind === 'bean'));
+    (document.getElementById('beanFields') as HTMLElement).style.display = 'block';
     if (mode === 'manual') {
-      document.getElementById('sfTitle')!.textContent = k === 'bean' ? 'Добавить зерно' : 'Добавить оборудование';
+      document.getElementById('sfTitle')!.textContent = 'Добавить зерно';
     }
     updateBrewPreview();
   }
@@ -416,11 +406,13 @@ import { DB, countryOrder } from '../data/countries';
     fill('f_country', COUNTRIES, 'выберите страну');
     bindCountryOther();
     fill('f_process', PROCESSES, 'выберите обработку');
-    fill('f_category', CATEGORIES, 'выберите категорию');
-    document.querySelectorAll('.kind-btn').forEach(b => b.addEventListener('click', () => setKind((b as HTMLElement).dataset.kind!)));
     document.querySelectorAll('.mode-btn').forEach(b => b.addEventListener('click', () => setMode((b as HTMLElement).dataset.mode as any)));
     const params = new URLSearchParams(window.location.search);
-    setKind(params.get('kind') === 'equipment' ? 'equipment' : 'bean');
+    if (params.get('kind') === 'equipment') {
+      window.location.replace('/account?tab=shelf#equipSection');
+      return;
+    }
+    setKind('bean');
     setMode(params.get('mode') === 'photo' ? 'photo' : 'manual');
     const preCountry = params.get('country');
     if (preCountry) setCountryValue(preCountry);
@@ -479,27 +471,22 @@ import { DB, countryOrder } from '../data/countries';
         photo_url = pub.publicUrl;
       }
       const payload: any = {
-        user_id: user.id, kind, name,
-        variety: kind === 'bean' ? readVarietyValue() : null,
-        roaster: kind === 'bean' ? ((document.getElementById('f_roaster') as HTMLInputElement).value.trim() || null) : null,
-        country: kind === 'bean' ? readCountryValue() : null,
-        process: kind === 'bean' ? ((document.getElementById('f_process') as HTMLSelectElement).value || null) : null,
-        category: kind === 'equipment' ? ((document.getElementById('f_category') as HTMLSelectElement).value || null) : null,
+        user_id: user.id, kind: 'bean', name,
+        variety: readVarietyValue(),
+        roaster: (document.getElementById('f_roaster') as HTMLInputElement).value.trim() || null,
+        country: readCountryValue(),
+        process: (document.getElementById('f_process') as HTMLSelectElement).value || null,
         photo_url, source: 'manual',
       };
       const { error } = await supabase.from('shelf_items').insert(payload);
       if (error) throw error;
-      if (kind === 'bean') {
-        const q = new URLSearchParams();
-        q.set('name', name);
-        if (payload.roaster) q.set('roaster', payload.roaster);
-        if (payload.country) q.set('country', payload.country);
-        if (payload.process) q.set('process', payload.process);
-        q.set('from_shelf', '1');
-        showBrewDone(payload, `/add-cup?${q.toString()}`);
-      } else {
-        window.location.href = '/account?tab=shelf';
-      }
+      const q = new URLSearchParams();
+      q.set('name', name);
+      if (payload.roaster) q.set('roaster', payload.roaster);
+      if (payload.country) q.set('country', payload.country);
+      if (payload.process) q.set('process', payload.process);
+      q.set('from_shelf', '1');
+      showBrewDone(payload, `/add-cup?${q.toString()}`);
     } catch (e: any) {
       msg.className = 'sf-msg error'; msg.textContent = 'Ошибка: ' + (e.message || e);
       btn.disabled = false; btn.textContent = 'Добавить на полку';
