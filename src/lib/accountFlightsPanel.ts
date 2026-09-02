@@ -83,13 +83,17 @@ export function renderFlightsPanel(
     ? suggestPairingsForGoal(shelfBeans, cups, savedPairs, defaultGoal)
     : [];
   const initialPair = initialPairs[0];
+  const initialBrewKey = initialPair?.brewPresetKey && FLIGHT_BREW_PRESETS[initialPair.brewPresetKey]
+    ? initialPair.brewPresetKey
+    : 'AeroPress';
+  const initialBrewHint = FLIGHT_BREW_PRESETS[initialBrewKey]?.label || '';
 
   const beanOptions = beans.map(
     (s) => `<option value="${esc(s.id)}">${esc(s.name)}${s.country ? ` · ${esc(s.country)}` : ''}</option>`,
   ).join('');
 
   const brewOptions = Object.keys(FLIGHT_BREW_PRESETS)
-    .map((k) => `<option value="${esc(k)}">${esc(FLIGHT_BREW_PRESETS[k].label)}</option>`)
+    .map((k) => `<option value="${esc(k)}"${k === initialBrewKey ? ' selected' : ''}>${esc(FLIGHT_BREW_PRESETS[k].label)}</option>`)
     .join('');
 
   const goalChips = goals.length
@@ -102,6 +106,7 @@ export function renderFlightsPanel(
     ? `<div class="flight-pair-pick" id="flightGoalPick">
         <div class="flight-pair-names" id="flightGoalPairNames">${esc(initialPair.a)} × ${esc(initialPair.b)}</div>
         <div class="flight-pair-reason" id="flightGoalPairReason">${esc(initialPair.reason)}</div>
+        <div class="flight-pair-brew-hint" id="flightGoalBrewHint">${initialBrewHint ? `☕ Рецепт на оба: ${esc(initialBrewHint)}` : ''}</div>
         <div class="flight-pair-actions">
           <button type="button" class="flight-pair-btn primary" id="flightGoalAccept">Принять пару</button>
           <button type="button" class="flight-pair-btn" id="flightGoalNext" ${initialPairs.length < 2 ? 'disabled' : ''}>↻ Другая</button>
@@ -122,6 +127,7 @@ export function renderFlightsPanel(
         <div class="flight-pair-names" id="flightPairNames"></div>
         <div class="flight-pair-reason" id="flightPairReason"></div>
         <div class="flight-auto-goal" id="flightAutoGoal"></div>
+        <div class="flight-pair-brew-hint" id="flightPairBrewHint"></div>
         <div class="flight-pair-actions">
           <button type="button" class="flight-pair-btn primary" id="flightPairAccept">Принять</button>
           <button type="button" class="flight-pair-btn" id="flightPairNext">↻ Другой лот</button>
@@ -244,12 +250,14 @@ export function bindFlightsPanel(
   const goalPairReason = root.querySelector('#flightGoalPairReason');
   const goalPairCounter = root.querySelector('#flightGoalPairCounter');
   const goalPairNext = root.querySelector('#flightGoalNext') as HTMLButtonElement | null;
+  const brewSel = root.querySelector('#flightBrew') as HTMLSelectElement | null;
+  const pairBrewHint = root.querySelector('#flightPairBrewHint');
+  const goalBrewHint = root.querySelector('#flightGoalBrewHint');
 
-  const setGoalUi = (goalId: ComparisonGoalId) => {
-    currentGoal = goalId;
-    root.querySelectorAll('.flight-goal-chip').forEach((chip) => {
-      chip.classList.toggle('on', (chip as HTMLElement).dataset.flightGoal === goalId);
-    });
+  const setBrewHint = (el: Element | null, presetKey?: string) => {
+    if (!el) return;
+    const preset = presetKey ? FLIGHT_BREW_PRESETS[presetKey] : null;
+    el.textContent = preset ? `☕ Рецепт на оба: ${preset.label}` : '';
   };
 
   const applyPartnerToForm = (partner: AnchoredPartnerSuggestion) => {
@@ -257,6 +265,18 @@ export function bindFlightsPanel(
     if (itemB && selB) selB.value = itemB.id;
     setGoalUi(partner.goalId);
     if (focusInp) focusInp.value = goalById(partner.goalId).focusDefault;
+    if (brewSel && partner.brewPresetKey && FLIGHT_BREW_PRESETS[partner.brewPresetKey]) {
+      brewSel.value = partner.brewPresetKey;
+    }
+    setBrewHint(pairBrewHint, partner.brewPresetKey);
+    setBrewHint(goalBrewHint, partner.brewPresetKey);
+  };
+
+  const setGoalUi = (goalId: ComparisonGoalId) => {
+    currentGoal = goalId;
+    root.querySelectorAll('.flight-goal-chip').forEach((chip) => {
+      chip.classList.toggle('on', (chip as HTMLElement).dataset.flightGoal === goalId);
+    });
   };
 
   const renderAnchorPartner = () => {
@@ -279,7 +299,13 @@ export function bindFlightsPanel(
     if (pairNames) pairNames.textContent = `${partner.a} × ${partner.b}`;
     if (pairReason) pairReason.textContent = partner.reason;
     const g = goalById(partner.goalId);
-    if (autoGoalEl) autoGoalEl.innerHTML = `🎯 Цель: <b>${g.emoji} ${esc(g.label)}</b> — ${esc(g.focusDefault)}`;
+    if (autoGoalEl) {
+      let goalHtml = `🎯 Цель: <b>${g.emoji} ${esc(g.label)}</b> — ${esc(g.focusDefault)}`;
+      if (partner.terroirHint) {
+        goalHtml += `<br><span style="font-weight:400;color:var(--text-dim)">👀 ${esc(partner.terroirHint)}</span>`;
+      }
+      autoGoalEl.innerHTML = goalHtml;
+    }
     if (pairCounter) {
       pairCounter.textContent = anchorPartners.length > 1
         ? `${partnerIndex + 1} из ${anchorPartners.length}`
@@ -330,6 +356,12 @@ export function bindFlightsPanel(
       goalPairCounter.textContent = goalPairs.length > 1 ? `${goalPairIndex + 1} из ${goalPairs.length}` : '';
     }
     if (goalPairNext) goalPairNext.disabled = goalPairs.length < 2;
+    setGoalUi(pair.goalId);
+    if (focusInp) focusInp.value = goalById(pair.goalId).focusDefault;
+    if (brewSel && pair.brewPresetKey && FLIGHT_BREW_PRESETS[pair.brewPresetKey]) {
+      brewSel.value = pair.brewPresetKey;
+    }
+    setBrewHint(goalBrewHint, pair.brewPresetKey);
   };
 
   const setGoal = (goalId: ComparisonGoalId, opts?: { skipAnchorReload?: boolean }) => {
@@ -381,7 +413,8 @@ export function bindFlightsPanel(
     const itemB = byName.get(pair.b.toLowerCase());
     if (itemA && selA) selA.value = itemA.id;
     if (itemB && selB) selB.value = itemB.id;
-    loadAnchorPartners(currentGoal);
+    applyPartnerToForm(pair);
+    if (itemA) loadAnchorPartners();
   });
 
   root.querySelector('#flightGoalNext')?.addEventListener('click', () => {

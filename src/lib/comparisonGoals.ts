@@ -1,9 +1,10 @@
 import { resolveCountryKey } from './countryResolve';
 import type { DiaryCup } from './shelfAssistantDiary';
 import type { PairSuggestion, SavedPair, ShelfBean } from './shelfAssistantPairings';
-import { pairKey, scoreShelfPair } from './shelfAssistantPairings';
+import { pairKey, scoreShelfPair, effectiveVarietyFamily } from './shelfAssistantPairings';
 
 export type ComparisonGoalId =
+  | 'terroir'
   | 'countries'
   | 'process'
   | 'variety'
@@ -19,6 +20,13 @@ export type ComparisonGoal = {
 };
 
 export const COMPARISON_GOALS: ComparisonGoal[] = [
+  {
+    id: 'terroir',
+    emoji: '🌋',
+    label: 'Сорт × терруар',
+    focusDefault:
+      'Один сорт — разное происхождение: тип кислотности, сладость, тело и длина послевкусия при остывании',
+  },
   {
     id: 'countries',
     emoji: '🌍',
@@ -57,10 +65,46 @@ export const COMPARISON_GOALS: ComparisonGoal[] = [
   },
 ];
 
+const TERROIR_PAIR_HINTS: Record<string, string> = {
+  'drcongo-rwanda':
+    'Руанда — чай, цитрус, карамель; Конго — смородина, малина, длиннее финиш',
+  'burundi-rwanda': 'Руанда мягче и чайнее; Бурунди ягоднее и ярче',
+  'burundi-drcongo': 'Оба бурбон у озера: Бурунди чище, Конго «дичее»',
+  'kenya-rwanda': 'Кения — томат и смородина; Руанда — мягче, цитрус',
+  'kenya-burundi': 'Кения плотнее и «томатнее»; Бурунди чайнее',
+  'colombia-peru': 'Оба бурбон в Андах: Колумбия ярче, Перу мягче и шоколаднее',
+  'bolivia-kenya': 'SL28/батиан: Боливия персик, Кения смородина — сорт vs терруар',
+};
+
 const BRIGHT_COUNTRIES = new Set([
-  'ethiopia', 'kenya', 'rwanda', 'burundi', 'malawi', 'drcongo', 'colombia', 'panama',
+  'ethiopia', 'kenya', 'rwanda', 'burundi', 'drcongo', 'malawi', 'colombia', 'panama',
 ]);
 const LOW_ACID_COUNTRIES = new Set(['brazil', 'indonesia', 'yemen', 'bolivia', 'guatemala', 'hawaii']);
+const AFRICAN_BRIGHT = new Set(['ethiopia', 'kenya', 'rwanda', 'burundi', 'drcongo', 'malawi']);
+
+function isWashed(process?: string | null, name?: string | null): boolean {
+  const p = `${process || ''} ${name || ''}`.toLowerCase();
+  if (/натур|natural|хани|honey|анаэроб|anaerobic/.test(p)) return false;
+  return /мыт|washed|wet/.test(p) || Boolean(process || name);
+}
+
+/** Рекомендуемый ключ пресета из FLIGHT_BREW_PRESETS. */
+export function suggestBrewPresetKey(
+  a: ShelfBean,
+  b: ShelfBean,
+  goalId?: ComparisonGoalId,
+): string {
+  const ckA = resolveCountryKey(a.country, a.name);
+  const ckB = resolveCountryKey(b.country, b.name);
+  const bothAfrican = Boolean(ckA && ckB && AFRICAN_BRIGHT.has(ckA) && AFRICAN_BRIGHT.has(ckB));
+  const bothWashed = isWashed(a.process, a.name) && isWashed(b.process, b.name);
+  const terroir = isTerroirPair(a, b);
+
+  if ((goalId === 'terroir' || terroir) && bothAfrican && bothWashed) return 'V60 (африка)';
+  if (bothAfrican && bothWashed) return 'V60 (африка)';
+  if (goalId === 'terroir' || terroir) return 'V60';
+  return 'AeroPress';
+}
 
 function processKind(process?: string | null, name?: string | null): string {
   const p = `${process || ''} ${name || ''}`.toLowerCase();
@@ -71,21 +115,30 @@ function processKind(process?: string | null, name?: string | null): string {
   return 'other';
 }
 
-function varietyFamily(variety?: string | null, name?: string | null): string {
-  const t = `${variety || ''} ${name || ''}`.toLowerCase();
-  if (/катимор|catimor/.test(t)) return 'catimor';
-  if (/катуаи|catuai|катурра|caturra/.test(t)) return 'caturra-catuai';
-  if (/стармай|starmaya/.test(t)) return 'starmaya';
-  if (/гейш|geisha/.test(t)) return 'geisha';
-  if (/sl28|sl34|бурбон|bourbon|батиан|batian/.test(t)) return 'dense';
-  return 'other';
-}
-
 function acidityAxis(countryKey: string | null): 'bright' | 'low' | 'mid' {
   if (!countryKey) return 'mid';
   if (BRIGHT_COUNTRIES.has(countryKey)) return 'bright';
   if (LOW_ACID_COUNTRIES.has(countryKey)) return 'low';
   return 'mid';
+}
+
+export function isTerroirPair(a: ShelfBean, b: ShelfBean): boolean {
+  const ckA = resolveCountryKey(a.country, a.name);
+  const ckB = resolveCountryKey(b.country, b.name);
+  const vfA = effectiveVarietyFamily(a);
+  const vfB = effectiveVarietyFamily(b);
+  return vfA === vfB && vfA !== 'other' && Boolean(ckA && ckB && ckA !== ckB);
+}
+
+export function terroirCompareHint(a: ShelfBean, b: ShelfBean): string {
+  if (!isTerroirPair(a, b)) return '';
+  const ckA = resolveCountryKey(a.country, a.name);
+  const ckB = resolveCountryKey(b.country, b.name);
+  const key = [ckA, ckB].filter(Boolean).sort().join('-');
+  return (
+    TERROIR_PAIR_HINTS[key] ||
+    'Смотри: тип кислотности (цитрус vs ягода), сладость (карамель vs фрукт), тело при остывании'
+  );
 }
 
 function pairMatchesGoal(
@@ -98,10 +151,12 @@ function pairMatchesGoal(
   const ckB = resolveCountryKey(b.country, b.name);
   const pkA = processKind(a.process, a.name);
   const pkB = processKind(b.process, b.name);
-  const vfA = varietyFamily(a.variety, a.name);
-  const vfB = varietyFamily(b.variety, b.name);
+  const vfA = effectiveVarietyFamily(a);
+  const vfB = effectiveVarietyFamily(b);
 
   switch (goalId) {
+    case 'terroir':
+      return isTerroirPair(a, b);
     case 'countries':
       return Boolean(ckA && ckB && ckA !== ckB);
     case 'process':
@@ -128,6 +183,30 @@ function pairMatchesGoal(
   }
 }
 
+function enrichPair(
+  a: ShelfBean,
+  b: ShelfBean,
+  scored: PairSuggestion,
+  savedPairs: SavedPair[],
+): AnchoredPartnerSuggestion {
+  const goalId = inferBestGoalForPair(a, b, savedPairs);
+  const terroirHint = goalId === 'terroir' ? terroirCompareHint(a, b) : undefined;
+  const brewPresetKey = suggestBrewPresetKey(a, b, goalId);
+  let reason = scored.reason;
+  if (terroirHint && !reason.includes(terroirHint.slice(0, 20))) {
+    reason = reason ? `${reason}; ${terroirHint}` : terroirHint;
+  }
+  return {
+    ...scored,
+    a: a.name,
+    b: b.name,
+    goalId,
+    reason,
+    terroirHint,
+    brewPresetKey,
+  };
+}
+
 export function getAvailableComparisonGoals(
   shelf: ShelfBean[],
   savedPairs: SavedPair[] = [],
@@ -150,11 +229,11 @@ export function suggestPairingsForGoal(
   savedPairs: SavedPair[],
   goalId: ComparisonGoalId,
   opts?: { limit?: number; excludeKeys?: string[] },
-): PairSuggestion[] {
+): AnchoredPartnerSuggestion[] {
   if (shelf.length < 2) return [];
   const savedKeys = new Set(savedPairs.map((p) => pairKey(p.bean_a, p.bean_b)));
   const exclude = new Set(opts?.excludeKeys ?? []);
-  const out: PairSuggestion[] = [];
+  const out: AnchoredPartnerSuggestion[] = [];
 
   for (let i = 0; i < shelf.length; i++) {
     for (let j = i + 1; j < shelf.length; j++) {
@@ -165,14 +244,18 @@ export function suggestPairingsForGoal(
       if (exclude.has(key)) continue;
       const scored = scoreShelfPair(A, B, shelf, cups, savedPairs);
       if (scored.score < 1) continue;
-      out.push(scored);
+      out.push(enrichPair(A, B, scored, savedPairs));
     }
   }
 
   return out.sort((x, y) => y.score - x.score).slice(0, opts?.limit ?? 8);
 }
 
-export type AnchoredPartnerSuggestion = PairSuggestion & { goalId: ComparisonGoalId };
+export type AnchoredPartnerSuggestion = PairSuggestion & {
+  goalId: ComparisonGoalId;
+  terroirHint?: string;
+  brewPresetKey?: string;
+};
 
 export function inferBestGoalForPair(
   a: ShelfBean,
@@ -182,6 +265,7 @@ export function inferBestGoalForPair(
   const savedKeys = new Set(savedPairs.map((p) => pairKey(p.bean_a, p.bean_b)));
   const priority: ComparisonGoalId[] = [
     'saved',
+    'terroir',
     'countries',
     'process',
     'variety',
@@ -209,9 +293,9 @@ export function suggestPartnersForAnchor(
     if (other.name === anchor.name) continue;
     const scored = scoreShelfPair(anchor, other, shelf, cups, savedPairs);
     if (scored.score < 1) continue;
-    const goalId = inferBestGoalForPair(anchor, other, savedPairs);
-    if (opts?.goalId && goalId !== opts.goalId) continue;
-    out.push({ ...scored, a: anchor.name, b: other.name, goalId });
+    const enriched = enrichPair(anchor, other, scored, savedPairs);
+    if (opts?.goalId && enriched.goalId !== opts.goalId) continue;
+    out.push(enriched);
   }
 
   return out.sort((x, y) => y.score - x.score).slice(0, opts?.limit ?? 12);

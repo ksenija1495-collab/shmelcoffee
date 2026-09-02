@@ -34,13 +34,35 @@ function processKind(process?: string | null, name?: string | null): ProcessKind
   return 'other';
 }
 
-function varietyFamily(variety?: string | null, name?: string | null): string {
+export function varietyFamily(variety?: string | null, name?: string | null): string {
   const t = `${variety || ''} ${name || ''}`.toLowerCase();
   if (/катимор|catimor/.test(t)) return 'catimor';
   if (/катуаи|catuai|катурра|caturra/.test(t)) return 'caturra-catuai';
   if (/стармай|starmaya/.test(t)) return 'starmaya';
   if (/гейш|geisha/.test(t)) return 'geisha';
   if (/sl28|sl34|бурбон|bourbon|батиан|batian/.test(t)) return 'dense';
+  return 'other';
+}
+
+export function varietyFamilyLabel(family: string): string {
+  const labels: Record<string, string> = {
+    dense: 'бурбон',
+    geisha: 'гейша',
+    catimor: 'катимор',
+    'caturra-catuai': 'caturra/catuai',
+    starmaya: 'starmaya',
+    other: 'сорт',
+  };
+  return labels[family] || 'сорт';
+}
+
+export function effectiveVarietyFamily(
+  bean: Pick<ShelfBean, 'variety' | 'name' | 'country'>,
+): string {
+  const vf = varietyFamily(bean.variety, bean.name);
+  if (vf !== 'other') return vf;
+  const ck = resolveCountryKey(bean.country, bean.name);
+  if (ck && /^(rwanda|burundi|drcongo)$/.test(ck)) return 'dense';
   return 'other';
 }
 
@@ -70,8 +92,8 @@ export function scoreShelfPair(
   const ckB = resolveCountryKey(B.country, B.name);
   const pkA = processKind(A.process, A.name);
   const pkB = processKind(B.process, B.name);
-  const vfA = varietyFamily(A.variety, A.name);
-  const vfB = varietyFamily(B.variety, B.name);
+  const vfA = effectiveVarietyFamily(A);
+  const vfB = effectiveVarietyFamily(B);
 
   let score = 0;
   const reasons: string[] = [];
@@ -97,9 +119,21 @@ export function scoreShelfPair(
     reasons.push('контраст обработки (чистое vs фермент)');
   }
 
-  if (vfA !== vfB) {
+  if (vfA === vfB && vfA !== 'other' && ckA && ckB && ckA !== ckB) {
+    score += 5;
+    reasons.unshift(`один сорт (${varietyFamilyLabel(vfA)}) — терруар, не генетика`);
+  } else if (vfA !== vfB) {
     score += 1;
     reasons.push('разные сорта');
+  }
+
+  const countryPair = [ckA, ckB].filter(Boolean).sort().join('-');
+  if (countryPair === 'drcongo-rwanda') {
+    score += 2;
+    reasons.push('Киву: Руанда чайнее, Конго смородиннее');
+  } else if (countryPair === 'burundi-rwanda') {
+    score += 1;
+    reasons.push('соседи: Руанда мягче, Бурунди ягоднее');
   }
 
   if (ckA && topCountries.has(ckA)) score += 1;

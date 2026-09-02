@@ -66,6 +66,17 @@ export const FLIGHT_BREW_PRESETS: Record<string, BrewPreset> = {
     grind: 'средний',
     label: 'V60 · 15 г / 250 мл · 93 °C · блум 45 мл',
   },
+  'V60 (африка)': {
+    brew: 'V60',
+    coffee_g: '15',
+    water_g: '250',
+    temp: '92',
+    time: '165',
+    blooming_ml: '40',
+    blooming: '30',
+    grind: 'средний',
+    label: 'V60 · африка мытая · 15 г / 250 мл · 92 °C · ~2:45',
+  },
   'V60 (тройное)': {
     brew: 'V60',
     coffee_g: '10',
