@@ -445,6 +445,25 @@ import Nav from '../components/Nav.astro';
   .flight-mode-hint { font-size: .72rem; color: var(--text-muted); margin: 10px 0 6px; line-height: 1.45; }
   .flight-focus-line { font-size: .76rem; color: var(--text-dim); margin: -6px 0 12px; line-height: 1.45; }
   .flight-focus-lbl { font-weight: 600; color: var(--text-muted); }
+  .brew-today { margin-bottom: 14px; }
+  .brew-diary-bar { font-size: .74rem; color: var(--text-dim); line-height: 1.45; padding: 10px 12px; border-radius: 10px; background: rgba(168,124,79,.06); border: 1px solid rgba(168,124,79,.15); margin-bottom: 14px; }
+  .brew-step { margin-bottom: 16px; }
+  .brew-step-h { font-weight: 700; font-size: .84rem; margin-bottom: 8px; }
+  .brew-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .brew-chip {
+    padding: 10px 14px; border-radius: 999px; border: 1px solid var(--border);
+    background: var(--bg); font-size: .78rem; cursor: pointer; font-family: inherit; color: var(--text);
+  }
+  .brew-chip.on { border-color: var(--accent); background: rgba(168,124,79,.1); font-weight: 600; }
+  .brew-plan-beans { font-weight: 700; font-size: 1rem; margin: 6px 0; }
+  .brew-plan-mode, .brew-plan-goal { font-size: .72rem; color: var(--text-muted); }
+  .brew-plan-brew { font-size: .78rem; margin: 8px 0; }
+  .brew-plan-focus, .brew-plan-reason, .brew-plan-diary { font-size: .74rem; color: var(--text-dim); line-height: 1.45; margin-top: 6px; }
+  .brew-list-h { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--text-muted); margin: 16px 0 8px; }
+  .brew-history { margin-top: 12px; }
+  .brew-history > summary { cursor: pointer; font-size: .78rem; font-weight: 600; color: var(--text-muted); }
+  .brew-session-slots { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+  .brew-session-card { margin-top: 12px; border: 1px solid rgba(90,140,90,.3); background: rgba(90,140,90,.05); }
   .ref-links-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; }
   .ref-link-card { display: block; padding: 12px; border-radius: 10px; border: 1px solid var(--border); text-decoration: none; color: var(--text); font-size: .82rem; font-weight: 600; transition: .15s; }
   .ref-link-card:hover { border-color: var(--accent); color: var(--accent); }
@@ -848,7 +867,7 @@ import Nav from '../components/Nav.astro';
       { done: hasBean, label: 'Добавить зерно', href: '/add-shelf?kind=bean' },
       { done: hasEquip, label: 'Отметить оборудование (V60, AP…)', href: '/account?tab=shelf#equipSection' },
       { done: hasCup, label: 'Записать первую чашку', href: '/add-cup' },
-      { done: doneFlight, label: 'Пройти первое сравнение', href: '/account?tab=flights&new=1' },
+      { done: doneFlight, label: 'Заварить сегодня', href: '/account?tab=flights&new=1' },
       { done: doneQuiz, label: 'Тест вкуса (необязательно)', href: '/quiz' },
     ];
     return `<div class="onboard-checklist"><div class="onboard-checklist-h">С чего начать</div>${items.map((it) =>
@@ -1307,14 +1326,14 @@ import Nav from '../components/Nav.astro';
 
       <div class="acc-tabs" id="accTabs">
         <button class="acc-tab" data-tab="shelf">🫘 Зерно</button>
-        <button class="acc-tab" data-tab="flights">🔬 Сравнения</button>
+        <button class="acc-tab" data-tab="flights">☕ Заварить сегодня</button>
         <button class="acc-tab" data-tab="diary">📔 Дневник</button>
         <button class="acc-tab" data-tab="reference">📚 Справочник</button>
         <button class="acc-tab" data-tab="profile">👤 Профиль</button>
       </div>
 
       <section class="acc-panel" data-panel="shelf"><div class="panel-h"><span>🫘 Зерно${shelfHasStatus ? ` <span class="shelf-low-count"${lowCount ? '' : ' style="display:none"'}">${lowCount} заканчивается</span>` : ''}</span><span style="display:flex;gap:6px;flex-wrap:wrap"><a href="/add-shelf?kind=bean" class="add-cup-btn">+ Зерно</a><a href="/add-shelf?mode=photo" class="add-cup-btn">📷 С фото</a></span></div>${checklist}${equipSection}<div id="shelfImportBanner" class="paid-banner" style="display:none"></div><div id="shelfAssistantMount"></div>${beansBlock}</section>
-      <section class="acc-panel" data-panel="flights"><div class="panel-h"><span>🔬 Сравнения</span><a href="/account?tab=flights&new=1" class="add-cup-btn">+ Новое</a></div>${flightsPanel}</section>
+      <section class="acc-panel" data-panel="flights"><div class="panel-h"><span>☕ Заварить сегодня</span></div>${flightsPanel}</section>
       <section class="acc-panel" data-panel="diary"><div class="panel-h"><span>📔 Дневник</span><a href="/add-cup" class="add-cup-btn">+ Чашка</a></div>${diaryPanel}</section>
       <section class="acc-panel" data-panel="reference"><div class="panel-h">📚 Справочник</div>${referencePanel}</section>
       <section class="acc-panel" data-panel="profile"><div class="panel-h">👤 Профиль</div>${profilePanel}</section>

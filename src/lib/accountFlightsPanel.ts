@@ -2,9 +2,6 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   getAvailableComparisonGoals,
   goalById,
-  suggestPairingsForGoal,
-  suggestPartnersForAnchor,
-  type AnchoredPartnerSuggestion,
   type ComparisonGoalId,
 } from './comparisonGoals';
 import type { SavedPair } from './shelfAssistantPairings';
@@ -19,6 +16,18 @@ import {
 } from './tastingFlights';
 import { formatCupRecipe } from './cupRecipe';
 import { filterAvailableShelfBeans } from './shelfAvailability';
+import {
+  brewMethodOptions,
+  buildBrewTodayPlans,
+  diarySummaryLine,
+  pickBrewTodayPlan,
+  SOLO_GOALS,
+  type BrewTodayEntry,
+  type BrewTodayMode,
+  type BrewTodayPlan,
+  type BrewTodayWizardState,
+} from './brewToday';
+import { applyRecipeToParams } from './cupRecipe';
 
 const esc = (s: unknown) =>
   String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
@@ -46,18 +55,61 @@ function cupsForFlight(cups: any[], flightId: string): Map<number, any> {
   return map;
 }
 
-function shelfBeansFromItems(shelf: any[]) {
-  return filterAvailableShelfBeans(shelf.filter((s) => s.kind === 'bean')).map((s) => ({
-    name: s.name,
-    roaster: s.roaster,
-    country: s.country,
-    process: s.process,
-    variety: s.variety,
-  }));
+function buildSoloCupUrl(plan: BrewTodayPlan): string {
+  const bean = plan.beans[0];
+  const preset = FLIGHT_BREW_PRESETS[plan.brewPresetKey] || FLIGHT_BREW_PRESETS.V60;
+  const q = applyRecipeToParams(
+    {
+      coffee_g: parseFloat(preset.coffee_g),
+      water_g: parseFloat(preset.water_g),
+      temp: preset.temp,
+      time: preset.time,
+      grind: preset.grind,
+      blooming: preset.blooming_ml
+        ? { ml: parseFloat(preset.blooming_ml), time: preset.blooming || '' }
+        : undefined,
+    },
+    preset.brew,
+  );
+  if (bean.name) q.set('name', bean.name);
+  if (bean.roaster) q.set('roaster', bean.roaster);
+  if (bean.country) q.set('country', bean.country);
+  if (bean.process) q.set('process', bean.process);
+  if (bean.variety) q.set('variety', bean.variety);
+  if (plan.focus) q.set('focus', plan.focus);
+  q.set('from_brew_today', '1');
+  return '/add-cup?' + q.toString();
+}
+
+function renderPlanCard(plan: BrewTodayPlan | null, altTotal: number, altIndex: number): string {
+  if (!plan) {
+    return `<div class="brew-plan empty" id="brewPlanCard">
+      <p class="flight-hint">Не нашлось подходящего варианта — добавь зерно на полку или выбери другую цель.</p>
+    </div>`;
+  }
+  const beansLine = plan.beans.map((b) => esc(b.name)).join(plan.mode === 'compare' ? ' × ' : '');
+  const goalLine = plan.goalId
+    ? `${goalById(plan.goalId).emoji} ${esc(goalById(plan.goalId).label)}`
+    : plan.mode === 'solo' ? '🔍 Solo-исследование' : '';
+
+  return `<div class="brew-plan profile-card" id="brewPlanCard">
+    <div class="brew-plan-mode">${plan.mode === 'compare' ? '⚖️ Сравнение' : '🔍 Исследование одного лота'}</div>
+    <div class="brew-plan-beans">${beansLine}</div>
+    ${goalLine ? `<div class="brew-plan-goal">${goalLine}</div>` : ''}
+    <div class="brew-plan-brew">☕ ${esc(plan.brewLabel)}</div>
+    <div class="brew-plan-focus"><b>🎯 Фокус:</b> ${esc(plan.focus)}</div>
+    <div class="brew-plan-reason">${esc(plan.reason)}</div>
+    <div class="brew-plan-diary">📔 ${esc(plan.diaryHint)}</div>
+    <div class="flight-pair-actions" style="margin-top:12px">
+      <button type="button" class="flight-pair-btn primary" id="brewPlanAccept">Принять · заварить</button>
+      <button type="button" class="flight-pair-btn" id="brewPlanNext" ${altTotal < 2 ? 'disabled' : ''}>↻ Другой вариант</button>
+    </div>
+    <div class="flight-pair-counter" id="brewPlanCounter">${altTotal > 1 ? `${altIndex + 1} из ${altTotal}` : ''}</div>
+  </div>`;
 }
 
 export function renderFlightsMigrationBox(): string {
-  return `<div class="migration-box"><b>Сравнения недоступны — нужна миграция в Supabase</b>
+  return `<div class="migration-box"><b>Заварить сегодня недоступно — нужна миграция в Supabase</b>
     <ol>
       <li>Открой <a href="https://supabase.com/dashboard/project/vakdjxdbfoxkrsedgwcl/sql/new" target="_blank" rel="noopener">SQL Editor</a></li>
       <li>Вставь файл <code>supabase/migration-tasting-flights.sql</code></li>
@@ -76,84 +128,74 @@ export function renderFlightsPanel(
   if (!flightsAvailable) return renderFlightsMigrationBox();
 
   const beans = filterAvailableShelfBeans(shelf.filter((s) => s.kind === 'bean'));
-  const shelfBeans = shelfBeansFromItems(shelf);
-  const goals = getAvailableComparisonGoals(shelfBeans, savedPairs);
-  const defaultGoal = goals[0]?.id ?? 'countries';
-  const initialPairs = shelfBeans.length >= 2
-    ? suggestPairingsForGoal(shelfBeans, cups, savedPairs, defaultGoal)
-    : [];
-  const initialPair = initialPairs[0];
-  const initialBrewKey = initialPair?.brewPresetKey && FLIGHT_BREW_PRESETS[initialPair.brewPresetKey]
-    ? initialPair.brewPresetKey
-    : 'AeroPress';
-  const initialBrewHint = FLIGHT_BREW_PRESETS[initialBrewKey]?.label || '';
+  const equipCats = shelf.filter((s) => s.kind === 'equipment').map((s) => s.category || s.name || '');
+  const methods = brewMethodOptions(equipCats);
+  const diaryLine = diarySummaryLine(cups);
 
   const beanOptions = beans.map(
     (s) => `<option value="${esc(s.id)}">${esc(s.name)}${s.country ? ` · ${esc(s.country)}` : ''}</option>`,
   ).join('');
 
-  const brewOptions = Object.keys(FLIGHT_BREW_PRESETS)
-    .map((k) => `<option value="${esc(k)}"${k === initialBrewKey ? ' selected' : ''}>${esc(FLIGHT_BREW_PRESETS[k].label)}</option>`)
-    .join('');
+  const methodOptions = methods.map((m) => `<option value="${esc(m)}">${esc(m)}</option>`).join('');
 
-  const goalChips = goals.length
-    ? goals.map((g, i) =>
-      `<button type="button" class="flight-goal-chip${g.id === defaultGoal ? ' on' : ''}" data-flight-goal="${g.id}">${g.emoji} ${esc(g.label)}</button>`,
-    ).join('')
-    : '';
+  const wizard = `<div class="brew-today profile-card" id="brewTodayWizard" ${openCreate || !flights.length ? '' : ''}>
+    <div class="brew-diary-bar" id="brewDiaryBar">📔 ${esc(diaryLine)}</div>
 
-  const pairPicker = initialPair && goals.length
-    ? `<div class="flight-pair-pick" id="flightGoalPick">
-        <div class="flight-pair-names" id="flightGoalPairNames">${esc(initialPair.a)} × ${esc(initialPair.b)}</div>
-        <div class="flight-pair-reason" id="flightGoalPairReason">${esc(initialPair.reason)}</div>
-        <div class="flight-pair-brew-hint" id="flightGoalBrewHint">${initialBrewHint ? `☕ Рецепт на оба: ${esc(initialBrewHint)}` : ''}</div>
-        <div class="flight-pair-actions">
-          <button type="button" class="flight-pair-btn primary" id="flightGoalAccept">Принять пару</button>
-          <button type="button" class="flight-pair-btn" id="flightGoalNext" ${initialPairs.length < 2 ? 'disabled' : ''}>↻ Другая</button>
-        </div>
-        <div class="flight-pair-counter" id="flightGoalPairCounter">${initialPairs.length > 1 ? `1 из ${initialPairs.length}` : ''}</div>
-      </div>`
-    : goals.length
-    ? `<p class="flight-hint" id="flightGoalPickEmpty">Для выбранной цели не нашлось пар — выбери лоты вручную ниже.</p>`
-    : '';
-
-  const createBlock = `<details class="flight-create" id="flightCreateForm" ${openCreate || !flights.length ? 'open' : ''}>
-    <summary>+ Новое сравнение</summary>
-    <div class="flight-create-body profile-card">
-      <label class="flight-label" style="margin-top:0">Моё зерно</label>
-      <select id="flightBeanA" class="flight-inp"><option value="">— выберите зерно —</option>${beanOptions}</select>
-      <div class="flight-pair-pick" id="flightAnchorPick" hidden>
-        <p class="flight-mode-hint">С чем сравнить <b id="flightAnchorName"></b>?</p>
-        <div class="flight-pair-names" id="flightPairNames"></div>
-        <div class="flight-pair-reason" id="flightPairReason"></div>
-        <div class="flight-auto-goal" id="flightAutoGoal"></div>
-        <div class="flight-pair-brew-hint" id="flightPairBrewHint"></div>
-        <div class="flight-pair-actions">
-          <button type="button" class="flight-pair-btn primary" id="flightPairAccept">Принять</button>
-          <button type="button" class="flight-pair-btn" id="flightPairNext">↻ Другой лот</button>
-        </div>
-        <div class="flight-pair-counter" id="flightPairCounter"></div>
+    <div class="brew-step" id="brewStepEntry">
+      <div class="brew-step-h">С чего начнём?</div>
+      <div class="brew-chips">
+        <button type="button" class="brew-chip" data-brew-entry="bean">🫘 Конкретное зерно</button>
+        <button type="button" class="brew-chip" data-brew-entry="method">⚙️ Конкретный способ</button>
+        <button type="button" class="brew-chip" data-brew-entry="free">✨ Подскажи с нуля</button>
       </div>
-      <p class="flight-mode-hint" id="flightGoalModeHint">Или выбери цель — подберём пару целиком:</p>
-      ${goals.length ? `<p class="flight-label" style="margin-top:0">Что хочешь научиться отличать?</p>
-      <div class="flight-goal-chips" id="flightGoalChips">${goalChips}</div>
-      ${pairPicker}` : ''}
-      <label class="flight-label">Способ заварки</label>
-      <select id="flightBrew" class="flight-inp">${brewOptions}</select>
-      <label class="flight-label">Лот B</label>
-      <select id="flightBeanB" class="flight-inp"><option value="">— выберите зерно —</option>${beanOptions}</select>
-      <label class="flight-label">Цель сравнения</label>
-      <input id="flightFocus" class="flight-inp" value="${esc(goalById(defaultGoal).focusDefault)}" placeholder="На что смотреть в чашке…" maxlength="240"/>
-      ${beans.length < 2 ? `<p class="flight-hint">Добавь минимум 2 зерна в <a href="/add-shelf?kind=bean">зерно</a>, чтобы сравнивать.</p>` : ''}
-      <button type="button" class="btn btn-primary" id="flightCreateBtn" style="margin-top:12px;font-size:.82rem" ${beans.length < 2 ? 'disabled' : ''}>Создать сравнение</button>
     </div>
-  </details>`;
 
-  const list = flights.length
-    ? flights.map((f) => renderFlightCard(f, cups)).join('')
-    : `<div class="empty-state">Сравнения помогают <b>отличать</b> вкусы. Выбери цель, прими пару из зерна — и заваривай по одному рецепту.</div>`;
+    <div class="brew-step" id="brewStepMode" hidden>
+      <div class="brew-step-h">Что сегодня?</div>
+      <div class="brew-chips">
+        <button type="button" class="brew-chip" data-brew-mode="solo">🔍 Исследовать одно зерно</button>
+        <button type="button" class="brew-chip" data-brew-mode="compare">⚖️ Сравнить два лота</button>
+      </div>
+    </div>
 
-  return `${createBlock}<div class="flight-list">${list}</div>`;
+    <div class="brew-step" id="brewStepPick" hidden>
+      <div class="brew-step-h" id="brewPickLabel">Выбор</div>
+      <select id="brewPickBean" class="flight-inp" hidden><option value="">— зерно —</option>${beanOptions}</select>
+      <select id="brewPickMethod" class="flight-inp" hidden>${methodOptions}</select>
+      <button type="button" class="flight-pair-btn" id="brewPickContinue" style="margin-top:10px">Дальше →</button>
+    </div>
+
+    <div class="brew-step" id="brewStepGoal" hidden>
+      <div class="brew-step-h" id="brewGoalLabel">Цель</div>
+      <div class="flight-goal-chips" id="brewGoalChips"></div>
+      <button type="button" class="flight-pair-btn primary" id="brewGoalContinue" style="margin-top:8px">Подобрать вариант →</button>
+    </div>
+
+    <div class="brew-step" id="brewStepResult" hidden>
+      <div class="brew-step-h">Предложение на сегодня</div>
+      <div id="brewPlanWrap"></div>
+    </div>
+
+    <div class="brew-active-session" id="brewActiveSession" hidden></div>
+  </div>`;
+
+  const activeFlights = flights.filter((f) => f.status === 'active' || f.status === 'draft');
+  const historyFlights = flights.filter((f) => f.status === 'completed');
+
+  const listTitle = activeFlights.length
+    ? `<div class="brew-list-h">В процессе</div>`
+    : '';
+  const list = activeFlights.length
+    ? activeFlights.map((f) => renderFlightCard(f, cups)).join('')
+    : '';
+
+  const history = historyFlights.length
+    ? `<details class="brew-history"><summary>История (${historyFlights.length})</summary><div class="flight-list">${historyFlights.map((f) => renderFlightCard(f, cups)).join('')}</div></details>`
+    : !flights.length
+    ? `<div class="empty-state">Пройди мастер выше — он учтёт дневник и полку, предложит зерно и рецепт, поможет записать чашку.</div>`
+    : '';
+
+  return `${wizard}${listTitle ? listTitle + `<div class="flight-list">${list}</div>` : list}${history}`;
 }
 
 function renderFlightCard(f: TastingFlight, cups: any[]): string {
@@ -220,242 +262,225 @@ export function bindFlightsPanel(
   onRefresh: () => void,
 ): void {
   const beans = filterAvailableShelfBeans(shelf.filter((s) => s.kind === 'bean'));
-  const shelfBeans = shelfBeansFromItems(shelf);
+  const shelfBeans = beans.map((s) => ({
+    name: s.name,
+    roaster: s.roaster,
+    country: s.country,
+    process: s.process,
+    variety: s.variety,
+  }));
   const byId = new Map(beans.map((s) => [s.id, s]));
-  const byName = new Map(beans.map((s) => [String(s.name).trim().toLowerCase(), s]));
 
-  let currentGoal: ComparisonGoalId = (
-    root.querySelector('.flight-goal-chip.on') as HTMLElement | null
-  )?.dataset.flightGoal as ComparisonGoalId || 'countries';
+  const wizard = root.querySelector('#brewTodayWizard');
+  if (!wizard) return;
 
-  let goalPairIndex = 0;
-  let goalPairs = suggestPairingsForGoal(shelfBeans, cups, savedPairs, currentGoal);
-  let anchorPartners: AnchoredPartnerSuggestion[] = [];
-  let partnerIndex = 0;
-  let anchorMode = false;
-
-  const focusInp = root.querySelector('#flightFocus') as HTMLInputElement | null;
-  const selA = root.querySelector('#flightBeanA') as HTMLSelectElement | null;
-  const selB = root.querySelector('#flightBeanB') as HTMLSelectElement | null;
-  const anchorPick = root.querySelector('#flightAnchorPick') as HTMLElement | null;
-  const anchorNameEl = root.querySelector('#flightAnchorName');
-  const pairNames = root.querySelector('#flightPairNames');
-  const pairReason = root.querySelector('#flightPairReason');
-  const autoGoalEl = root.querySelector('#flightAutoGoal');
-  const pairCounter = root.querySelector('#flightPairCounter');
-  const pairNext = root.querySelector('#flightPairNext') as HTMLButtonElement | null;
-  const goalPick = root.querySelector('#flightGoalPick') as HTMLElement | null;
-  const goalModeHint = root.querySelector('#flightGoalModeHint') as HTMLElement | null;
-  const goalPairNames = root.querySelector('#flightGoalPairNames');
-  const goalPairReason = root.querySelector('#flightGoalPairReason');
-  const goalPairCounter = root.querySelector('#flightGoalPairCounter');
-  const goalPairNext = root.querySelector('#flightGoalNext') as HTMLButtonElement | null;
-  const brewSel = root.querySelector('#flightBrew') as HTMLSelectElement | null;
-  const pairBrewHint = root.querySelector('#flightPairBrewHint');
-  const goalBrewHint = root.querySelector('#flightGoalBrewHint');
-
-  const setBrewHint = (el: Element | null, presetKey?: string) => {
-    if (!el) return;
-    const preset = presetKey ? FLIGHT_BREW_PRESETS[presetKey] : null;
-    el.textContent = preset ? `☕ Рецепт на оба: ${preset.label}` : '';
+  const state: BrewTodayWizardState = {
+    entry: null,
+    mode: null,
+    beanId: null,
+    method: null,
+    goalId: null,
+    altIndex: 0,
   };
 
-  const applyPartnerToForm = (partner: AnchoredPartnerSuggestion) => {
-    const itemB = byName.get(partner.b.toLowerCase());
-    if (itemB && selB) selB.value = itemB.id;
-    setGoalUi(partner.goalId);
-    if (focusInp) focusInp.value = goalById(partner.goalId).focusDefault;
-    if (brewSel && partner.brewPresetKey && FLIGHT_BREW_PRESETS[partner.brewPresetKey]) {
-      brewSel.value = partner.brewPresetKey;
-    }
-    setBrewHint(pairBrewHint, partner.brewPresetKey);
-    setBrewHint(goalBrewHint, partner.brewPresetKey);
-  };
+  const stepEntry = wizard.querySelector('#brewStepEntry') as HTMLElement;
+  const stepMode = wizard.querySelector('#brewStepMode') as HTMLElement;
+  const stepPick = wizard.querySelector('#brewStepPick') as HTMLElement;
+  const stepGoal = wizard.querySelector('#brewStepGoal') as HTMLElement;
+  const stepResult = wizard.querySelector('#brewStepResult') as HTMLElement;
+  const pickLabel = wizard.querySelector('#brewPickLabel');
+  const pickBean = wizard.querySelector('#brewPickBean') as HTMLSelectElement;
+  const pickMethod = wizard.querySelector('#brewPickMethod') as HTMLSelectElement;
+  const goalChipsEl = wizard.querySelector('#brewGoalChips');
+  const goalLabel = wizard.querySelector('#brewGoalLabel');
+  const planWrap = wizard.querySelector('#brewPlanWrap');
+  const activeSession = wizard.querySelector('#brewActiveSession') as HTMLElement;
 
-  const setGoalUi = (goalId: ComparisonGoalId) => {
-    currentGoal = goalId;
-    root.querySelectorAll('.flight-goal-chip').forEach((chip) => {
-      chip.classList.toggle('on', (chip as HTMLElement).dataset.flightGoal === goalId);
+  let currentPlan: BrewTodayPlan | null = null;
+  let altTotal = 0;
+
+  const markChip = (selector: string, attr: string, value: string) => {
+    wizard.querySelectorAll(selector).forEach((el) => {
+      el.classList.toggle('on', (el as HTMLElement).dataset[attr] === value);
     });
   };
 
-  const renderAnchorPartner = () => {
-    const partner = anchorPartners[partnerIndex];
-    if (!anchorPick) return;
-    if (!partner) {
-      anchorPick.hidden = false;
-      if (anchorNameEl && selA?.value) {
-        const itemA = byId.get(selA.value);
-        if (itemA) anchorNameEl.textContent = itemA.name;
+  const showGoals = () => {
+    if (!goalChipsEl) return;
+    if (state.mode === 'solo') {
+      if (goalLabel) goalLabel.textContent = 'Зачем завариваешь?';
+      goalChipsEl.innerHTML = SOLO_GOALS.map((g, i) =>
+        `<button type="button" class="flight-goal-chip${i === 0 ? ' on' : ''}" data-brew-solo-goal="${g.id}">${esc(g.label)}</button>`,
+      ).join('');
+      state.goalId = null;
+    } else {
+      const goals = getAvailableComparisonGoals(shelfBeans, savedPairs);
+      const defaultGoal = goals[0]?.id ?? 'countries';
+      state.goalId = state.goalId || defaultGoal;
+      if (goalLabel) goalLabel.textContent = 'Что хочешь отличить?';
+      goalChipsEl.innerHTML = goals.map((g) =>
+        `<button type="button" class="flight-goal-chip${g.id === state.goalId ? ' on' : ''}" data-brew-goal="${g.id}">${g.emoji} ${esc(g.label)}</button>`,
+      ).join('');
+    }
+    stepGoal.hidden = false;
+  };
+
+  const applySoloGoalFocus = () => {
+    if (state.mode !== 'solo' || !currentPlan) return;
+    const soloBtn = wizard.querySelector('[data-brew-solo-goal].on') as HTMLElement | null;
+    const sg = SOLO_GOALS.find((g) => g.id === soloBtn?.dataset.brewSoloGoal);
+    if (sg) currentPlan.focus = sg.focus;
+  };
+
+  const renderResult = () => {
+    const plans = buildBrewTodayPlans(shelf, cups, savedPairs, state);
+    altTotal = plans.length;
+    currentPlan = pickBrewTodayPlan(shelf, cups, savedPairs, state);
+    applySoloGoalFocus();
+    if (planWrap) {
+      planWrap.innerHTML = renderPlanCard(currentPlan, altTotal, state.altIndex);
+    }
+    stepResult.hidden = false;
+  };
+
+  wizard.addEventListener('click', async (e) => {
+    const t = e.target as HTMLElement;
+    if (t.id === 'brewPlanNext' || t.closest('#brewPlanNext')) {
+      if (altTotal < 2) return;
+      state.altIndex = (state.altIndex + 1) % altTotal;
+      currentPlan = pickBrewTodayPlan(shelf, cups, savedPairs, state);
+      applySoloGoalFocus();
+      if (planWrap) planWrap.innerHTML = renderPlanCard(currentPlan, altTotal, state.altIndex);
+      return;
+    }
+    if (t.id !== 'brewPlanAccept' && !t.closest('#brewPlanAccept')) return;
+      if (!currentPlan) return;
+      const btn = wizard.querySelector('#brewPlanAccept') as HTMLButtonElement;
+      btn.disabled = true;
+
+      if (currentPlan.mode === 'solo') {
+        const url = buildSoloCupUrl(currentPlan);
+        activeSession.hidden = false;
+        activeSession.innerHTML = `<div class="brew-session-card profile-card">
+          <div class="brew-step-h">Заваривай и фиксируй</div>
+          <p class="flight-hint">${esc(currentPlan.focus)}</p>
+          <p class="brew-plan-brew">☕ ${esc(currentPlan.brewLabel)}</p>
+          <a href="${url}" class="add-cup-btn" style="display:inline-block;margin-top:10px">☕ Записать чашку</a>
+        </div>`;
+        btn.disabled = false;
+        return;
       }
-      if (pairNames) pairNames.textContent = 'Подходящих лотов не нашлось';
-      if (pairReason) pairReason.textContent = 'Попробуй другую цель ниже или выбери лот B вручную.';
-      if (autoGoalEl) autoGoalEl.textContent = '';
-      if (pairNext) pairNext.disabled = true;
-      return;
-    }
-    anchorPick.hidden = false;
-    if (anchorNameEl) anchorNameEl.textContent = partner.a;
-    if (pairNames) pairNames.textContent = `${partner.a} × ${partner.b}`;
-    if (pairReason) pairReason.textContent = partner.reason;
-    const g = goalById(partner.goalId);
-    if (autoGoalEl) {
-      let goalHtml = `🎯 Цель: <b>${g.emoji} ${esc(g.label)}</b> — ${esc(g.focusDefault)}`;
-      if (partner.terroirHint) {
-        goalHtml += `<br><span style="font-weight:400;color:var(--text-dim)">👀 ${esc(partner.terroirHint)}</span>`;
+
+      const idA = currentPlan.beans[0]?.shelfId;
+      const idB = currentPlan.beans[1]?.shelfId;
+      if (!idA || !idB) {
+        alert('Не нашлось оба лота на полке.');
+        btn.disabled = false;
+        return;
       }
-      autoGoalEl.innerHTML = goalHtml;
-    }
-    if (pairCounter) {
-      pairCounter.textContent = anchorPartners.length > 1
-        ? `${partnerIndex + 1} из ${anchorPartners.length}`
-        : '';
-    }
-    if (pairNext) pairNext.disabled = anchorPartners.length < 2;
-    applyPartnerToForm(partner);
-  };
+      const sA = byId.get(idA);
+      const sB = byId.get(idB);
+      if (!sA || !sB) {
+        btn.disabled = false;
+        return;
+      }
+      const flightBeans = [beanFromShelfItem(sA, 0), beanFromShelfItem(sB, 1)];
+      const title = flightTitleFromBeans(flightBeans);
+      const { data, error } = await supabase.from('tasting_flights').insert({
+        user_id: userId,
+        title,
+        brew_method: currentPlan.brewPresetKey,
+        beans: flightBeans,
+        focus: currentPlan.focus,
+        status: 'active',
+        source: 'brew_today',
+      }).select('id').single();
 
-  const loadAnchorPartners = (goalFilter?: ComparisonGoalId) => {
-    const idA = selA?.value;
-    if (!idA) {
-      anchorMode = false;
-      anchorPartners = [];
-      partnerIndex = 0;
-      if (anchorPick) anchorPick.hidden = true;
-      if (goalModeHint) goalModeHint.hidden = false;
-      if (goalPick) goalPick.hidden = false;
-      return;
-    }
-    const itemA = byId.get(idA);
-    if (!itemA) return;
-    anchorMode = true;
-    anchorPartners = suggestPartnersForAnchor(
-      itemA.name,
-      shelfBeans,
-      cups,
-      savedPairs,
-      goalFilter ? { goalId: goalFilter } : undefined,
-    );
-    partnerIndex = 0;
-    if (goalModeHint) goalModeHint.hidden = true;
-    if (goalPick) goalPick.hidden = true;
-    renderAnchorPartner();
-  };
+      btn.disabled = false;
+      if (error) {
+        alert('Не удалось создать: ' + error.message);
+        return;
+      }
 
-  const renderGoalPairCard = () => {
-    if (!goalPairNames || !goalPairReason) return;
-    const pair = goalPairs[goalPairIndex];
-    if (!pair) {
-      if (goalPick) goalPick.hidden = true;
-      return;
-    }
-    if (goalPick) goalPick.hidden = false;
-    goalPairNames.textContent = `${pair.a} × ${pair.b}`;
-    goalPairReason.textContent = pair.reason;
-    if (goalPairCounter) {
-      goalPairCounter.textContent = goalPairs.length > 1 ? `${goalPairIndex + 1} из ${goalPairs.length}` : '';
-    }
-    if (goalPairNext) goalPairNext.disabled = goalPairs.length < 2;
-    setGoalUi(pair.goalId);
-    if (focusInp) focusInp.value = goalById(pair.goalId).focusDefault;
-    if (brewSel && pair.brewPresetKey && FLIGHT_BREW_PRESETS[pair.brewPresetKey]) {
-      brewSel.value = pair.brewPresetKey;
-    }
-    setBrewHint(goalBrewHint, pair.brewPresetKey);
-  };
+      const flight = {
+        id: data.id,
+        brew_method: currentPlan.brewPresetKey,
+        focus: currentPlan.focus,
+      };
+      const urlA = buildFlightCupUrl(flight, flightBeans[0], { focus: currentPlan.focus });
+      const urlB = buildFlightCupUrl(flight, flightBeans[1], { focus: currentPlan.focus });
 
-  const setGoal = (goalId: ComparisonGoalId, opts?: { skipAnchorReload?: boolean }) => {
-    if (anchorMode && selA?.value && !opts?.skipAnchorReload) {
-      setGoalUi(goalId);
-      loadAnchorPartners(goalId);
-      return;
-    }
-    setGoalUi(goalId);
-    goalPairIndex = 0;
-    goalPairs = suggestPairingsForGoal(shelfBeans, cups, savedPairs, goalId);
-    if (focusInp) focusInp.value = goalById(goalId).focusDefault;
-    renderGoalPairCard();
-  };
-
-  selA?.addEventListener('change', () => {
-    if (selA.value) loadAnchorPartners();
-    else {
-      anchorMode = false;
-      if (anchorPick) anchorPick.hidden = true;
-      if (goalModeHint) goalModeHint.hidden = false;
-      if (goalPick) goalPick.hidden = false;
-      setGoal(currentGoal);
-    }
+      activeSession.hidden = false;
+      activeSession.innerHTML = `<div class="brew-session-card profile-card">
+        <div class="brew-step-h">Сравнение создано — заваривай по одному рецепту</div>
+        <p class="brew-plan-brew">☕ ${esc(currentPlan.brewLabel)}</p>
+        <p class="flight-hint">${esc(currentPlan.focus)}</p>
+        <div class="brew-session-slots">
+          <a href="${urlA}" class="add-cup-btn">☕ Чашка A · ${esc(flightBeans[0].name)}</a>
+          <a href="${urlB}" class="add-cup-btn">☕ Чашка B · ${esc(flightBeans[1].name)}</a>
+        </div>
+      </div>`;
+      onRefresh();
   });
 
-  root.querySelectorAll('[data-flight-goal]').forEach((chip) => {
-    chip.addEventListener('click', () => {
-      setGoal((chip as HTMLElement).dataset.flightGoal as ComparisonGoalId);
+  wizard.querySelectorAll('[data-brew-entry]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      state.entry = (btn as HTMLElement).dataset.brewEntry as BrewTodayEntry;
+      state.altIndex = 0;
+      markChip('[data-brew-entry]', 'brewEntry', state.entry);
+      stepMode.hidden = false;
     });
   });
 
-  root.querySelector('#flightPairAccept')?.addEventListener('click', () => {
-    const partner = anchorPartners[partnerIndex];
-    if (!partner) return;
-    applyPartnerToForm(partner);
-  });
+  wizard.querySelectorAll('[data-brew-mode]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      state.mode = (btn as HTMLElement).dataset.brewMode as BrewTodayMode;
+      state.altIndex = 0;
+      markChip('[data-brew-mode]', 'brewMode', state.mode);
 
-  root.querySelector('#flightPairNext')?.addEventListener('click', () => {
-    if (anchorPartners.length < 2) return;
-    partnerIndex = (partnerIndex + 1) % anchorPartners.length;
-    renderAnchorPartner();
-  });
-
-  root.querySelector('#flightGoalAccept')?.addEventListener('click', () => {
-    const pair = goalPairs[goalPairIndex];
-    if (!pair) return;
-    const itemA = byName.get(pair.a.toLowerCase());
-    const itemB = byName.get(pair.b.toLowerCase());
-    if (itemA && selA) selA.value = itemA.id;
-    if (itemB && selB) selB.value = itemB.id;
-    applyPartnerToForm(pair);
-    if (itemA) loadAnchorPartners();
-  });
-
-  root.querySelector('#flightGoalNext')?.addEventListener('click', () => {
-    if (goalPairs.length < 2) return;
-    goalPairIndex = (goalPairIndex + 1) % goalPairs.length;
-    renderGoalPairCard();
-  });
-
-  renderGoalPairCard();
-
-  root.querySelector('#flightCreateBtn')?.addEventListener('click', async () => {
-    const brew = (root.querySelector('#flightBrew') as HTMLSelectElement)?.value || 'AeroPress';
-    const idA = (root.querySelector('#flightBeanA') as HTMLSelectElement)?.value;
-    const idB = (root.querySelector('#flightBeanB') as HTMLSelectElement)?.value;
-    const focus = (root.querySelector('#flightFocus') as HTMLInputElement)?.value.trim() || null;
-    if (!idA || !idB || idA === idB) {
-      alert('Выбери два разных лота из зерна.');
-      return;
-    }
-    const sA = byId.get(idA);
-    const sB = byId.get(idB);
-    if (!sA || !sB) return;
-    const flightBeans = [beanFromShelfItem(sA, 0), beanFromShelfItem(sB, 1)];
-    const title = flightTitleFromBeans(flightBeans);
-    const btn = root.querySelector('#flightCreateBtn') as HTMLButtonElement;
-    btn.disabled = true;
-    const { error } = await supabase.from('tasting_flights').insert({
-      user_id: userId,
-      title,
-      brew_method: brew,
-      beans: flightBeans,
-      focus,
-      status: 'active',
-      source: 'goal_picker',
+      if (state.entry === 'bean') {
+        stepPick.hidden = false;
+        pickBean.hidden = false;
+        pickMethod.hidden = true;
+        if (pickLabel) pickLabel.textContent = 'Какое зерно?';
+      } else if (state.entry === 'method') {
+        stepPick.hidden = false;
+        pickBean.hidden = true;
+        pickMethod.hidden = false;
+        if (pickLabel) pickLabel.textContent = 'Каким способом?';
+      } else {
+        stepPick.hidden = true;
+        showGoals();
+      }
     });
-    btn.disabled = false;
-    if (error) {
-      alert('Не удалось создать: ' + error.message);
+  });
+
+  wizard.querySelector('#brewPickContinue')?.addEventListener('click', () => {
+    if (!pickBean.hidden && pickBean.value) state.beanId = pickBean.value;
+    if (!pickMethod.hidden && pickMethod.value) state.method = pickMethod.value;
+    state.altIndex = 0;
+    showGoals();
+  });
+
+  wizard.querySelector('#brewGoalContinue')?.addEventListener('click', () => {
+    state.altIndex = 0;
+    renderResult();
+  });
+
+  wizard.addEventListener('click', (e) => {
+    const t = e.target as HTMLElement;
+    const goalBtn = t.closest('[data-brew-goal]') as HTMLElement | null;
+    if (goalBtn) {
+      state.goalId = goalBtn.dataset.brewGoal as ComparisonGoalId;
+      wizard.querySelectorAll('[data-brew-goal]').forEach((c) => c.classList.toggle('on', c === goalBtn));
       return;
     }
-    onRefresh();
+    const soloBtn = t.closest('[data-brew-solo-goal]') as HTMLElement | null;
+    if (soloBtn) {
+      wizard.querySelectorAll('[data-brew-solo-goal]').forEach((c) => c.classList.toggle('on', c === soloBtn));
+      const sg = SOLO_GOALS.find((g) => g.id === soloBtn.dataset.brewSoloGoal);
+      if (sg && currentPlan) currentPlan.focus = sg.focus;
+    }
   });
 
   root.querySelectorAll('[data-flight-save]').forEach((btn) => {
@@ -485,7 +510,7 @@ export function bindFlightsPanel(
 
   root.querySelectorAll('[data-flight-del]').forEach((btn) => {
     btn.addEventListener('click', async () => {
-      if (!confirm('Удалить это сравнение?')) return;
+      if (!confirm('Удалить эту сессию?')) return;
       const id = (btn as HTMLElement).dataset.flightDel!;
       await supabase.from('tasting_flights').delete().eq('id', id);
       onRefresh();
