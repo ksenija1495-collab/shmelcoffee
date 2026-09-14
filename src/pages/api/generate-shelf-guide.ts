@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { createClient } from '@supabase/supabase-js';
 import OpenAI from 'openai';
 import { getAuthUser } from '../../lib/requireAuth';
+import { consumeGuideCreditIfNeeded, refundGuideCredit } from '../../lib/cabinetFree';
 
 export const prerender = false;
 
@@ -26,11 +27,11 @@ export const POST: APIRoute = async ({ request }) => {
   if (beanErr || !bean) return new Response('Shelf item not found', { status: 404 });
   if (bean.user_id !== auth.user.id) return new Response('forbidden', { status: 403 });
 
-  const { data: consumed } = await supabase.rpc('consume_guide_credit', { p_user: auth.user.id });
+  const consumed = await consumeGuideCreditIfNeeded(supabase, auth.user.id);
   if (!consumed) return new Response('payment_required', { status: 402 });
 
   const refund = async () => {
-    await supabase.rpc('add_guide_credits', { p_user: auth.user.id, p_amount: 1 });
+    await refundGuideCredit(supabase, auth.user.id);
   };
 
   const { data: profile } = await supabase

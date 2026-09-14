@@ -75,6 +75,7 @@ import Nav from '../components/Nav.astro';
     { auth: { flowType: 'implicit' } }
   );
   import { buildProdamusBuyUrl } from '../lib/prodamusBuyUrl';
+  import { isCabinetFree } from '../lib/cabinetFree';
   import { BEAN_VARIETIES } from '../data/varieties';
 
   const PRODAMUS_URL = (import.meta.env.PUBLIC_PRODAMUS_URL as string) || '';
@@ -149,9 +150,10 @@ import Nav from '../components/Nav.astro';
     const { data: { session } } = await supabase.auth.getSession();
     const accessToken = session?.access_token || '';
 
+    const freeCabinet = isCabinetFree();
     const [shelfRes, credits] = await Promise.all([
       supabase.from('shelf_items').select('*').eq('user_id', user.id).eq('kind', 'bean').order('created_at', { ascending: false }),
-      fetchCredits(accessToken),
+      freeCabinet ? Promise.resolve(1) : fetchCredits(accessToken),
     ]);
     const beans: any[] = shelfRes.data || [];
     const buyUrl = buildProdamusBuyUrl(PRODAMUS_URL, user, window.location.origin);
@@ -164,7 +166,7 @@ import Nav from '../components/Nav.astro';
       <a href="/account" class="gen-back">← В кабинет</a>
       <div class="gen-h1">Создать персональный гид</div>
       <div class="gen-sub">Выбери одно или несколько зёрен и способов заваривания — AI соберёт рецепты и план дегустации, чтобы заваривать и сравнивать.</div>
-      <div class="gen-credit">${credits > 0 ? `Доступно гидов: <b>${credits}</b> · списывается 1 за генерацию` : 'Нет оплаченных гидов — сначала купи (99&nbsp;₽).'}</div>
+      <div class="gen-credit">${freeCabinet ? 'Пока бесплатно — генерируй гиды без ограничений.' : credits > 0 ? `Доступно гидов: <b>${credits}</b> · списывается 1 за генерацию` : 'Нет оплаченных гидов — сначала купи (99&nbsp;₽).'}</div>
 
       <div class="gen-step-t">1. Зёрна <span class="gen-cnt" id="beanCnt">0 / ${MAX_BEANS}</span></div>
       <div class="gen-grid" id="beanGrid">
@@ -178,7 +180,7 @@ import Nav from '../components/Nav.astro';
 
       <div class="gen-bar"><div class="gen-bar-inner">
         <span class="gen-bar-note" id="genNote">Выбери хотя бы одно зерно и способ</span>
-        ${credits > 0
+        ${freeCabinet || credits > 0
           ? '<button class="gen-gen-btn" id="genBtn" disabled>🤖 Сгенерировать гид</button>'
           : '<button class="gen-gen-btn" id="buyBtn">Купить гид · 99 ₽</button>'}
       </div></div>

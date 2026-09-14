@@ -1,8 +1,9 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { isCabinetFree } from './cabinetFree';
 
 export type ShelfAssistantAccess = {
   hasAccess: boolean;
-  source: 'subscription' | 'beta_credits' | 'none';
+  source: 'subscription' | 'beta_credits' | 'free' | 'none';
   activeUntil: string | null;
 };
 
@@ -11,6 +12,10 @@ export async function getShelfAssistantAccess(
   admin: SupabaseClient,
   userId: string,
 ): Promise<ShelfAssistantAccess> {
+  if (isCabinetFree()) {
+    return { hasAccess: true, source: 'free', activeUntil: null };
+  }
+
   const { data: subRow } = await admin
     .from('shelf_assistant_subscriptions')
     .select('active_until')

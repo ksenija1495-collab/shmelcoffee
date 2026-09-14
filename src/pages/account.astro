@@ -504,6 +504,7 @@ import Nav from '../components/Nav.astro';
   import { generalGuide } from '../data/generalGuide';
   import { BREW_METHODS, FAMILY_ICON } from '../data/methods';
   import { buildProdamusBuyUrl, buildProdamusShelfAssistUrl } from '../lib/prodamusBuyUrl';
+  import { isCabinetFree } from '../lib/cabinetFree';
   import { beanOutUrl } from '../lib/beanOutUrl';
   import { formatCupRecipe, recipeFingerprint, applyRecipeToParams } from '../lib/cupRecipe';
   import { formatTasteCharacterLine, normalizeTasteCharacter } from '../lib/tasteCharacter';
@@ -875,11 +876,13 @@ import Nav from '../components/Nav.astro';
     ).join('')}</div>`;
   }
 
-  function renderGuideUpsell(credits: number, cupsCount: number, openedSize: number, guidesCount: number, buyUrl: string) {
+  function renderGuideUpsell(credits: number, cupsCount: number, openedSize: number, guidesCount: number, _buyUrl: string) {
     if (guidesCount > 0 || (cupsCount < 3 && openedSize < 1)) return '';
-    const body = credits > 0
+    const body = isCabinetFree()
+      ? `<p>Персональный гид под твоё зерно и способы заварки — бесплатно, пока тестируем кабинет.</p><a href="/generate" class="btn btn-primary" style="text-decoration:none;display:inline-block">✨ Создать гид →</a>`
+      : credits > 0
       ? `<p>У тебя <b>${credits}</b> ${guideWord(credits)} — сгенерируй рецепт под своё зерно и способ заваривания.</p><a href="/generate" class="btn btn-primary" style="text-decoration:none;display:inline-block">✨ Создать гид →</a>`
-      : `<p>Попробуй персональный гид — рецепт и параметры под твоё зерно. Первый гид бесплатно при регистрации.</p><button type="button" class="btn btn-primary" data-buy="1">Купить гид · 99 ₽</button>`;
+      : `<p>Попробуй персональный гид — рецепт и параметры под твоё зерно.</p><button type="button" class="btn btn-primary" data-buy="1">Купить гид · 99 ₽</button>`;
     return `<div class="guide-upsell"><div class="gu-title">🎁 Персональный гид под твоё зерно</div>${body}</div>`;
   }
 
@@ -948,7 +951,9 @@ import Nav from '../components/Nav.astro';
     const until = access.activeUntil
       ? new Date(access.activeUntil).toLocaleDateString('ru-RU')
       : null;
-    const badge = access.source === 'subscription' && until
+    const badge = access.source === 'free'
+      ? 'бесплатно'
+      : access.source === 'subscription' && until
       ? `до ${until}`
       : access.source === 'beta_credits'
       ? 'бета'
@@ -1144,7 +1149,7 @@ import Nav from '../components/Nav.astro';
         });
         loadingWrap.remove();
         if (res.status === 402) {
-          renderBotMsg('Нужна подписка на ассистента. Обнови страницу или напиши @ksenijashmel.', message);
+          renderBotMsg('Доступ к IVAN временно недоступен. Обнови страницу или напиши @ksenijashmel.', message);
           return;
         }
         if (!res.ok) throw new Error(await res.text());

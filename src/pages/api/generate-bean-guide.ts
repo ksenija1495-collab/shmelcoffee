@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { createClient } from '@supabase/supabase-js';
 import OpenAI from 'openai';
+import { consumeGuideCreditIfNeeded, refundGuideCredit } from '../../lib/cabinetFree';
 
 export const prerender = false;
 
@@ -25,9 +26,9 @@ export const POST: APIRoute = async ({ request }) => {
 
   const admin = createClient(url, import.meta.env.SUPABASE_SERVICE_ROLE_KEY);
 
-  const { data: consumed } = await admin.rpc('consume_guide_credit', { p_user: user.id });
+  const consumed = await consumeGuideCreditIfNeeded(admin, user.id);
   if (!consumed) return new Response('payment_required', { status: 402 });
-  const refund = async () => { await admin.rpc('add_guide_credits', { p_user: user.id, p_amount: 1 }); };
+  const refund = async () => { await refundGuideCredit(admin, user.id); };
 
   const { data: profile } = await admin
     .from('taste_profiles')
