@@ -80,7 +80,7 @@ const OWNER = 'ksenija14.95@gmail.com';
 
     page.innerHTML = `
       <div class="mx-h">Метрики Shmelco</div>
-      <div class="mx-sub">Обновляется в реальном времени · только для тебя<br>Трафик страниц — в <a href="https://vercel.com/dashboard" target="_blank" rel="noopener">Vercel → Analytics</a> (после включения)</div>
+      <div class="mx-sub">Обновляется в реальном времени · только для тебя<br>Трафик страниц — в <a href="https://vercel.com/dashboard" target="_blank" rel="noopener">Vercel → Analytics</a> (после включения)<br>${(m.excluded_user_ids || []).length ? `Сводка <b>без твоего аккаунта</b> (${m.excluded_user_ids.length} id).` : ''}</div>
 
       <div class="mx-sec">Re-activation email</div>
       <div class="mx-email-box">

@@ -26,6 +26,14 @@ if (!url || !serviceKey) {
 const admin = createClient(url, serviceKey);
 const pub = createClient(url, anonKey);
 
+const EXCLUDE = new Set(
+  (env.METRICS_EXCLUDE_USER_IDS || 'd83618c4-5c8f-4e82-a79d-eeba7a148661')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean),
+);
+const keep = (userId) => userId && !EXCLUDE.has(userId);
+
 async function tableCount(table) {
   const { count, error } = await admin.from(table).select('*', { count: 'exact', head: true });
   return error ? { table, error: error.message } : { table, count: count ?? 0 };
@@ -63,6 +71,7 @@ async function main() {
     const { data } = await admin.auth.admin.listUsers({ page, perPage: 200 });
     const users = data?.users ?? [];
     for (const u of users) {
+      if (EXCLUDE.has(u.id)) continue;
       registrations += 1;
       if (u.created_at) {
         const m = u.created_at.slice(0, 7);
@@ -73,10 +82,10 @@ async function main() {
     page += 1;
   }
 
-  const profiles = profilesRes.data ?? [];
-  const cups = cupsRes.data ?? [];
-  const shelf = shelfRes.data ?? [];
-  const purchases = purchasesRes.data ?? [];
+  const profiles = (profilesRes.data ?? []).filter((p) => keep(p.user_id));
+  const cups = (cupsRes.data ?? []).filter((c) => keep(c.user_id));
+  const shelf = (shelfRes.data ?? []).filter((s) => keep(s.user_id));
+  const purchases = (purchasesRes.data ?? []).filter((p) => keep(p.user_id));
 
   const profileUsers = new Set(profiles.map((p) => p.user_id));
   const activeUsers = new Set([...cups.map((c) => c.user_id), ...shelf.map((s) => s.user_id)]);
@@ -119,6 +128,7 @@ async function main() {
     quiz_flavors: flavorCounts,
     community_stats: communityRes.error ? { error: communityRes.error.message } : communityRes.data,
     get_metrics_rpc: metricsRes.error ? { error: metricsRes.error.message } : metricsRes.data,
+    excluded_user_ids: [...EXCLUDE],
   };
 
   process.stdout.write(JSON.stringify(out, null, 2));

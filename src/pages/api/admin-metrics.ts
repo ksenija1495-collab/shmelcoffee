@@ -1,6 +1,12 @@
 import type { APIRoute } from 'astro';
 import { createClient } from '@supabase/supabase-js';
 import { getAuthUser } from '../../lib/requireAuth';
+import {
+  computeProductMetrics,
+  countSinceExcluding,
+  resolveMetricsExcludedIds,
+} from '../../lib/metricsCompute';
+import { isMetricsExcluded } from '../../lib/metricsExclude';
 
 export const prerender = false;
 
@@ -28,19 +34,6 @@ function mskDateLabel(): string {
   }).format(new Date());
 }
 
-async function countSince(
-  admin: ReturnType<typeof createClient>,
-  table: string,
-  since: string,
-): Promise<number> {
-  const { count, error } = await admin
-    .from(table)
-    .select('*', { count: 'exact', head: true })
-    .gte('created_at', since);
-  if (error) return 0;
-  return count || 0;
-}
-
 export const GET: APIRoute = async ({ request }) => {
   const auth = await getAuthUser(request);
   if ('error' in auth) return auth.error;
@@ -51,17 +44,18 @@ export const GET: APIRoute = async ({ request }) => {
   const since = mskDayStartISO();
   const url = import.meta.env.PUBLIC_SUPABASE_URL;
   const admin = createClient(url, import.meta.env.SUPABASE_SERVICE_ROLE_KEY);
+  const excluded = await resolveMetricsExcludedIds(admin);
 
-  const [metricsRes, profiles, selections, cups, shelf, clicks, guides, purchases] =
+  const [totals, profiles, selections, cups, shelf, clicks, guides, purchases] =
     await Promise.all([
-      admin.rpc('get_metrics'),
-      countSince(admin, 'taste_profiles', since),
-      countSince(admin, 'coffee_selections', since),
-      countSince(admin, 'cups', since),
-      countSince(admin, 'shelf_items', since),
-      countSince(admin, 'bean_clicks', since),
-      countSince(admin, 'guides', since),
-      countSince(admin, 'prodamus_orders', since),
+      computeProductMetrics(admin, excluded),
+      countSinceExcluding(admin, 'taste_profiles', since, excluded),
+      countSinceExcluding(admin, 'coffee_selections', since, excluded),
+      countSinceExcluding(admin, 'cups', since, excluded),
+      countSinceExcluding(admin, 'shelf_items', since, excluded),
+      countSinceExcluding(admin, 'bean_clicks', since, excluded),
+      countSinceExcluding(admin, 'guides', since, excluded),
+      countSinceExcluding(admin, 'prodamus_orders', since, excluded),
     ]);
 
   let registrationsToday = 0;
@@ -71,6 +65,7 @@ export const GET: APIRoute = async ({ request }) => {
     const { data } = await admin.auth.admin.listUsers({ page, perPage: 200 });
     const users = data?.users || [];
     for (const u of users) {
+      if (isMetricsExcluded(u.id, excluded)) continue;
       if (u.created_at && u.created_at >= since) {
         registrationsToday += 1;
         if (u.email) registrationEmails.push(u.email);
@@ -86,10 +81,20 @@ export const GET: APIRoute = async ({ request }) => {
     admin.from('shelf_items').select('user_id'),
   ]);
   const activeIds = new Set([
-    ...(cupRows || []).map((r: { user_id: string }) => r.user_id),
-    ...(shelfRows || []).map((r: { user_id: string }) => r.user_id),
+    ...(cupRows || [])
+      .filter((r) => !isMetricsExcluded(r.user_id, excluded))
+      .map((r: { user_id: string }) => r.user_id),
+    ...(shelfRows || [])
+      .filter((r) => !isMetricsExcluded(r.user_id, excluded))
+      .map((r: { user_id: string }) => r.user_id),
   ]);
-  const profileIds = [...new Set((profileRows || []).map((r: { user_id: string }) => r.user_id))];
+  const profileIds = [
+    ...new Set(
+      (profileRows || [])
+        .filter((r) => !isMetricsExcluded(r.user_id, excluded))
+        .map((r: { user_id: string }) => r.user_id),
+    ),
+  ];
   const inactiveIds = profileIds.filter((id) => !activeIds.has(id));
 
   const inactive_users: { email: string; name?: string }[] = [];
@@ -99,6 +104,7 @@ export const GET: APIRoute = async ({ request }) => {
       const { data } = await admin.auth.admin.listUsers({ page: uPage, perPage: 200 });
       const users = data?.users || [];
       for (const u of users) {
+        if (isMetricsExcluded(u.id, excluded)) continue;
         if (u.id && inactiveIds.includes(u.id) && u.email) {
           inactive_users.push({
             email: u.email,
@@ -112,7 +118,7 @@ export const GET: APIRoute = async ({ request }) => {
   }
 
   const body = {
-    totals: metricsRes.data || {},
+    totals,
     inactive_users,
     today: {
       date_label: mskDateLabel(),
