@@ -98,14 +98,6 @@ export function diaryHintForBean(cups: DiaryCup[], bean: ShelfBean & { id?: stri
   return `Последняя чашка: ${last.brew_method || '—'}, ${stars}${last.comment ? ` — «${String(last.comment).slice(0, 80)}»` : ''}`;
 }
 
-function preferredDiaryBrew(cups: DiaryCup[]): string | null {
-  const top = cups.filter((c) => (c.rating ?? 0) >= 4 && c.brew_method);
-  const counts = new Map<string, number>();
-  top.forEach((c) => counts.set(c.brew_method!, (counts.get(c.brew_method!) || 0) + 1));
-  const sorted = [...counts.entries()].sort((a, b) => b[1] - a[1]);
-  return sorted[0]?.[0] || null;
-}
-
 function methodFamily(method: string | null | undefined): string {
   const m = String(method || '').toLowerCase();
   if (/aero/.test(m)) return 'aeropress';
@@ -153,6 +145,7 @@ function scoreBeanForSmallVolume(item: any, cups: DiaryCup[]): number {
   const washed = /мыт|washed/.test(process);
   const ferment = /анаэроб|натур|natural/.test(process);
   let score = 0;
+  if (item.status === 'low') score += 4;
   if (washed) score += 3;
   if (ferment) score += 1;
   if (rec && /aero|v60|switch/i.test(rec.primary.method)) score += 2;
@@ -163,6 +156,34 @@ function scoreBeanForSmallVolume(item: any, cups: DiaryCup[]): number {
   else if (best >= 4) score += 1;
   else if (!best) score += 1;
   return score;
+}
+
+function scoreMethodContrast(item: any, cups: DiaryCup[]): number {
+  const nameKey = norm(item.name);
+  const tried = cups.filter((c) => norm(c.name) === nameKey && c.brew_method);
+  const fams = new Set(tried.map((c) => methodFamily(c.brew_method)));
+  let score = 0;
+  if (fams.size === 1) score += 5;
+  else if (fams.size === 0) score += 3;
+  else {
+    const byFam = new Map<string, number>();
+    tried.forEach((c) => {
+      const f = methodFamily(c.brew_method);
+      byFam.set(f, Math.max(byFam.get(f) || 0, c.rating ?? 0));
+    });
+    const ratings = [...byFam.values()];
+    if (ratings.length >= 2) score += Math.abs(ratings[0] - ratings[1]);
+  }
+  if (item.status === 'low') score -= 2;
+  return score;
+}
+
+function defaultMethodForSmall(item: any): string {
+  const rec = recommendBrew(item);
+  const process = String(item.process || '').toLowerCase();
+  if (/анаэроб|натур|natural/.test(process)) return 'AeroPress';
+  if (rec?.primary.method) return rec.primary.method;
+  return 'V60';
 }
 
 function methodsPairForBean(item: any, cups: DiaryCup[]): [string, string] {
@@ -242,7 +263,9 @@ function soloPlans(
     if (item) {
       const sb = shelfBeanFromItem(item);
       const brewKey = state.method
-        ? presetKeyForMethod(state.method, sb)
+        ? presetKeyForMethod(state.method, sb, sb, state.entry === 'small')
+        : state.entry === 'small'
+        ? presetKeyForMethod(defaultMethodForSmall(item), sb, sb, true)
         : suggestBrewPresetKey(sb, sb, 'terroir');
       const preset = FLIGHT_BREW_PRESETS[brewKey] || FLIGHT_BREW_PRESETS.V60;
       const rec = recommendBrew(sb);
@@ -259,23 +282,27 @@ function soloPlans(
   }
 
   if (state.method && !state.beanId) {
-    const pref = preferredDiaryBrew(cups);
-    const sorted = [...beans].sort((a, b) => {
-      const aMatch = cups.some((c) => norm(c.name) === norm(a.name) && (c.rating ?? 0) >= 4) ? 1 : 0;
-      const bMatch = cups.some((c) => norm(c.name) === norm(b.name) && (c.rating ?? 0) >= 4) ? 1 : 0;
-      return bMatch - aMatch;
-    });
-    for (const item of sorted.slice(0, 6)) {
+    const small = state.entry === 'small';
+    const sorted = [...beans].sort(
+      (a, b) => scoreBeanForMethod(b, cups, state.method!) - scoreBeanForMethod(a, cups, state.method!),
+    );
+    for (const item of sorted.slice(0, 8)) {
       const sb = shelfBeanFromItem(item);
-      const brewKey = presetKeyForMethod(state.method, sb);
+      const brewKey = presetKeyForMethod(state.method, sb, sb, small);
       const preset = FLIGHT_BREW_PRESETS[brewKey] || FLIGHT_BREW_PRESETS.AeroPress;
+      const rec = recommendBrew(sb);
+      const recFit = rec && methodFamily(rec.primary.method) === methodFamily(state.method);
       out.push({
         mode: 'solo',
         beans: [{ shelfId: item.id, name: sb.name, country: sb.country, process: sb.process, variety: sb.variety, roaster: sb.roaster }],
         brewPresetKey: brewKey,
         brewLabel: preset.label,
-        focus: `Исследовать через ${state.method}: что раскрывается в этом лоте`,
-        reason: `Выбран способ ${state.method} — подобран лот с полки`,
+        focus: small
+          ? `Малый объём на ${state.method}: хватит ли сладости и чистоты без большой чашки`
+          : `Исследовать через ${state.method}: что раскрывается в этом лоте`,
+        reason: recFit
+          ? `${state.method} — основной метод для этого лота`
+          : `Под ${state.method} с полки: обработка и дневник лучше стыкуются, чем у остальных`,
         diaryHint: diaryHintForBean(cups, sb),
       });
     }
@@ -348,6 +375,64 @@ function comparePlans(
   return pairs.map((p) => planFromPair(p, shelfItems, cups, 'compare'));
 }
 
+function smallPlans(
+  shelfItems: any[],
+  cups: DiaryCup[],
+  state: BrewTodayWizardState,
+): BrewTodayPlan[] {
+  const beans = [...shelfItems].sort(
+    (a, b) => scoreBeanForSmallVolume(b, cups) - scoreBeanForSmallVolume(a, cups),
+  );
+  return beans.slice(0, 8).map((item) => {
+    const sb = shelfBeanFromItem(item);
+    const method = state.method || defaultMethodForSmall(item);
+    const brewKey = presetKeyForMethod(method, sb, sb, true);
+    const preset = FLIGHT_BREW_PRESETS[brewKey] || FLIGHT_BREW_PRESETS['V60 (малый)'];
+    const low = item.status === 'low';
+    return {
+      mode: 'solo' as const,
+      beans: [{ shelfId: item.id, name: sb.name, country: sb.country, process: sb.process, variety: sb.variety, roaster: sb.roaster }],
+      brewPresetKey: brewKey,
+      brewLabel: preset.label,
+      focus: 'Малая доза: сладость, чистота, не выжать лот впустую',
+      reason: low
+        ? 'Лот заканчивается — 13 г разумнее, чем полная воронка'
+        : 'В малом объёме лучше слышны мытые и уже любимые лоты, без размазывания тела',
+      diaryHint: diaryHintForBean(cups, sb),
+    };
+  });
+}
+
+function methodsExplorePlans(
+  shelfItems: any[],
+  cups: DiaryCup[],
+  state: BrewTodayWizardState,
+): BrewTodayPlan[] {
+  const beans = state.beanId
+    ? shelfItems.filter((s) => s.id === state.beanId)
+    : [...shelfItems].sort((a, b) => scoreMethodContrast(b, cups) - scoreMethodContrast(a, cups));
+
+  return beans.slice(0, 8).map((item) => {
+    const sb = shelfBeanFromItem(item);
+    const [m1, m2] = methodsPairForBean(item, cups);
+    const k1 = presetKeyForMethod(m1, sb);
+    const k2 = presetKeyForMethod(m2, sb);
+    const p1 = FLIGHT_BREW_PRESETS[k1] || FLIGHT_BREW_PRESETS.V60;
+    const p2 = FLIGHT_BREW_PRESETS[k2] || FLIGHT_BREW_PRESETS.AeroPress;
+    return {
+      mode: 'methods' as const,
+      beans: [{ shelfId: item.id, name: sb.name, country: sb.country, process: sb.process, variety: sb.variety, roaster: sb.roaster }],
+      brewPresetKey: k1,
+      brewLabel: p1.label,
+      secondBrewPresetKey: k2,
+      secondBrewLabel: p2.label,
+      focus: `Один лот, два метода: ${m1} vs ${m2} — что меняет тело, кислотность, сладость`,
+      reason: 'Сравниваешь способ, не терруар. Рецепты разные, зерно одно.',
+      diaryHint: diaryHintForBean(cups, sb),
+    };
+  });
+}
+
 export function buildBrewTodayPlans(
   shelfItems: any[],
   cups: DiaryCup[],
@@ -370,6 +455,15 @@ export function buildBrewTodayPlans(
     ? { ...state, beanId: null }
     : state;
 
+  if (nextState.entry === 'small') {
+    if (nextState.beanId) {
+      return soloPlans(available, shelfBeans, cups, { ...nextState, mode: 'solo' });
+    }
+    return smallPlans(available, cups, nextState);
+  }
+  if (nextState.mode === 'methods' || nextState.entry === 'methods') {
+    return methodsExplorePlans(available, cups, nextState);
+  }
   if (nextState.mode === 'solo') {
     return soloPlans(available, shelfBeans, cups, nextState);
   }

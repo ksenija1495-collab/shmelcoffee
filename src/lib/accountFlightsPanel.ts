@@ -55,9 +55,10 @@ function cupsForFlight(cups: any[], flightId: string): Map<number, any> {
   return map;
 }
 
-function buildSoloCupUrl(plan: BrewTodayPlan): string {
+function buildCupUrlFromPlan(plan: BrewTodayPlan, presetKey?: string): string {
   const bean = plan.beans[0];
-  const preset = FLIGHT_BREW_PRESETS[plan.brewPresetKey] || FLIGHT_BREW_PRESETS.V60;
+  const key = presetKey || plan.brewPresetKey;
+  const preset = FLIGHT_BREW_PRESETS[key] || FLIGHT_BREW_PRESETS.V60;
   const q = applyRecipeToParams(
     {
       coffee_g: parseFloat(preset.coffee_g),
@@ -81,6 +82,10 @@ function buildSoloCupUrl(plan: BrewTodayPlan): string {
   return '/add-cup?' + q.toString();
 }
 
+function buildSoloCupUrl(plan: BrewTodayPlan): string {
+  return buildCupUrlFromPlan(plan);
+}
+
 function renderPlanCard(plan: BrewTodayPlan | null, altTotal: number, altIndex: number): string {
   if (!plan) {
     return `<div class="brew-plan empty" id="brewPlanCard">
@@ -88,15 +93,24 @@ function renderPlanCard(plan: BrewTodayPlan | null, altTotal: number, altIndex: 
     </div>`;
   }
   const beansLine = plan.beans.map((b) => esc(b.name)).join(plan.mode === 'compare' ? ' × ' : '');
+  const modeLabel = plan.mode === 'compare'
+    ? '⚖️ Сравнение лотов'
+    : plan.mode === 'methods'
+    ? '🔀 Один лот × два способа'
+    : '🔍 Исследование одного лота';
   const goalLine = plan.goalId
     ? `${goalById(plan.goalId).emoji} ${esc(goalById(plan.goalId).label)}`
     : plan.mode === 'solo' ? '🔍 Solo-исследование' : '';
 
   return `<div class="brew-plan profile-card" id="brewPlanCard">
-    <div class="brew-plan-mode">${plan.mode === 'compare' ? '⚖️ Сравнение' : '🔍 Исследование одного лота'}</div>
+    <div class="brew-plan-mode">${modeLabel}</div>
     <div class="brew-plan-beans">${beansLine}</div>
     ${goalLine ? `<div class="brew-plan-goal">${goalLine}</div>` : ''}
     <div class="brew-plan-brew">☕ ${esc(plan.brewLabel)}</div>
+    ${plan.secondBrewLabel ? `<div class="brew-plan-brew">☕ ${esc(plan.secondBrewLabel)}</div>` : ''}
+    <div class="brew-plan-focus"><b>🎯 Фокус:</b> ${esc(plan.focus)}</div>
+    <div class="brew-plan-reason">${esc(plan.reason)}</div>
+    <div class="brew-plan-diary">📔 ${esc(plan.diaryHint)}</div>
     <div class="brew-plan-focus"><b>🎯 Фокус:</b> ${esc(plan.focus)}</div>
     <div class="brew-plan-reason">${esc(plan.reason)}</div>
     <div class="brew-plan-diary">📔 ${esc(plan.diaryHint)}</div>
@@ -136,7 +150,7 @@ export function renderFlightsPanel(
     (s) => `<option value="${esc(s.id)}">${esc(s.name)}${s.country ? ` · ${esc(s.country)}` : ''}</option>`,
   ).join('');
 
-  const methodOptions = methods.map((m) => `<option value="${esc(m)}">${esc(m)}</option>`).join('');
+  const methodOptions = `<option value="">— подбери способ сам —</option>` + methods.map((m) => `<option value="${esc(m)}">${esc(m)}</option>`).join('');
 
   const wizard = `<div class="brew-today profile-card" id="brewTodayWizard" ${openCreate || !flights.length ? '' : ''}>
     <div class="brew-diary-bar" id="brewDiaryBar">📔 ${esc(diaryLine)}</div>
@@ -145,7 +159,9 @@ export function renderFlightsPanel(
       <div class="brew-step-h">С чего начнём?</div>
       <div class="brew-chips">
         <button type="button" class="brew-chip" data-brew-entry="bean">🫘 Конкретное зерно</button>
-        <button type="button" class="brew-chip" data-brew-entry="method">⚙️ Конкретный способ</button>
+        <button type="button" class="brew-chip" data-brew-entry="method">⚙️ Подобрать лот под способ</button>
+        <button type="button" class="brew-chip" data-brew-entry="methods">🔀 Один лот × два способа</button>
+        <button type="button" class="brew-chip" data-brew-entry="small">🥄 Малый объём · ~13 г</button>
         <button type="button" class="brew-chip" data-brew-entry="free">✨ Подскажи с нуля</button>
       </div>
     </div>
@@ -372,6 +388,22 @@ export function bindFlightsPanel(
         return;
       }
 
+      if (currentPlan.mode === 'methods') {
+        const urlA = buildCupUrlFromPlan(currentPlan, currentPlan.brewPresetKey);
+        const urlB = buildCupUrlFromPlan(currentPlan, currentPlan.secondBrewPresetKey);
+        activeSession.hidden = false;
+        activeSession.innerHTML = `<div class="brew-session-card profile-card">
+          <div class="brew-step-h">Один лот — два метода</div>
+          <p class="flight-hint">${esc(currentPlan.focus)}</p>
+          <div class="brew-session-slots">
+            <a href="${urlA}" class="add-cup-btn">☕ 1 · ${esc(currentPlan.brewLabel)}</a>
+            <a href="${urlB}" class="add-cup-btn">☕ 2 · ${esc(currentPlan.secondBrewLabel || '')}</a>
+          </div>
+        </div>`;
+        btn.disabled = false;
+        return;
+      }
+
       const idA = currentPlan.beans[0]?.shelfId;
       const idB = currentPlan.beans[1]?.shelfId;
       if (!idA || !idB) {
@@ -428,8 +460,41 @@ export function bindFlightsPanel(
     btn.addEventListener('click', () => {
       state.entry = (btn as HTMLElement).dataset.brewEntry as BrewTodayEntry;
       state.altIndex = 0;
+      state.beanId = null;
+      state.method = null;
       markChip('[data-brew-entry]', 'brewEntry', state.entry);
+
+      if (state.entry === 'methods') {
+        state.mode = 'methods';
+        stepMode.hidden = true;
+        stepGoal.hidden = true;
+        stepPick.hidden = false;
+        pickBean.hidden = false;
+        pickMethod.hidden = true;
+        if (pickLabel) pickLabel.textContent = 'Какое зерно? Можно пропустить — подберём лот, которому два метода дадут больше всего.';
+        return;
+      }
+      if (state.entry === 'small') {
+        state.mode = 'solo';
+        stepMode.hidden = true;
+        stepGoal.hidden = true;
+        stepPick.hidden = false;
+        pickBean.hidden = true;
+        pickMethod.hidden = false;
+        if (pickLabel) pickLabel.textContent = 'Способ для малой дозы (или оставь любой и нажми Дальше)';
+        return;
+      }
+      if (state.entry === 'method') {
+        state.mode = null;
+        stepMode.hidden = true;
+        stepPick.hidden = false;
+        pickBean.hidden = true;
+        pickMethod.hidden = false;
+        if (pickLabel) pickLabel.textContent = 'Каким способом? Подберём лот под него.';
+        return;
+      }
       stepMode.hidden = false;
+      stepPick.hidden = true;
     });
   });
 
@@ -445,10 +510,14 @@ export function bindFlightsPanel(
         pickMethod.hidden = true;
         if (pickLabel) pickLabel.textContent = 'Какое зерно?';
       } else if (state.entry === 'method') {
-        stepPick.hidden = false;
-        pickBean.hidden = true;
-        pickMethod.hidden = false;
-        if (pickLabel) pickLabel.textContent = 'Каким способом?';
+        if (state.method) {
+          showGoals();
+        } else {
+          stepPick.hidden = false;
+          pickBean.hidden = true;
+          pickMethod.hidden = false;
+          if (pickLabel) pickLabel.textContent = 'Каким способом? Подберём лот под него.';
+        }
       } else {
         stepPick.hidden = true;
         showGoals();
@@ -458,8 +527,22 @@ export function bindFlightsPanel(
 
   wizard.querySelector('#brewPickContinue')?.addEventListener('click', () => {
     if (!pickBean.hidden && pickBean.value) state.beanId = pickBean.value;
-    if (!pickMethod.hidden && pickMethod.value) state.method = pickMethod.value;
+    else if (!pickBean.hidden) state.beanId = null;
+    if (!pickMethod.hidden) state.method = pickMethod.value || null;
     state.altIndex = 0;
+
+    if (state.entry === 'methods' || state.entry === 'small') {
+      renderResult();
+      return;
+    }
+    if (state.entry === 'method' && !state.method) {
+      if (pickLabel) pickLabel.textContent = 'Выбери способ — под него соберём лот.';
+      return;
+    }
+    if (state.entry === 'method' && !state.mode) {
+      stepMode.hidden = false;
+      return;
+    }
     showGoals();
   });
 
