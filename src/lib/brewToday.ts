@@ -14,9 +14,10 @@ import { FLIGHT_BREW_PRESETS } from './tastingFlights';
 import { formatCupRecipe } from './cupRecipe';
 import { recommendBrew } from './brewRecommend';
 import { EQUIPMENT_TAGS } from './equipmentTags';
+import { filterAvailableShelfBeans } from './shelfAvailability';
 
-export type BrewTodayEntry = 'bean' | 'method' | 'free';
-export type BrewTodayMode = 'solo' | 'compare';
+export type BrewTodayEntry = 'bean' | 'method' | 'methods' | 'small' | 'free';
+export type BrewTodayMode = 'solo' | 'compare' | 'methods';
 
 export type BrewTodayWizardState = {
   entry: BrewTodayEntry | null;
@@ -43,6 +44,8 @@ export type BrewTodayPlan = {
   reason: string;
   diaryHint: string;
   goalId?: ComparisonGoalId;
+  secondBrewPresetKey?: string;
+  secondBrewLabel?: string;
 };
 
 const BREW_METHODS = [
@@ -103,11 +106,77 @@ function preferredDiaryBrew(cups: DiaryCup[]): string | null {
   return sorted[0]?.[0] || null;
 }
 
-function presetKeyForMethod(method: string, a: ShelfBean, b?: ShelfBean): string {
-  if (method === 'V60') return suggestBrewPresetKey(a, b || a, 'countries');
-  if (/aero/i.test(method)) return 'AeroPress';
-  if (/switch/i.test(method)) return 'V60';
+function methodFamily(method: string | null | undefined): string {
+  const m = String(method || '').toLowerCase();
+  if (/aero/.test(m)) return 'aeropress';
+  if (/switch/.test(m)) return 'switch';
+  if (/v60|воронк/.test(m)) return 'v60';
+  if (/chemex|кемекс/.test(m)) return 'chemex';
+  if (/френч|french|пресс/.test(m)) return 'french';
+  if (/эспресс|espresso/.test(m)) return 'espresso';
+  return m;
+}
+
+function presetKeyForMethod(method: string, a: ShelfBean, b?: ShelfBean, small = false): string {
+  const fam = methodFamily(method);
+  if (fam === 'v60') {
+    if (small) return 'V60 (малый)';
+    return suggestBrewPresetKey(a, b || a, 'countries');
+  }
+  if (fam === 'aeropress') return small ? 'AeroPress (малый)' : 'AeroPress';
+  if (fam === 'switch') return small ? 'Hario Switch (малый)' : 'Hario Switch';
+  if (small) return 'V60 (малый)';
   return suggestBrewPresetKey(a, b || a);
+}
+
+function scoreBeanForMethod(item: any, cups: DiaryCup[], method: string): number {
+  const rec = recommendBrew(item);
+  const want = methodFamily(method);
+  let score = 0;
+  if (rec && methodFamily(rec.primary.method) === want) score += 4;
+  else if (rec && methodFamily(rec.secondary.method) === want) score += 2;
+  const matches = cups.filter(
+    (c) => norm(c.name) === norm(item.name) && methodFamily(c.brew_method) === want,
+  );
+  const best = matches.reduce((mx, c) => Math.max(mx, c.rating ?? 0), 0);
+  if (best >= 5) score += 3;
+  else if (best >= 4) score += 2;
+  else if (best === 3) score -= 1;
+  else if (best > 0 && best <= 2) score -= 3;
+  else score += 1;
+  return score;
+}
+
+function scoreBeanForSmallVolume(item: any, cups: DiaryCup[]): number {
+  const rec = recommendBrew(item);
+  const process = String(item.process || '').toLowerCase();
+  const washed = /мыт|washed/.test(process);
+  const ferment = /анаэроб|натур|natural/.test(process);
+  let score = 0;
+  if (washed) score += 3;
+  if (ferment) score += 1;
+  if (rec && /aero|v60|switch/i.test(rec.primary.method)) score += 2;
+  const best = cups
+    .filter((c) => norm(c.name) === norm(item.name))
+    .reduce((mx, c) => Math.max(mx, c.rating ?? 0), 0);
+  if (best >= 5) score += 2;
+  else if (best >= 4) score += 1;
+  else if (!best) score += 1;
+  return score;
+}
+
+function methodsPairForBean(item: any, cups: DiaryCup[]): [string, string] {
+  const rec = recommendBrew(item);
+  const primary = rec?.primary.method || 'V60';
+  const secondary = rec?.secondary.method || (methodFamily(primary) === 'v60' ? 'AeroPress' : 'V60');
+  const famA = methodFamily(primary);
+  const famB = methodFamily(secondary);
+  if (famA !== famB) return [primary, secondary];
+  const tried = cups.filter((c) => norm(c.name) === norm(item.name) && c.brew_method);
+  const unused = ['V60', 'AeroPress', 'Hario Switch'].find((m) =>
+    !tried.some((c) => methodFamily(c.brew_method) === methodFamily(m)),
+  );
+  return [primary, unused || (famA === 'v60' ? 'AeroPress' : 'V60')];
 }
 
 function shelfBeanFromItem(s: any): ShelfBean & { id: string } {
@@ -285,22 +354,26 @@ export function buildBrewTodayPlans(
   savedPairs: SavedPair[],
   state: BrewTodayWizardState,
 ): BrewTodayPlan[] {
-  const shelfBeans: ShelfBean[] = shelfItems
-    .filter((s) => s.kind === 'bean')
-    .map((s) => ({
-      name: s.name,
-      roaster: s.roaster,
-      country: s.country,
-      process: s.process,
-      variety: s.variety,
-    }));
+  const available = filterAvailableShelfBeans(shelfItems.filter((s) => s.kind === 'bean'));
+  const shelfBeans: ShelfBean[] = available.map((s) => ({
+    name: s.name,
+    roaster: s.roaster,
+    country: s.country,
+    process: s.process,
+    variety: s.variety,
+  }));
 
   if (!state.mode) return [];
 
-  if (state.mode === 'solo') {
-    return soloPlans(shelfItems, shelfBeans, cups, state);
+  const availableIds = new Set(available.map((s) => s.id));
+  const nextState = state.beanId && !availableIds.has(state.beanId)
+    ? { ...state, beanId: null }
+    : state;
+
+  if (nextState.mode === 'solo') {
+    return soloPlans(available, shelfBeans, cups, nextState);
   }
-  return comparePlans(shelfItems, shelfBeans, cups, savedPairs, state);
+  return comparePlans(available, shelfBeans, cups, savedPairs, nextState);
 }
 
 export function pickBrewTodayPlan(

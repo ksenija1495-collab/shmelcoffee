@@ -177,7 +177,8 @@ export function renderFlightsPanel(
     </div>
 
     <div class="brew-active-session" id="brewActiveSession" hidden></div>
-  </div>`;
+  </div>
+  <div id="shelfAssistantMount"></div>`;
 
   const activeFlights = flights.filter((f) => f.status === 'active' || f.status === 'draft');
   const historyFlights = flights.filter((f) => f.status === 'completed');
