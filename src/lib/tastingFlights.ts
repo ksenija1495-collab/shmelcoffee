@@ -130,6 +130,24 @@ export const FLIGHT_BREW_PRESETS: Record<string, BrewPreset> = {
     grind: 'средний',
     label: 'Switch малый · 13 г / 220 мл · 92 °C',
   },
+  Турка: {
+    brew: 'Турка',
+    coffee_g: '8',
+    water_g: '70',
+    temp: '88',
+    time: '180',
+    grind: 'в пыль',
+    label: 'Турка · 8 г / 70 мл · холодная вода · 3 подъёма',
+  },
+  'Турка (2 чашки)': {
+    brew: 'Турка',
+    coffee_g: '15',
+    water_g: '140',
+    temp: '88',
+    time: '180',
+    grind: 'в пыль',
+    label: 'Турка · 15 г / 140 мл · 2 чашки · 2 подъёма',
+  },
 };
 
 export function flightTitleFromBeans(beans: FlightBean[]): string {
@@ -143,9 +161,28 @@ export function flightTitleFromBeans(beans: FlightBean[]): string {
   return 'Сравнение';
 }
 
+export function isTurkaBrew(method?: string | null): boolean {
+  return /турк|turka|cezve|ibrik|джезв/i.test(String(method || ''));
+}
+
+export function turkaPresetKey(twoCups = true): string {
+  return twoCups ? 'Турка (2 чашки)' : 'Турка';
+}
+
+export function lookupPreset(presetKey: string, brewMethod?: string | null): BrewPreset {
+  const direct = FLIGHT_BREW_PRESETS[presetKey];
+  if (direct) return direct;
+  if (isTurkaBrew(presetKey) || isTurkaBrew(brewMethod)) {
+    return FLIGHT_BREW_PRESETS[turkaPresetKey(true)] || FLIGHT_BREW_PRESETS[turkaPresetKey(false)];
+  }
+  if (/aero/i.test(presetKey)) return FLIGHT_BREW_PRESETS.AeroPress;
+  if (/switch/i.test(presetKey)) return FLIGHT_BREW_PRESETS['Hario Switch'];
+  return FLIGHT_BREW_PRESETS.V60;
+}
+
 export function presetForFlight(brewMethod?: string | null): BrewPreset {
   const key = brewMethod || 'AeroPress';
-  return FLIGHT_BREW_PRESETS[key] || FLIGHT_BREW_PRESETS.AeroPress;
+  return lookupPreset(key, brewMethod);
 }
 
 export function buildFlightCupUrl(

@@ -10,9 +10,10 @@ import {
 import type { SavedPair, ShelfBean } from './shelfAssistantPairings';
 import type { DiaryCup } from './shelfAssistantDiary';
 import { bestDiaryRecipeForBean } from './tastingFlights';
-import { FLIGHT_BREW_PRESETS } from './tastingFlights';
+import { FLIGHT_BREW_PRESETS, lookupPreset, turkaPresetKey } from './tastingFlights';
 import { formatCupRecipe } from './cupRecipe';
 import { recommendBrew } from './brewRecommend';
+import { resolveCountryKey } from './countryResolve';
 import { EQUIPMENT_TAGS } from './equipmentTags';
 import { filterAvailableShelfBeans } from './shelfAvailability';
 
@@ -52,6 +53,7 @@ const BREW_METHODS = [
   'V60',
   'Hario Switch',
   'AeroPress',
+  'Турка',
   'Chemex',
   'Френч-пресс',
   'Эспрессо',
@@ -106,6 +108,7 @@ function methodFamily(method: string | null | undefined): string {
   if (/chemex|кемекс/.test(m)) return 'chemex';
   if (/френч|french|пресс/.test(m)) return 'french';
   if (/эспресс|espresso/.test(m)) return 'espresso';
+  if (/турк|turka|cezve|ibrik|джезв/.test(m)) return 'turka';
   return m;
 }
 
@@ -117,8 +120,22 @@ function presetKeyForMethod(method: string, a: ShelfBean, b?: ShelfBean, small =
   }
   if (fam === 'aeropress') return small ? 'AeroPress (малый)' : 'AeroPress';
   if (fam === 'switch') return small ? 'Hario Switch (малый)' : 'Hario Switch';
+  if (fam === 'turka') return turkaPresetKey(!small);
   if (small) return 'V60 (малый)';
   return suggestBrewPresetKey(a, b || a);
+}
+
+function soloPresetKeyForBean(
+  item: ShelfBean,
+  small: boolean,
+  method?: string | null,
+): string {
+  if (method) return presetKeyForMethod(method, item, item, small);
+  if (resolveCountryKey(item.country, item.name) === 'yemen') {
+    return turkaPresetKey(!small);
+  }
+  if (small) return presetKeyForMethod(defaultMethodForSmall(item), item, item, true);
+  return suggestBrewPresetKey(item, item, 'terroir');
 }
 
 function scoreBeanForMethod(item: any, cups: DiaryCup[], method: string): number {
@@ -136,6 +153,16 @@ function scoreBeanForMethod(item: any, cups: DiaryCup[], method: string): number
   else if (best === 3) score -= 1;
   else if (best > 0 && best <= 2) score -= 3;
   else score += 1;
+
+  if (want === 'turka') {
+    const ck = resolveCountryKey(item.country, item.name);
+    const process = String(item.process || '').toLowerCase();
+    if (ck === 'yemen') score += 6;
+    if (ck === 'vietnam') score += 2;
+    if (/анаэроб|натур|natural/.test(process)) score += 3;
+    if (/мыт|washed/.test(process) && ck && /ethiopia|rwanda|malawi|kenya/.test(ck)) score -= 5;
+  }
+
   return score;
 }
 
@@ -187,14 +214,18 @@ function defaultMethodForSmall(item: any): string {
 }
 
 function methodsPairForBean(item: any, cups: DiaryCup[]): [string, string] {
-  const rec = recommendBrew(item);
+  const sb = shelfBeanFromItem(item);
+  if (resolveCountryKey(sb.country, sb.name) === 'yemen') {
+    return ['Турка', 'Hario Switch'];
+  }
+  const rec = recommendBrew(sb);
   const primary = rec?.primary.method || 'V60';
   const secondary = rec?.secondary.method || (methodFamily(primary) === 'v60' ? 'AeroPress' : 'V60');
   const famA = methodFamily(primary);
   const famB = methodFamily(secondary);
   if (famA !== famB) return [primary, secondary];
   const tried = cups.filter((c) => norm(c.name) === norm(item.name) && c.brew_method);
-  const unused = ['V60', 'AeroPress', 'Hario Switch'].find((m) =>
+  const unused = ['Турка', 'V60', 'AeroPress', 'Hario Switch'].find((m) =>
     !tried.some((c) => methodFamily(c.brew_method) === methodFamily(m)),
   );
   return [primary, unused || (famA === 'v60' ? 'AeroPress' : 'V60')];
@@ -226,7 +257,7 @@ function planFromPair(
   const b = bItem ? shelfBeanFromItem(bItem) : { id: '', name: pair.b };
 
   const brewPresetKey = pair.brewPresetKey || suggestBrewPresetKey(a, mode === 'compare' ? b : a, pair.goalId);
-  const preset = FLIGHT_BREW_PRESETS[brewPresetKey] || FLIGHT_BREW_PRESETS.V60;
+  const preset = lookupPreset(brewPresetKey);
   const hints = [
     diaryHintForBean(cups, a),
     mode === 'compare' && bItem ? diaryHintForBean(cups, b) : '',
@@ -262,19 +293,17 @@ function soloPlans(
     const item = beans.find((s) => s.id === state.beanId);
     if (item) {
       const sb = shelfBeanFromItem(item);
-      const brewKey = state.method
-        ? presetKeyForMethod(state.method, sb, sb, state.entry === 'small')
-        : state.entry === 'small'
-        ? presetKeyForMethod(defaultMethodForSmall(item), sb, sb, true)
-        : suggestBrewPresetKey(sb, sb, 'terroir');
-      const preset = FLIGHT_BREW_PRESETS[brewKey] || FLIGHT_BREW_PRESETS.V60;
+      const brewKey = soloPresetKeyForBean(sb, state.entry === 'small', state.method);
+      const preset = lookupPreset(brewKey, state.method);
       const rec = recommendBrew(sb);
       out.push({
         mode: 'solo',
         beans: [{ shelfId: item.id, name: sb.name, country: sb.country, process: sb.process, variety: sb.variety, roaster: sb.roaster }],
         brewPresetKey: brewKey,
         brewLabel: preset.label,
-        focus: 'Исследовать один лот: тип кислотности, сладость, тело при остывании',
+        focus: methodFamily(state.method) === 'turka'
+          ? 'Турка: плотность, специи, сладость — снимай на подъёме пенки, не кипяти'
+          : 'Исследовать один лот: тип кислотности, сладость, тело при остывании',
         reason: rec?.why || 'Solo — чтобы услышать лот без сравнения',
         diaryHint: diaryHintForBean(cups, sb),
       });
@@ -289,15 +318,18 @@ function soloPlans(
     for (const item of sorted.slice(0, 8)) {
       const sb = shelfBeanFromItem(item);
       const brewKey = presetKeyForMethod(state.method, sb, sb, small);
-      const preset = FLIGHT_BREW_PRESETS[brewKey] || FLIGHT_BREW_PRESETS.AeroPress;
+      const preset = lookupPreset(brewKey, state.method);
       const rec = recommendBrew(sb);
       const recFit = rec && methodFamily(rec.primary.method) === methodFamily(state.method);
+      const isTurka = methodFamily(state.method) === 'turka';
       out.push({
         mode: 'solo',
         beans: [{ shelfId: item.id, name: sb.name, country: sb.country, process: sb.process, variety: sb.variety, roaster: sb.roaster }],
         brewPresetKey: brewKey,
         brewLabel: preset.label,
-        focus: small
+        focus: isTurka
+          ? 'Турка: холодная вода, медленный нагрев, 2–3 подъёма пенки — тело и специи без горечи'
+          : small
           ? `Малый объём на ${state.method}: хватит ли сладости и чистоты без большой чашки`
           : `Исследовать через ${state.method}: что раскрывается в этом лоте`,
         reason: recFit
@@ -314,7 +346,7 @@ function soloPlans(
       const hasDiary = cups.some((c) => norm(c.name) === norm(sb.name));
       if (hasDiary) continue;
       const brewKey = suggestBrewPresetKey(sb, sb);
-      const preset = FLIGHT_BREW_PRESETS[brewKey] || FLIGHT_BREW_PRESETS.V60;
+      const preset = lookupPreset(brewKey, state.method);
       out.push({
         mode: 'solo',
         beans: [{ shelfId: item.id, name: sb.name, country: sb.country, process: sb.process, variety: sb.variety, roaster: sb.roaster }],
@@ -330,7 +362,7 @@ function soloPlans(
       const best = bestDiaryRecipeForBean(cups, sb);
       if (!best || (best.rating ?? 0) < 4) continue;
       const brewKey = suggestBrewPresetKey(sb, sb);
-      const preset = FLIGHT_BREW_PRESETS[brewKey] || FLIGHT_BREW_PRESETS.V60;
+      const preset = lookupPreset(brewKey, state.method);
       out.push({
         mode: 'solo',
         beans: [{ shelfId: item.id, name: sb.name, country: sb.country, process: sb.process, variety: sb.variety, roaster: sb.roaster }],
@@ -387,7 +419,7 @@ function smallPlans(
     const sb = shelfBeanFromItem(item);
     const method = state.method || defaultMethodForSmall(item);
     const brewKey = presetKeyForMethod(method, sb, sb, true);
-    const preset = FLIGHT_BREW_PRESETS[brewKey] || FLIGHT_BREW_PRESETS['V60 (малый)'];
+    const preset = lookupPreset(brewKey, method);
     const low = item.status === 'low';
     return {
       mode: 'solo' as const,
@@ -417,8 +449,8 @@ function methodsExplorePlans(
     const [m1, m2] = methodsPairForBean(item, cups);
     const k1 = presetKeyForMethod(m1, sb);
     const k2 = presetKeyForMethod(m2, sb);
-    const p1 = FLIGHT_BREW_PRESETS[k1] || FLIGHT_BREW_PRESETS.V60;
-    const p2 = FLIGHT_BREW_PRESETS[k2] || FLIGHT_BREW_PRESETS.AeroPress;
+    const p1 = lookupPreset(k1, m1);
+    const p2 = lookupPreset(k2, m2);
     return {
       mode: 'methods' as const,
       beans: [{ shelfId: item.id, name: sb.name, country: sb.country, process: sb.process, variety: sb.variety, roaster: sb.roaster }],
@@ -490,6 +522,7 @@ export function brewMethodOptions(equipCategories: string[]): string[] {
       if (t.id === 'chemex') return 'Chemex';
       if (t.id === 'french') return 'Френч-пресс';
       if (t.id === 'espresso') return 'Эспрессо';
+      if (t.id === 'turka') return 'Турка';
       return t.label;
     });
   return [...new Set([...fromEquip, ...BREW_METHODS])];

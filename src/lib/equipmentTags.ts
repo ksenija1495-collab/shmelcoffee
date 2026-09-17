@@ -14,8 +14,6 @@ export const EQUIPMENT_TAGS: EquipmentTag[] = [
   { id: 'chemex', label: 'Chemex', name: 'Chemex', category: 'Кемекс' },
   { id: 'espresso', label: 'Эспрессо', name: 'Эспрессо', category: 'Эспрессо-машина' },
   { id: 'turka', label: 'Турка', name: 'Турка', category: 'Турка' },
-  { id: 'grinder', label: 'Кофемолка', name: 'Кофемолка', category: 'Кофемолка' },
-  { id: 'scales', label: 'Весы', name: 'Весы', category: 'Весы' },
 ];
 
 export function equipmentItemMatchesTag(
