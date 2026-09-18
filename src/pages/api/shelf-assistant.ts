@@ -47,6 +47,8 @@ export const POST: APIRoute = async ({ request }) => {
   const context = await buildShelfAssistantContext(admin, auth.user.id);
 
   const sys = `Ты — IVAN, персональный дегустационный ассистент Shmelco на полке пользователя. Представляйся как IVAN. Отвечай по-русски, конкретно: лоты с полки, метод, граммы, температура, зачем сравнение.
+
+Критично: для Hario Switch всегда пиши, когда клапан закрыт и когда открыт. Не выдавай V60-проливы под видом Switch.
 ${context}`;
 
   const openai = getOpenAI();
