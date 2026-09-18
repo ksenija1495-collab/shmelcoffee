@@ -13,6 +13,7 @@ import {
   type FlightBean,
   type TastingFlight,
   FLIGHT_BREW_PRESETS,
+  lookupPreset,
 } from './tastingFlights';
 import { formatCupRecipe } from './cupRecipe';
 import { filterAvailableShelfBeans } from './shelfAvailability';
@@ -58,7 +59,7 @@ function cupsForFlight(cups: any[], flightId: string): Map<number, any> {
 function buildCupUrlFromPlan(plan: BrewTodayPlan, presetKey?: string): string {
   const bean = plan.beans[0];
   const key = presetKey || plan.brewPresetKey;
-  const preset = FLIGHT_BREW_PRESETS[key] || FLIGHT_BREW_PRESETS.V60;
+  const preset = lookupPreset(key);
   const q = applyRecipeToParams(
     {
       coffee_g: parseFloat(preset.coffee_g),
@@ -108,9 +109,6 @@ function renderPlanCard(plan: BrewTodayPlan | null, altTotal: number, altIndex: 
     ${goalLine ? `<div class="brew-plan-goal">${goalLine}</div>` : ''}
     <div class="brew-plan-brew">☕ ${esc(plan.brewLabel)}</div>
     ${plan.secondBrewLabel ? `<div class="brew-plan-brew">☕ ${esc(plan.secondBrewLabel)}</div>` : ''}
-    <div class="brew-plan-focus"><b>🎯 Фокус:</b> ${esc(plan.focus)}</div>
-    <div class="brew-plan-reason">${esc(plan.reason)}</div>
-    <div class="brew-plan-diary">📔 ${esc(plan.diaryHint)}</div>
     <div class="brew-plan-focus"><b>🎯 Фокус:</b> ${esc(plan.focus)}</div>
     <div class="brew-plan-reason">${esc(plan.reason)}</div>
     <div class="brew-plan-diary">📔 ${esc(plan.diaryHint)}</div>
@@ -349,7 +347,14 @@ export function bindFlightsPanel(
     if (sg) currentPlan.focus = sg.focus;
   };
 
+  const syncWizardPicks = () => {
+    if (pickMethod && pickMethod.value) state.method = pickMethod.value;
+    if (!pickBean.hidden && pickBean.value) state.beanId = pickBean.value;
+    else if (!pickBean.hidden && !pickBean.value) state.beanId = null;
+  };
+
   const renderResult = () => {
+    syncWizardPicks();
     const plans = buildBrewTodayPlans(shelf, cups, savedPairs, state);
     altTotal = plans.length;
     currentPlan = pickBrewTodayPlan(shelf, cups, savedPairs, state);
@@ -547,6 +552,7 @@ export function bindFlightsPanel(
   });
 
   wizard.querySelector('#brewGoalContinue')?.addEventListener('click', () => {
+    syncWizardPicks();
     state.altIndex = 0;
     renderResult();
   });

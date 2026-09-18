@@ -19,15 +19,25 @@ import { filterAvailableShelfBeans } from './shelfAvailability';
 
 export type BrewTodayEntry = 'bean' | 'method' | 'methods' | 'small' | 'free';
 export type BrewTodayMode = 'solo' | 'compare' | 'methods';
+export type BrewTodayFollowUp = 'solo' | 'second-method' | 'second-bean';
 
 export type BrewTodayWizardState = {
   entry: BrewTodayEntry | null;
   mode: BrewTodayMode | null;
   beanId: string | null;
   method: string | null;
+  followUp: BrewTodayFollowUp | null;
+  secondMethod: string | null;
+  secondBeanId: string | null;
   goalId: ComparisonGoalId | null;
   altIndex: number;
 };
+
+export const FOLLOW_UP_OPTIONS: { id: BrewTodayFollowUp; label: string; hint: string }[] = [
+  { id: 'solo', label: '☕ Только этот лот', hint: 'Один лот в выбранном способе' },
+  { id: 'second-method', label: '🔀 + второй способ', hint: 'Тот же лот — сравнить два способа' },
+  { id: 'second-bean', label: '⚖️ + второе зерно', hint: 'Тот же способ — сравнить два лота' },
+];
 
 export type BrewTodayPlan = {
   mode: BrewTodayMode;
@@ -98,6 +108,26 @@ export function diaryHintForBean(cups: DiaryCup[], bean: ShelfBean & { id?: stri
   const last = matches[0];
   const stars = last.rating ? `${last.rating}/5` : 'без оценки';
   return `Последняя чашка: ${last.brew_method || '—'}, ${stars}${last.comment ? ` — «${String(last.comment).slice(0, 80)}»` : ''}`;
+}
+
+export function diaryHintForMethodChoice(
+  cups: DiaryCup[],
+  bean: ShelfBean,
+  method: string,
+): string {
+  const best = bestDiaryRecipeForBean(cups, { name: bean.name, roaster: bean.roaster });
+  if (!best?.brew_method) return diaryHintForBean(cups, bean);
+  if (methodFamily(best.brew_method) === methodFamily(method)) {
+    return diaryHintForBean(cups, bean);
+  }
+  const rec = formatCupRecipe(best.recipe);
+  const stars = best.rating ? `${'★'.repeat(best.rating)}` : '';
+  return `Сегодня: ${method}. В дневнике лучше зашло на ${best.brew_method}${rec ? ` · ${rec}` : ''} ${stars}`.trim();
+}
+
+function presetKeyFromDiaryCup(cup: DiaryCup, bean: ShelfBean, small = false): string {
+  if (cup.brew_method) return presetKeyForMethod(cup.brew_method, bean, bean, small);
+  return suggestBrewPresetKey(bean, bean);
 }
 
 function methodFamily(method: string | null | undefined): string {
@@ -213,7 +243,44 @@ function defaultMethodForSmall(item: any): string {
   return 'V60';
 }
 
-function methodsPairForBean(item: any, cups: DiaryCup[]): [string, string] {
+export function sortShelfBeansForMethod(
+  shelfItems: any[],
+  cups: DiaryCup[],
+  method: string,
+): any[] {
+  return [...shelfItems].sort(
+    (a, b) => scoreBeanForMethod(b, cups, method) - scoreBeanForMethod(a, cups, method),
+  );
+}
+
+export function suggestSecondMethodForBean(
+  item: any,
+  anchorMethod: string,
+  cups: DiaryCup[],
+): string {
+  const sb = shelfBeanFromItem(item);
+  const rec = recommendBrew(sb);
+  const anchorFam = methodFamily(anchorMethod);
+  const candidates = [rec?.primary.method, rec?.secondary.method].filter(Boolean) as string[];
+  for (const m of candidates) {
+    if (methodFamily(m) !== anchorFam) return m;
+  }
+  const ck = resolveCountryKey(sb.country, sb.name);
+  if (anchorFam === 'turka') {
+    if (ck === 'yemen') return 'Hario Switch';
+    return 'Hario Switch';
+  }
+  const alts = ['Hario Switch', 'V60', 'AeroPress', 'Турка', 'Chemex', 'Френч-пресс'];
+  const tried = cups
+    .filter((c) => norm(c.name) === norm(item.name))
+    .map((c) => methodFamily(c.brew_method));
+  return alts.find((m) => methodFamily(m) !== anchorFam && !tried.includes(methodFamily(m))) || alts.find((m) => methodFamily(m) !== anchorFam) || 'V60';
+}
+
+function methodsPairForBean(item: any, cups: DiaryCup[], anchorMethod?: string | null): [string, string] {
+  if (anchorMethod) {
+    return [anchorMethod, suggestSecondMethodForBean(item, anchorMethod, cups)];
+  }
   const sb = shelfBeanFromItem(item);
   if (resolveCountryKey(sb.country, sb.name) === 'yemen') {
     return ['Турка', 'Hario Switch'];
@@ -304,18 +371,18 @@ function soloPlans(
         focus: methodFamily(state.method) === 'turka'
           ? 'Турка: плотность, специи, сладость — снимай на подъёме пенки, не кипяти'
           : 'Исследовать один лот: тип кислотности, сладость, тело при остывании',
-        reason: rec?.why || 'Solo — чтобы услышать лот без сравнения',
-        diaryHint: diaryHintForBean(cups, sb),
+        reason: state.method
+          ? `${state.method} — твой выбор способа для этого лота`
+          : rec?.why || 'Solo — чтобы услышать лот без сравнения',
+        diaryHint: state.method ? diaryHintForMethodChoice(cups, sb, state.method) : diaryHintForBean(cups, sb),
       });
     }
   }
 
   if (state.method && !state.beanId) {
     const small = state.entry === 'small';
-    const sorted = [...beans].sort(
-      (a, b) => scoreBeanForMethod(b, cups, state.method!) - scoreBeanForMethod(a, cups, state.method!),
-    );
-    for (const item of sorted.slice(0, 8)) {
+    const sorted = sortShelfBeansForMethod(beans, cups, state.method);
+    for (const item of sorted.slice(0, 6)) {
       const sb = shelfBeanFromItem(item);
       const brewKey = presetKeyForMethod(state.method, sb, sb, small);
       const preset = lookupPreset(brewKey, state.method);
@@ -335,8 +402,28 @@ function soloPlans(
         reason: recFit
           ? `${state.method} — основной метод для этого лота`
           : `Под ${state.method} с полки: обработка и дневник лучше стыкуются, чем у остальных`,
-        diaryHint: diaryHintForBean(cups, sb),
+        diaryHint: diaryHintForMethodChoice(cups, sb, state.method),
       });
+
+      const best = bestDiaryRecipeForBean(cups, sb);
+      if (
+        best
+        && (best.rating ?? 0) >= 4
+        && best.brew_method
+        && methodFamily(best.brew_method) !== methodFamily(state.method)
+      ) {
+        const diaryKey = presetKeyFromDiaryCup(best, sb, small);
+        const diaryPreset = lookupPreset(diaryKey, best.brew_method);
+        out.push({
+          mode: 'solo',
+          beans: [{ shelfId: item.id, name: sb.name, country: sb.country, process: sb.process, variety: sb.variety, roaster: sb.roaster }],
+          brewPresetKey: diaryKey,
+          brewLabel: diaryPreset.label,
+          focus: 'Повторить лучшее из дневника — сравни с выбранным способом',
+          reason: `Альтернатива: в дневнике этот лот заходил на ${best.brew_method}`,
+          diaryHint: diaryHintForBean(cups, sb),
+        });
+      }
     }
   }
 
@@ -361,15 +448,15 @@ function soloPlans(
       const sb = shelfBeanFromItem(item);
       const best = bestDiaryRecipeForBean(cups, sb);
       if (!best || (best.rating ?? 0) < 4) continue;
-      const brewKey = suggestBrewPresetKey(sb, sb);
-      const preset = lookupPreset(brewKey, state.method);
+      const brewKey = presetKeyFromDiaryCup(best, sb);
+      const preset = lookupPreset(brewKey, best.brew_method);
       out.push({
         mode: 'solo',
         beans: [{ shelfId: item.id, name: sb.name, country: sb.country, process: sb.process, variety: sb.variety, roaster: sb.roaster }],
         brewPresetKey: brewKey,
         brewLabel: preset.label,
         focus: 'Повторить удачный профиль — сравни с памятью',
-        reason: 'Лот уже заходил в дневнике на 4★+ — повтори лучший рецепт',
+        reason: `Лучшее из дневника: ${best.brew_method || 'заварка'} · ${best.rating}★`,
         diaryHint: diaryHintForBean(cups, sb),
       });
     }
@@ -435,33 +522,118 @@ function smallPlans(
   });
 }
 
-function methodsExplorePlans(
+function planFromAnchoredMethods(
+  item: any,
+  cups: DiaryCup[],
+  m1: string,
+  m2: string,
+): BrewTodayPlan {
+  const sb = shelfBeanFromItem(item);
+  const k1 = presetKeyForMethod(m1, sb);
+  const k2 = presetKeyForMethod(m2, sb);
+  const p1 = lookupPreset(k1, m1);
+  const p2 = lookupPreset(k2, m2);
+  return {
+    mode: 'methods',
+    beans: [{ shelfId: item.id, name: sb.name, country: sb.country, process: sb.process, variety: sb.variety, roaster: sb.roaster }],
+    brewPresetKey: k1,
+    brewLabel: p1.label,
+    secondBrewPresetKey: k2,
+    secondBrewLabel: p2.label,
+    focus: `Один лот, два метода: ${m1} vs ${m2} — что меняет тело, кислотность, сладость`,
+    reason: `${m1} — твой выбор. ${m2} — контраст для сравнения.`,
+    diaryHint: diaryHintForBean(cups, sb),
+  };
+}
+
+function planFromAnchoredCompare(
+  itemA: any,
+  itemB: any,
+  method: string,
+  cups: DiaryCup[],
+  goalId?: ComparisonGoalId,
+): BrewTodayPlan {
+  const a = shelfBeanFromItem(itemA);
+  const b = shelfBeanFromItem(itemB);
+  const brewKey = presetKeyForMethod(method, a, b);
+  const preset = lookupPreset(brewKey, method);
+  const goal = goalId ? goalById(goalId) : null;
+  return {
+    mode: 'compare',
+    beans: [
+      { shelfId: itemA.id, name: a.name, country: a.country, process: a.process, variety: a.variety, roaster: a.roaster },
+      { shelfId: itemB.id, name: b.name, country: b.country, process: b.process, variety: b.variety, roaster: b.roaster },
+    ],
+    brewPresetKey: brewKey,
+    brewLabel: preset.label,
+    focus: goal?.focusDefault || `Два лота в ${method}: терруар при одном способе`,
+    reason: `Оба лота в ${method} — сравниваешь зерно, не метод.`,
+    diaryHint: [diaryHintForBean(cups, a), diaryHintForBean(cups, b)].filter(Boolean).join(' · '),
+    goalId,
+  };
+}
+
+function anchoredMethodsPlans(
   shelfItems: any[],
   cups: DiaryCup[],
   state: BrewTodayWizardState,
 ): BrewTodayPlan[] {
+  const m1 = state.method!;
+  const m2 = state.secondMethod || null;
   const beans = state.beanId
     ? shelfItems.filter((s) => s.id === state.beanId)
     : [...shelfItems].sort((a, b) => scoreMethodContrast(b, cups) - scoreMethodContrast(a, cups));
 
   return beans.slice(0, 8).map((item) => {
-    const sb = shelfBeanFromItem(item);
+    const second = m2 || suggestSecondMethodForBean(item, m1, cups);
+    return planFromAnchoredMethods(item, cups, m1, second);
+  });
+}
+
+function anchoredComparePlans(
+  shelfItems: any[],
+  shelfBeans: ShelfBean[],
+  cups: DiaryCup[],
+  savedPairs: SavedPair[],
+  state: BrewTodayWizardState,
+): BrewTodayPlan[] {
+  const itemA = shelfItems.find((s) => s.id === state.beanId);
+  if (!itemA || !state.method) return [];
+
+  if (state.secondBeanId) {
+    const itemB = shelfItems.find((s) => s.id === state.secondBeanId);
+    if (!itemB) return [];
+    return [planFromAnchoredCompare(itemA, itemB, state.method, cups, state.goalId || undefined)];
+  }
+
+  const partners = suggestPartnersForAnchor(itemA.name, shelfBeans, cups, savedPairs, {
+    limit: 8,
+    goalId: state.goalId || undefined,
+  });
+  return partners
+    .map((p) => {
+      const itemB = shelfItems.find((s) => norm(s.name) === norm(p.b));
+      if (!itemB) return null;
+      return planFromAnchoredCompare(itemA, itemB, state.method!, cups, p.goalId);
+    })
+    .filter((p): p is BrewTodayPlan => Boolean(p));
+}
+
+function methodsExplorePlans(
+  shelfItems: any[],
+  cups: DiaryCup[],
+  state: BrewTodayWizardState,
+): BrewTodayPlan[] {
+  if (state.method) {
+    return anchoredMethodsPlans(shelfItems, cups, state);
+  }
+  const beans = state.beanId
+    ? shelfItems.filter((s) => s.id === state.beanId)
+    : [...shelfItems].sort((a, b) => scoreMethodContrast(b, cups) - scoreMethodContrast(a, cups));
+
+  return beans.slice(0, 8).map((item) => {
     const [m1, m2] = methodsPairForBean(item, cups);
-    const k1 = presetKeyForMethod(m1, sb);
-    const k2 = presetKeyForMethod(m2, sb);
-    const p1 = lookupPreset(k1, m1);
-    const p2 = lookupPreset(k2, m2);
-    return {
-      mode: 'methods' as const,
-      beans: [{ shelfId: item.id, name: sb.name, country: sb.country, process: sb.process, variety: sb.variety, roaster: sb.roaster }],
-      brewPresetKey: k1,
-      brewLabel: p1.label,
-      secondBrewPresetKey: k2,
-      secondBrewLabel: p2.label,
-      focus: `Один лот, два метода: ${m1} vs ${m2} — что меняет тело, кислотность, сладость`,
-      reason: 'Сравниваешь способ, не терруар. Рецепты разные, зерно одно.',
-      diaryHint: diaryHintForBean(cups, sb),
-    };
+    return planFromAnchoredMethods(item, cups, m1, m2);
   });
 }
 
@@ -493,11 +665,17 @@ export function buildBrewTodayPlans(
     }
     return smallPlans(available, cups, nextState);
   }
+  if (nextState.followUp === 'second-method' && nextState.method && nextState.beanId) {
+    return anchoredMethodsPlans(available, cups, { ...nextState, mode: 'methods' });
+  }
+  if (nextState.followUp === 'second-bean' && nextState.method && nextState.beanId) {
+    return anchoredComparePlans(available, shelfBeans, cups, savedPairs, { ...nextState, mode: 'compare' });
+  }
   if (nextState.mode === 'methods' || nextState.entry === 'methods') {
     return methodsExplorePlans(available, cups, nextState);
   }
-  if (nextState.mode === 'solo') {
-    return soloPlans(available, shelfBeans, cups, nextState);
+  if (nextState.mode === 'solo' || nextState.followUp === 'solo') {
+    return soloPlans(available, shelfBeans, cups, { ...nextState, mode: 'solo' });
   }
   return comparePlans(available, shelfBeans, cups, savedPairs, nextState);
 }
