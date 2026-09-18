@@ -206,11 +206,15 @@ export function renderFlightsPanel(
 
   const history = historyFlights.length
     ? `<details class="brew-history"><summary>История (${historyFlights.length})</summary><div class="flight-list">${historyFlights.map((f) => renderFlightCard(f, cups)).join('')}</div></details>`
-    : !flights.length
-    ? `<div class="empty-state">Пройди мастер выше — он учтёт дневник и полку, предложит зерно и рецепт, поможет записать чашку.</div>`
     : '';
 
-  return `${wizard}${listTitle ? listTitle + `<div class="flight-list">${list}</div>` : list}${history}`;
+  const recordCup = `<div class="brew-record-cup profile-card" id="brewRecordCup">
+    <div class="brew-step-h">☕ Записать чашку</div>
+    <p class="flight-hint">Уже заварила? Зафиксируй лот, способ и рецепт в дневнике — IVAN и мастер выше учтут это в следующий раз.</p>
+    <a href="/add-cup" class="flight-pair-btn primary" style="display:inline-block;margin-top:10px;text-decoration:none">+ Записать чашку</a>
+  </div>`;
+
+  return `${wizard}${recordCup}${listTitle ? listTitle + `<div class="flight-list">${list}</div>` : list}${history}`;
 }
 
 function renderFlightCard(f: TastingFlight, cups: any[]): string {
