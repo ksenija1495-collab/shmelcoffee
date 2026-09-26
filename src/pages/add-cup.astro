@@ -44,6 +44,13 @@ import { DB, countryOrder } from '../data/countries';
         </div>
         <label class="fl">Способ заваривания</label>
         <select id="f_brew"></select>
+        <div id="apModeWrap" class="ap-mode-wrap" hidden>
+          <label class="fl">AeroPress · как заваривала</label>
+          <div class="ap-mode-chips">
+            <button type="button" class="ap-mode-chip on" data-ap-mode="standard" aria-pressed="true">⬇️ Прямой</button>
+            <button type="button" class="ap-mode-chip" data-ap-mode="inverted" aria-pressed="false">🔃 Перевёрнутый</button>
+          </div>
+        </div>
         <details class="recipe-picker" id="recipePicker">
           <summary class="recipe-picker-summary">Выбрать рецепт</summary>
           <div class="recipe-picker-body">
@@ -358,6 +365,13 @@ import { DB, countryOrder } from '../data/countries';
     font-size: .8rem; cursor: pointer; transition: .12s; font-family: 'Inter', sans-serif; color: var(--text);
   }
   .chip.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .ap-mode-wrap { margin: 2px 0 10px; }
+  .ap-mode-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .ap-mode-chip {
+    padding: 8px 14px; border-radius: 20px; border: 1px solid var(--border); background: var(--bg);
+    font-size: .82rem; cursor: pointer; transition: .12s; font-family: 'Inter', sans-serif; color: var(--text);
+  }
+  .ap-mode-chip.on { background: var(--accent); color: #fff; border-color: var(--accent); }
   .rating { display: flex; gap: 6px; }
   .star { font-size: 1.6rem; cursor: pointer; color: var(--border); transition: .12s; }
   .star.on { color: #E0B81E; }
@@ -385,7 +399,16 @@ import { DB, countryOrder } from '../data/countries';
   import { wheelData } from '../data/wheel';
   import { DB, countryOrder } from '../data/countries';
   import { BEAN_VARIETIES } from '../data/varieties';
-  import { applyRecipeToParams, decodePoursParam, normalizeRecipe, recipeHasData, parseGramsFromRatioText, type BrewPour } from '../lib/cupRecipe';
+  import {
+    applyRecipeToParams,
+    decodePoursParam,
+    normalizeAeropressMode,
+    normalizeRecipe,
+    recipeHasData,
+    parseGramsFromRatioText,
+    type AeropressMode,
+    type BrewPour,
+  } from '../lib/cupRecipe';
   import { normalizePour, pourHasData } from '../lib/brewPour';
   import { brewMethodForForm } from '../lib/brewMethodMap';
   import { bindVarietyOther, readVarietyValue, setVarietyValue } from '../lib/beanVarietyField';
@@ -778,6 +801,34 @@ import { DB, countryOrder } from '../data/countries';
     if (error) console.warn('shelf insert failed:', error.message);
   }
 
+  function isAeropressSelected() {
+    return (document.getElementById('f_brew') as HTMLSelectElement)?.value === 'Aeropress';
+  }
+
+  function readAeropressMode(): AeropressMode {
+    const active = document.querySelector('.ap-mode-chip.on') as HTMLElement | null;
+    const mode = normalizeAeropressMode(active?.dataset.apMode);
+    return mode || 'standard';
+  }
+
+  function setAeropressMode(mode?: AeropressMode | null) {
+    const next = mode || 'standard';
+    document.querySelectorAll('.ap-mode-chip').forEach((chip) => {
+      const el = chip as HTMLElement;
+      const on = el.dataset.apMode === next;
+      el.classList.toggle('on', on);
+      el.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+  }
+
+  function syncApModeVisibility() {
+    const wrap = document.getElementById('apModeWrap') as HTMLElement | null;
+    if (!wrap) return;
+    const show = isAeropressSelected();
+    wrap.hidden = !show;
+    if (show && !document.querySelector('.ap-mode-chip.on')) setAeropressMode('standard');
+  }
+
   function clearRecipeForm() {
     (document.getElementById('r_coffee_g') as HTMLInputElement).value = '';
     (document.getElementById('r_water_g') as HTMLInputElement).value = '';
@@ -787,6 +838,7 @@ import { DB, countryOrder } from '../data/countries';
     setBrewTimeInputValue(document.getElementById('r_time') as HTMLInputElement, null);
     setBloomOnForm(null);
     setPourRows([]);
+    setAeropressMode('standard');
     const hint = document.getElementById('recipeHint') as HTMLElement | null;
     if (hint) hint.style.display = 'none';
   }
@@ -794,9 +846,11 @@ import { DB, countryOrder } from '../data/countries';
   function applyRecipeToForm(recipeRaw: unknown, brewMethod?: string | null) {
     if (brewMethod) setSelect('f_brew', brewMethodForForm(brewMethod));
     updateChampToggleLabel();
+    syncApModeVisibility();
     const r = normalizeRecipe(recipeRaw);
     if (!r) {
       clearRecipeForm();
+      syncApModeVisibility();
       return;
     }
     (document.getElementById('r_coffee_g') as HTMLInputElement).value = r.coffee_g ? String(r.coffee_g) : '';
@@ -807,6 +861,8 @@ import { DB, countryOrder } from '../data/countries';
     setBrewTimeInputValue(document.getElementById('r_time') as HTMLInputElement, r.time);
     setBloomOnForm(r.blooming ?? null);
     setPourRows(r.pours ?? []);
+    if (r.aeropress_mode) setAeropressMode(r.aeropress_mode);
+    else if (isAeropressSelected()) setAeropressMode('standard');
     (document.getElementById('recipeHint') as HTMLElement).style.display = 'block';
   }
 
@@ -952,6 +1008,7 @@ import { DB, countryOrder } from '../data/countries';
     if (bloom) recipe.blooming = bloom;
     const pours = collectPours();
     if (pours.length) recipe.pours = pours;
+    if (isAeropressSelected()) recipe.aeropress_mode = readAeropressMode();
     return recipe;
   }
 
@@ -1011,8 +1068,16 @@ import { DB, countryOrder } from '../data/countries';
     updateChampToggleLabel();
     document.getElementById('f_brew')!.addEventListener('change', () => {
       updateChampToggleLabel();
+      syncApModeVisibility();
       if (champDetails.open) renderChampRecipesPanel();
     });
+    document.querySelectorAll('.ap-mode-chip').forEach((chip) => {
+      chip.addEventListener('click', () => {
+        const mode = normalizeAeropressMode((chip as HTMLElement).dataset.apMode);
+        if (mode) setAeropressMode(mode);
+      });
+    });
+    syncApModeVisibility();
   }
 
   function setEditModeUI() {
@@ -1257,6 +1322,9 @@ import { DB, countryOrder } from '../data/countries';
     if (g('country')) setCountryValue(g('country'));
     setSelect('f_process', g('process'));
     setSelect('f_brew', g('brew'));
+    syncApModeVisibility();
+    const apMode = normalizeAeropressMode(g('ap_mode'));
+    if (apMode) setAeropressMode(apMode);
     (document.getElementById('r_coffee_g') as HTMLInputElement).value = g('coffee_g');
     (document.getElementById('r_water_g') as HTMLInputElement).value = g('water_g');
     if (!g('coffee_g') && !g('water_g') && g('ratio')) {

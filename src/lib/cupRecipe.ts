@@ -9,6 +9,8 @@ import {
 
 export type { BrewPour };
 
+export type AeropressMode = 'standard' | 'inverted';
+
 export type BrewRecipe = {
   coffee_g?: number | null;
   water_g?: number | null;
@@ -17,11 +19,35 @@ export type BrewRecipe = {
   ratio?: string | null;
   temp?: string | null;
   time?: string | null;
+  aeropress_mode?: AeropressMode | null;
   blooming?: BrewPour | null;
   pours?: BrewPour[];
 };
 
-const RECIPE_KEYS = ['coffee_g', 'water_g', 'grind', 'grinder', 'temp', 'time', 'blooming', 'pours'] as const;
+const RECIPE_KEYS = [
+  'coffee_g',
+  'water_g',
+  'grind',
+  'grinder',
+  'temp',
+  'time',
+  'aeropress_mode',
+  'blooming',
+  'pours',
+] as const;
+
+export function normalizeAeropressMode(raw: unknown): AeropressMode | null {
+  const v = String(raw || '').trim().toLowerCase();
+  if (v === 'inverted' || v === 'invert' || v.includes('перевёр') || v.includes('перевер')) return 'inverted';
+  if (v === 'standard' || v === 'upright' || v.includes('прям') || v === 'classic') return 'standard';
+  return null;
+}
+
+export function formatAeropressMode(mode?: AeropressMode | null): string {
+  if (mode === 'inverted') return 'перевёрнутый';
+  if (mode === 'standard') return 'прямой';
+  return '';
+}
 
 /** Парсит «15 г / 250 мл» из текстовых рецептов методов (legacy). */
 export function parseGramsFromRatioText(text: string): { coffee_g?: number; water_g?: number } {
@@ -36,8 +62,9 @@ export function parseGramsFromRatioText(text: string): { coffee_g?: number; wate
 }
 
 export function recipeHasData(recipe: Record<string, unknown>): boolean {
-  return Object.entries(recipe).some(([, v]) => {
+  return Object.entries(recipe).some(([k, v]) => {
     if (v == null || v === '') return false;
+    if (k === 'aeropress_mode') return normalizeAeropressMode(v) != null;
     if (Array.isArray(v)) return v.length > 0;
     if (typeof v === 'object') return pourHasData(v as BrewPour);
     return true;
@@ -59,6 +86,8 @@ export function normalizeRecipe(raw: unknown): BrewRecipe | null {
   if (r.grinder) out.grinder = String(r.grinder);
   if (r.temp) out.temp = String(r.temp);
   if (r.time) out.time = String(r.time);
+  const apMode = normalizeAeropressMode(r.aeropress_mode);
+  if (apMode) out.aeropress_mode = apMode;
   const bloom = normalizePour(r.blooming);
   if (bloom) out.blooming = bloom;
   if (Array.isArray(r.pours)) {
@@ -72,6 +101,8 @@ export function formatCupRecipe(recipe: unknown): string {
   const r = normalizeRecipe(recipe);
   if (!r) return '';
   const parts: string[] = [];
+  const apMode = formatAeropressMode(r.aeropress_mode);
+  if (apMode) parts.push(`AP ${apMode}`);
   if (r.coffee_g) parts.push(`${r.coffee_g} г зерна`);
   if (r.water_g) parts.push(`${r.water_g} г воды`);
   if (r.grind) parts.push(`помол ${r.grind}${r.grinder ? ` · ${r.grinder}` : ''}`);
@@ -98,6 +129,8 @@ export function formatCupRecipeShort(recipe: unknown, brewMethod?: string | null
   const r = normalizeRecipe(recipe);
   const bits: string[] = [];
   if (brewMethod) bits.push(brewMethod);
+  const apMode = formatAeropressMode(r?.aeropress_mode);
+  if (apMode) bits.push(`AP ${apMode}`);
   if (r?.coffee_g && r?.water_g) bits.push(`${r.coffee_g} г · ${r.water_g} г`);
   else if (r?.coffee_g) bits.push(`${r.coffee_g} г зерна`);
   else if (r?.water_g) bits.push(`${r.water_g} г воды`);
@@ -115,6 +148,8 @@ export function cupRecipeLines(recipe: unknown): CupRecipeLine[] {
   const r = normalizeRecipe(recipe);
   if (!r) return [];
   const lines: CupRecipeLine[] = [];
+  const apMode = formatAeropressMode(r.aeropress_mode);
+  if (apMode) lines.push({ label: 'AeroPress', value: apMode });
   if (r.coffee_g) lines.push({ label: 'Зерно', value: `${r.coffee_g} г` });
   if (r.water_g) lines.push({ label: 'Вода', value: `${r.water_g} г` });
   if (r.grind || r.grinder) {
@@ -160,6 +195,7 @@ export function applyRecipeToParams(recipe: BrewRecipe, brewMethod?: string | nu
   if (recipe.grinder) q.set('grinder', recipe.grinder);
   if (recipe.temp) q.set('temp', recipe.temp);
   if (recipe.time) q.set('time', recipe.time);
+  if (recipe.aeropress_mode) q.set('ap_mode', recipe.aeropress_mode);
   if (recipe.blooming?.ml) q.set('blooming_ml', String(recipe.blooming.ml));
   if (recipe.blooming?.time) q.set('blooming', recipe.blooming.time);
   if (recipe.pours?.length) {
