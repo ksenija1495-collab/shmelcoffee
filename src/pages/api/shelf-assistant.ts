@@ -4,10 +4,13 @@ import { getAuthUser } from '../../lib/requireAuth';
 import { getOpenAI } from '../../lib/openai';
 import { getShelfAssistantAccess } from '../../lib/shelfAssistantAccess';
 import { buildShelfAssistantContext } from '../../lib/shelfAssistantContext';
+import {
+  loadShelfAssistantHistory,
+  saveShelfAssistantTurns,
+  turnsForModel,
+} from '../../lib/shelfAssistantHistory';
 
 export const prerender = false;
-
-type ChatTurn = { role: 'user' | 'assistant'; content: string };
 
 export const POST: APIRoute = async ({ request }) => {
   const auth = await getAuthUser(request);
@@ -32,17 +35,8 @@ export const POST: APIRoute = async ({ request }) => {
     return new Response('Invalid message', { status: 400 });
   }
 
-  const history: ChatTurn[] = Array.isArray(body.history)
-    ? body.history
-        .filter(
-          (t: unknown) =>
-            t &&
-            typeof t === 'object' &&
-            ((t as ChatTurn).role === 'user' || (t as ChatTurn).role === 'assistant') &&
-            typeof (t as ChatTurn).content === 'string',
-        )
-        .slice(-8)
-    : [];
+  const { messages: storedHistory } = await loadShelfAssistantHistory(admin, auth.user.id);
+  const history = turnsForModel(storedHistory, 16);
 
   const context = await buildShelfAssistantContext(admin, auth.user.id);
 
@@ -71,7 +65,9 @@ ${context}`;
     return new Response('empty_response', { status: 502 });
   }
 
-  return new Response(JSON.stringify({ reply }), {
+  const saved = await saveShelfAssistantTurns(admin, auth.user.id, message, reply);
+
+  return new Response(JSON.stringify({ reply, historySaved: saved.ok, historyTableOk: saved.tableOk }), {
     status: 200,
     headers: { 'Content-Type': 'application/json' },
   });

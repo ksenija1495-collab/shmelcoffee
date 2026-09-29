@@ -16,6 +16,7 @@ import {
   type SavedPair,
 } from './shelfAssistantPairings';
 import { filterAvailableShelfBeans } from './shelfAvailability';
+import { SHELF_ASSIST_HISTORY_DAYS } from './shelfAssistantHistory';
 
 const FLAVOR_LABELS: Record<string, string> = {
   fruity: 'фруктовые',
@@ -64,9 +65,14 @@ export async function buildShelfAssistantContext(
   const profile = profileRes.data;
   const shelfAll = shelfRes.data ?? [];
   const shelf = filterAvailableShelfBeans(shelfAll);
-  const cups = (cupsRes.data ?? []) as DiaryCup[];
+  const allCups = (cupsRes.data ?? []) as DiaryCup[];
+  const historySince = new Date();
+  historySince.setDate(historySince.getDate() - SHELF_ASSIST_HISTORY_DAYS);
+  const historySinceIso = historySince.toISOString();
+  const recentCups = allCups.filter((c) => c.created_at && c.created_at >= historySinceIso);
+
   const savedPairs = feedbackRes.error ? [] : ((feedbackRes.data ?? []) as SavedPair[]);
-  const inferredPairs = inferDiaryPairs(cups);
+  const inferredPairs = inferDiaryPairs(recentCups.length ? recentCups : allCups);
 
   const today = new Date().toLocaleDateString('ru-RU', {
     weekday: 'long',
@@ -74,9 +80,9 @@ export async function buildShelfAssistantContext(
     month: 'long',
   });
 
-  const diaryProfileBlock = buildDiaryProfileBlock(cups);
-  const beanBrewPriorityBlock = buildBeanBrewPriorityBlock(cups);
-  const smallVolumeBlock = buildSmallVolumePatternBlock(cups);
+  const diaryProfileBlock = buildDiaryProfileBlock(recentCups.length ? recentCups : allCups);
+  const beanBrewPriorityBlock = buildBeanBrewPriorityBlock(allCups);
+  const smallVolumeBlock = buildSmallVolumePatternBlock(allCups);
 
   const quizBlock = profile
     ? `Квиз (справочно, может расходиться с дневником): ${profile.profile_type || '—'}. Вкусы: ${(profile.preferred_tastes || [])
@@ -88,7 +94,9 @@ export async function buildShelfAssistantContext(
     ? shelf.map((b, i) => `${i + 1}. ${shelfBeanWithCountryHint(b)}`).join('\n')
     : 'Полка пуста.';
 
-  const pairBlock = formatPairSuggestions(suggestPairings(shelf, cups, savedPairs));
+  const pairBlock = formatPairSuggestions(
+    suggestPairings(shelf, recentCups.length ? recentCups : allCups, savedPairs),
+  );
 
   const successLines: string[] = [];
   if (savedPairs.length) {
@@ -105,15 +113,17 @@ export async function buildShelfAssistantContext(
     ? successLines.join('\n')
     : 'Пока нет отмеченных удачных пар.';
 
-  const cupsBlock = cups.length
-    ? cups.slice(0, 12).map(formatDiaryCupLine).join('\n')
-    : 'Чашек в дневнике пока нет.';
+  const cupsBlock = recentCups.length
+    ? recentCups.slice(0, 12).map(formatDiaryCupLine).join('\n')
+    : allCups.length
+      ? `За последние ${SHELF_ASSIST_HISTORY_DAYS} дней новых чашек нет. Смотри лучшие рецепты по лотам ниже.`
+      : 'Чашек в дневнике пока нет.';
 
-  const recentBeanNames = [...new Set(cups.map((c) => c.name).filter(Boolean))].slice(0, 20);
+  const recentBeanNames = [...new Set(allCups.map((c) => c.name).filter(Boolean))].slice(0, 20);
 
-  return `Сегодня: ${today}.
+  return `Сегодня: ${today}. Контекст обновляется при каждом запросе; чашки за последние ${SHELF_ASSIST_HISTORY_DAYS} дней — в приоритете, лучшие рецепты — за всё время дневника.
 
-Профиль из дневника (ВАЖНЕЕ квиза):
+Профиль из дневника за ${SHELF_ASSIST_HISTORY_DAYS} дн. (ВАЖНЕЕ квиза):
 ${diaryProfileBlock}
 
 Лучшие рецепты по лотам (ОБЯЗАТЕЛЬНЫЙ ПРИОРИТЕТ — при «как заварить X» начинай отсюда):
@@ -131,7 +141,7 @@ ${pairBlock}
 Удачные пары:
 ${successBlock}
 
-Недавние чашки (полные данные — рецепты и сенсорика):
+Чашки за последние ${SHELF_ASSIST_HISTORY_DAYS} дн. (рецепты и сенсорика):
 ${cupsBlock}
 
 Лоты из дневника (могут не быть на полке): ${recentBeanNames.join(', ') || '—'}
