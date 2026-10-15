@@ -1451,7 +1451,12 @@ import Nav from '../components/Nav.astro';
     if (urlTab === 'flights' || urlTab === 'reference') urlTab = urlTab === 'flights' ? 'shelf' : 'profile';
     if (urlTab && page.querySelector('.acc-tab[data-tab="' + urlTab + '"]')) startTab = urlTab;
     else {
-      try { const sv = localStorage.getItem('acc_tab'); if (sv && page.querySelector('.acc-tab[data-tab="' + sv + '"]')) startTab = sv; } catch (e) {}
+      try {
+        let sv = localStorage.getItem('acc_tab');
+        if (sv === 'flights') sv = 'shelf';
+        if (sv === 'reference') sv = 'profile';
+        if (sv && page.querySelector('.acc-tab[data-tab="' + sv + '"]')) startTab = sv;
+      } catch (e) {}
     }
     activateTab(startTab);
     if (location.hash === '#equipSection') {
