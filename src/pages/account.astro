@@ -354,6 +354,39 @@ import Nav from '../components/Nav.astro';
 
   .shelf-brew-btn { display: block; margin-top: 8px; width: 100%; font-size: .72rem; font-weight: 700; padding: 7px 10px; border-radius: 6px; border: 1px solid var(--text); background: var(--text); color: var(--bg); cursor: pointer; text-align: center; text-decoration: none; font-family: 'Inter', sans-serif; transition: all .2s; }
   .shelf-brew-btn:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .shelf-brew-modal {
+    position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,.45);
+    display: flex; align-items: flex-end; justify-content: center; padding: 12px;
+  }
+  .shelf-brew-modal[hidden] { display: none !important; }
+  .shelf-brew-sheet {
+    width: min(480px, 100%); max-height: 88vh; overflow: auto;
+    background: var(--surface); border-radius: 16px 16px 12px 12px;
+    border: 1px solid var(--border); padding: 18px 16px 20px; box-shadow: var(--shadow-hover);
+  }
+  .shelf-brew-sheet-h { font-weight: 700; font-size: 1rem; margin-bottom: 12px; padding-right: 28px; position: relative; }
+  .shelf-brew-close { position: absolute; right: 0; top: 0; border: 0; background: transparent; font-size: 1.4rem; cursor: pointer; color: var(--text-muted); line-height: 1; }
+  .shelf-brew-choice { display: grid; gap: 8px; margin-bottom: 12px; }
+  .shelf-brew-choice-btn {
+    width: 100%; text-align: left; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border);
+    background: var(--bg); font-size: .84rem; font-weight: 600; cursor: pointer; font-family: 'Inter', sans-serif;
+  }
+  .shelf-brew-choice-btn.primary { background: var(--text); color: var(--bg); border-color: var(--text); }
+  .shelf-brew-vols { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0 14px; }
+  .shelf-brew-vol {
+    padding: 6px 12px; border-radius: 20px; border: 1px solid var(--border); background: var(--bg);
+    font-size: .78rem; font-weight: 600; cursor: pointer; font-family: 'Inter', sans-serif;
+  }
+  .shelf-brew-vol.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .shelf-brew-plan-line { font-size: .84rem; font-weight: 600; margin: 8px 0 4px; }
+  .shelf-brew-plan-why { font-size: .78rem; color: var(--text-dim); line-height: 1.45; }
+  .shelf-brew-plan-src { font-size: .72rem; color: var(--accent); font-weight: 700; text-transform: uppercase; letter-spacing: .03em; }
+  .shelf-brew-method { display: block; width: 100%; margin-bottom: 8px; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); cursor: pointer; font-weight: 600; font-family: 'Inter', sans-serif; }
+  .shelf-brew-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  .shelf-brew-actions .flight-pair-btn { flex: 1; min-width: 120px; }
+  .diary-filters { grid-template-columns: 1fr 1fr 1fr; }
+  @media (max-width: 560px) { .diary-filters { grid-template-columns: 1fr; } }
+  .equip-section[hidden] { display: none !important; }
 
   .shelf-assist { margin-bottom: 16px; }
   .shelf-assist-h { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
@@ -516,10 +549,9 @@ import Nav from '../components/Nav.astro';
   import { resolveCountryKey } from '../lib/countryResolve';
   import { fetchSavedBrewRecipes } from '../lib/savedBrewRecipeApi';
   import { CHAMPION_PICKER_ITEMS } from '../data/championRecipePicker';
-  import { recommendBrew, renderBrewRecHtml, formatBrewRecCompact } from '../lib/brewRecommend';
   import { isVarietyBlend } from '../lib/varietyBlend';
-  import { renderFlightsPanel, bindFlightsPanel } from '../lib/accountFlightsPanel';
-  import { renderReferencePanel, bindReferencePanel, resetReferenceToHome } from '../lib/accountReferencePanel';
+  import { renderProfileReferenceLinks } from '../lib/accountReferencePanel';
+  import { bindShelfBrewFlow, type ShelfBeanRow } from '../lib/accountShelfBrewFlow';
   import { bestDiaryRecipeForBean } from '../lib/tastingFlights';
   import { filterAvailableShelfBeans } from '../lib/shelfAvailability';
   import { EQUIPMENT_TAGS, findEquipmentItemForTag, equipmentItemMatchesTag } from '../lib/equipmentTags';
@@ -861,18 +893,17 @@ import Nav from '../components/Nav.astro';
     return `<div class="equip-section" id="equipSection"><div class="equip-h">⚙️ Чем завариваешь</div><div class="equip-chips">${tags}</div></div>`;
   }
 
-  function renderChecklist(userId: string, latestProfile: any, cups: any[], shelf: any[], flights: any[], openedSize: number) {
+  function renderChecklist(_userId: string, latestProfile: any, cups: any[], shelf: any[]) {
     const hasBean = shelf.some((s: any) => s.kind === 'bean');
     const hasEquip = shelf.some((s: any) => s.kind === 'equipment');
     const hasCup = cups.length > 0;
-    const doneFlight = flights.length > 0;
     const doneQuiz = !!latestProfile;
-    if (hasBean && hasEquip && hasCup && doneFlight) return '';
+    if (cups.length >= 3 && hasBean && hasCup) return '';
     const items = [
       { done: hasBean, label: 'Добавить зерно', href: '/add-shelf?kind=bean' },
       { done: hasEquip, label: 'Отметить оборудование (V60, AP…)', href: '/account?tab=shelf#equipSection' },
       { done: hasCup, label: 'Записать первую чашку', href: '/add-cup' },
-      { done: doneFlight, label: 'Заварить сегодня', href: '/account?tab=flights&new=1' },
+      { done: hasBean && hasCup, label: 'Нажми «Заварить» на карточке зерна', href: '/account?tab=shelf' },
       { done: doneQuiz, label: 'Тест вкуса (необязательно)', href: '/quiz' },
     ];
     return `<div class="onboard-checklist"><div class="onboard-checklist-h">С чего начать</div>${items.map((it) =>
@@ -1272,24 +1303,26 @@ import Nav from '../components/Nav.astro';
       ? `<div class="profile-card tastemap-card"><svg id="tasteWheel" class="tastemap-wheel" viewBox="0 0 360 360"></svg><div class="tastemap-side"><div class="tm-row"><span class="profile-label">Кислотность</span><span class="profile-value">${ACID[answers.acidity] || '—'}</span></div><div class="tm-row"><span class="profile-label">Тело</span><span class="profile-value">${BODY[answers.body] || '—'}</span></div><div class="tm-row"><span class="profile-label">Сладость</span><span class="profile-value">${SWEET[answers.sweetness] || '—'}</span></div><div class="tm-fams">${[...prefFams].map(f => `<span class="tm-fam" style="background:${famColor[f] || 'var(--accent)'}">${f}</span>`).join('') || '<span class="profile-tag">—</span>'}</div><div class="tm-hint">Нажми на сектор — откроется список нот.</div></div></div><div id="tmInfo" class="info-panel"></div>`
       : '';
 
-    const pathPanel = `<div class="sub-h">🧭 Мой путь</div><div class="profile-card"><div class="disco-top"><div class="disco-ring">${ringSVG(openedKeys.size, countryOrder.length)}</div><div><div class="disco-count">${openedKeys.size} / ${countryOrder.length}</div><div class="profile-label" style="min-width:0">стран открыто в дневнике</div></div></div>${quizCountryNames.length ? `<div class="profile-label" style="min-width:0;margin-top:14px">Из теста — начни с:</div><div class="path-quiz-countries">${quizCountryNames.map((n: string) => `<span class="profile-tag">${esc(n)}</span>`).join('')}</div>` : ''}${recommendedFirst.length ? `<div class="disco-subtitle">Ещё не пробовала — под профиль</div><div class="disco-rec">${recommendedFirst.map((k: string) => { const c: any = DB[k]; return `<a class="disco-rec-card" href="/add-shelf?kind=bean&country=${encodeURIComponent(c.name)}"><span class="drc-flag">${c.flag}</span><span class="drc-name">${c.name}</span><span class="drc-why">${c.flavors.slice(0, 3).join(' · ')}</span><span class="drc-cta">На полку →</span></a>`; }).join('')}</div>` : ''}<div class="disco-subtitle">Карта стран</div><div class="disco-grid">${countryOrder.map((k: string) => { const c: any = DB[k]; const open = openedKeys.has(k); return `<span class="disco-chip ${open ? 'open' : 'closed'}" data-k="${k}">${c.flag} ${c.name}${open ? ' ✓' : ''}</span>`; }).join('')}</div><div id="discoInfo" class="info-panel"></div></div><p style="font-size:.78rem;color:var(--text-muted);margin-top:12px"><a href="${COMMUNITY_TG}" target="_blank" rel="noopener" style="color:var(--accent);font-weight:600">Telegram-сообщество</a> · <a href="/account?tab=reference" style="color:var(--accent);font-weight:600">Справочник</a></p>`;
+    const pathPanel = `<div class="sub-h">🧭 Мой путь</div><div class="profile-card"><div class="disco-top"><div class="disco-ring">${ringSVG(openedKeys.size, countryOrder.length)}</div><div><div class="disco-count">${openedKeys.size} / ${countryOrder.length}</div><div class="profile-label" style="min-width:0">стран открыто в дневнике</div></div></div>${quizCountryNames.length ? `<div class="profile-label" style="min-width:0;margin-top:14px">Из теста — начни с:</div><div class="path-quiz-countries">${quizCountryNames.map((n: string) => `<span class="profile-tag">${esc(n)}</span>`).join('')}</div>` : ''}${recommendedFirst.length ? `<div class="disco-subtitle">Ещё не пробовала — под профиль</div><div class="disco-rec">${recommendedFirst.map((k: string) => { const c: any = DB[k]; return `<a class="disco-rec-card" href="/add-shelf?kind=bean&country=${encodeURIComponent(c.name)}"><span class="drc-flag">${c.flag}</span><span class="drc-name">${c.name}</span><span class="drc-why">${c.flavors.slice(0, 3).join(' · ')}</span><span class="drc-cta">На полку →</span></a>`; }).join('')}</div>` : ''}<div class="disco-subtitle">Карта стран</div><div class="disco-grid">${countryOrder.map((k: string) => { const c: any = DB[k]; const open = openedKeys.has(k); return `<span class="disco-chip ${open ? 'open' : 'closed'}" data-k="${k}">${c.flag} ${c.name}${open ? ' ✓' : ''}</span>`; }).join('')}</div><div id="discoInfo" class="info-panel"></div></div><p style="font-size:.78rem;color:var(--text-muted);margin-top:12px"><a href="${COMMUNITY_TG}" target="_blank" rel="noopener" style="color:var(--accent);font-weight:600">Telegram-сообщество</a></p>`;
 
-    const checklist = renderChecklist(user.id, latestProfile, cups, shelf, flights, openedKeys.size);
-    const profilePanel = `${profileCard}${tasteCard ? `<div class="sub-h">🗺️ Карта вкуса</div>${tasteCard}` : ''}${pathPanel}`;
-
-    const flightsPanel = renderFlightsPanel(flights, shelf, cups, flightsAvailable, openCreateFlight, savedPairs);
-    const referencePanel = renderReferencePanel();
+    const checklist = renderChecklist(user.id, latestProfile, cups, shelf);
+    const profilePanel = `${profileCard}${renderProfileReferenceLinks()}${tasteCard ? `<div class="sub-h">🗺️ Карта вкуса</div>${tasteCard}` : ''}${pathPanel}<div id="shelfAssistantMount"></div>`;
 
     const brewMethods = [...new Set(cups.map((c: any) => c.brew_method).filter(Boolean))].sort() as string[];
+    const diaryCountries = [...new Set(cups.map((c: any) => c.country).filter(Boolean))].sort() as string[];
+    const diaryNames = [...new Set(cups.map((c: any) => c.name).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ru')) as string[];
     const diaryFilters = cups.length ? `<div class="diary-filters">
-      <select id="diaryFilterBrew"><option value="">Все способы заварки</option>${brewMethods.map((m) => `<option value="${esc(m)}">${esc(m)}</option>`).join('')}</select>
-      <select id="diaryFilterRecipe"><option value="">Все базовые рецепты</option>${savedRecipes.map((r: any) => `<option value="${r.id}">${esc(r.name)}</option>`).join('')}</select>
+      <select id="diaryFilterBrew"><option value="">Все способы</option>${brewMethods.map((m) => `<option value="${esc(m)}">${esc(m)}</option>`).join('')}</select>
+      <select id="diaryFilterCountry"><option value="">Все страны</option>${diaryCountries.map((m) => `<option value="${esc(m)}">${esc(m)}</option>`).join('')}</select>
+      <select id="diaryFilterBean"><option value="">Все зёрна</option>${diaryNames.map((m) => `<option value="${esc(m)}">${esc(m)}</option>`).join('')}</select>
+      <select id="diaryFilterRecipe"><option value="">Мои рецепты</option>${savedRecipes.map((r: any) => `<option value="${r.id}">${esc(r.name)}</option>`).join('')}</select>
     </div>` : '';
+    const showTasteChar = cups.length >= 10;
     const renderCupItem = (c: any) => {
       const recipeLine = formatCupRecipe(c.recipe);
       const fp = recipeFingerprint(c.recipe);
-      const charLine = formatTasteCharacterLine(normalizeTasteCharacter(c.taste_character));
-      return `<div class="cup-item" data-brew="${esc(c.brew_method || '')}" data-recipe-id="${esc(c.brew_recipe_id || '')}" data-recipe-fp="${esc(fp)}">
+      const charLine = showTasteChar ? formatTasteCharacterLine(normalizeTasteCharacter(c.taste_character)) : '';
+      return `<div class="cup-item" data-brew="${esc(c.brew_method || '')}" data-country="${esc(c.country || '')}" data-name="${esc(c.name || '')}" data-recipe-id="${esc(c.brew_recipe_id || '')}" data-recipe-fp="${esc(fp)}">
         <div class="cup-head"><a href="/cup?id=${c.id}" class="cup-card-link">${esc(c.name)}</a>${c.rating ? ` <span class="cup-star">${'★'.repeat(c.rating)}</span>` : ''}</div>
         <div class="coffee-detail">${[c.roaster, c.country, c.process, c.brew_method].filter(Boolean).map(esc).join(' · ') || '—'}</div>
         ${recipeLine ? `<div class="coffee-detail">${esc(recipeLine)}</div>` : ''}
@@ -1312,6 +1345,7 @@ import Nav from '../components/Nav.astro';
     const beanItems = shelfSorted.filter((s: any) => s.kind === 'bean');
     const equipItems = shelfSorted.filter((s: any) => s.kind === 'equipment');
     const equipSection = renderEquipmentSection(equipItems);
+    const beansById = new Map<string, ShelfBeanRow>();
     const lowCount = shelfHasStatus ? beanItems.filter((s: any) => s.status === 'low').length : 0;
     const shelfSearch = beanItems.length
       ? `<div class="shelf-search-wrap"><input type="search" id="shelfSearch" class="shelf-search" placeholder="Поиск: страна, сорт, обжарщик, обработка…" autocomplete="off"/><div id="shelfSearchEmpty" class="empty-state shelf-search-empty">Ничего не нашлось</div></div>`
@@ -1330,27 +1364,22 @@ import Nav from '../components/Nav.astro';
             ? (esc(s.roaster) || 'зерно')
             : ([s.roaster, s.variety, s.process].filter(Boolean).map(esc).join(' · ') || 'зерно');
           const blendTag = blend ? `<div class="shelf-blend-tag">смесь сортов</div>` : '';
+          beansById.set(s.id, {
+            id: s.id,
+            name: s.name,
+            roaster: s.roaster,
+            country: s.country,
+            process: s.process,
+            variety: s.variety,
+          });
           const diaryBest = bestDiaryRecipeForBean(cups, { name: s.name, roaster: s.roaster });
-          const brewRec = !diaryBest ? recommendBrew(s) : null;
           const diaryRecLine = diaryBest ? formatCupRecipe(diaryBest.recipe) : '';
-          const diaryBrewHref = diaryBest ? (() => {
-            const q = applyRecipeToParams(diaryBest.recipe as any, diaryBest.brew_method);
-            if (s.name) q.set('name', s.name);
-            if (s.roaster) q.set('roaster', s.roaster);
-            if (s.country) q.set('country', s.country);
-            if (s.process) q.set('process', s.process);
-            if (s.variety) q.set('variety', s.variety);
-            q.set('from_shelf', '1');
-            return '/add-cup?' + q.toString();
-          })() : shelfBrewHref(s);
           const brewTip = diaryBest && diaryRecLine
-            ? `<details class="shelf-brew-tip" open><summary>⭐ Лучший из дневника · ${esc(diaryRecLine)}</summary><div class="brew-rec-note">${diaryBest.rating ? `${'★'.repeat(diaryBest.rating)} · ` : ''}${esc(diaryBest.brew_method || '')}</div></details>`
-            : brewRec
-            ? `<details class="shelf-brew-tip"><summary>☕ ${esc(formatBrewRecCompact(brewRec))}</summary>${renderBrewRecHtml(brewRec)}</details>`
+            ? `<div class="brew-rec-note" style="margin-top:6px;font-size:.72rem;color:var(--text-dim)">⭐ ${diaryBest.rating ? `${'★'.repeat(diaryBest.rating)} · ` : ''}${esc(diaryRecLine)}</div>`
             : '';
           const searchBlob = [s.name, s.roaster, s.country, s.process, s.variety]
             .filter(Boolean).join(' ').toLowerCase();
-          return `<div class="shelf-card shelf-st-${st}" data-shelf-q="${esc(searchBlob)}">${cover}<div class="shelf-body"><div class="shelf-name">${esc(s.name)}</div><div class="shelf-meta">${meta}</div>${blendTag}${statusBtn}${brewTip}<a class="shelf-brew-btn" href="${diaryBrewHref}">☕ Заварила →</a></div><button class="shelf-del" data-shelf-del="${s.id}" title="удалить">×</button></div>`;
+          return `<div class="shelf-card shelf-st-${st}" data-shelf-q="${esc(searchBlob)}">${cover}<div class="shelf-body"><div class="shelf-name">${esc(s.name)}</div><div class="shelf-meta">${meta}</div>${blendTag}${statusBtn}${brewTip}<button type="button" class="shelf-brew-btn" data-shelf-brew="${esc(s.id)}">☕ Заварить</button><a class="shelf-brew-log" href="${shelfBrewHref(s)}" style="display:block;margin-top:6px;font-size:.68rem;text-align:center;color:var(--text-muted)">Уже заварила → записать</a></div><button class="shelf-del" data-shelf-del="${s.id}" title="удалить">×</button></div>`;
         };
     const beansBlock = beanItems.length
       ? `${shelfSearch}<div class="shelf-grid" id="shelfGrid">${beanItems.map(renderBeanCard).join('')}</div>${shelfHasStatus ? '' : shelfStatusMigrationBox()}`
@@ -1361,20 +1390,42 @@ import Nav from '../components/Nav.astro';
 
       <div class="acc-tabs" id="accTabs">
         <button class="acc-tab" data-tab="shelf">🫘 Зерно</button>
-        <button class="acc-tab" data-tab="flights">☕ Заварить сегодня</button>
         <button class="acc-tab" data-tab="diary">📔 Дневник</button>
-        <button class="acc-tab" data-tab="reference">📚 Справочник</button>
         <button class="acc-tab" data-tab="profile">👤 Профиль</button>
       </div>
 
       <section class="acc-panel" data-panel="shelf"><div class="panel-h"><span>🫘 Зерно${shelfHasStatus ? ` <span class="shelf-low-count"${lowCount ? '' : ' style="display:none"'}">${lowCount} заканчивается</span>` : ''}</span><span style="display:flex;gap:6px;flex-wrap:wrap"><a href="/add-shelf?kind=bean" class="add-cup-btn">+ Зерно</a><a href="/add-shelf?mode=photo" class="add-cup-btn">📷 С фото</a></span></div>${checklist}${equipSection}<div id="shelfImportBanner" class="paid-banner" style="display:none"></div>${beansBlock}</section>
-      <section class="acc-panel" data-panel="flights"><div class="panel-h"><span>☕ Заварить сегодня</span></div>${flightsPanel}</section>
       <section class="acc-panel" data-panel="diary"><div class="panel-h"><span>📔 Дневник</span><a href="/add-cup" class="add-cup-btn">+ Чашка</a></div>${diaryPanel}</section>
-      <section class="acc-panel" data-panel="reference"><div class="panel-h">📚 Справочник</div>${referencePanel}</section>
       <section class="acc-panel" data-panel="profile"><div class="panel-h">👤 Профиль</div>${profilePanel}</section>
+
+      <div id="shelfBrewModal" class="shelf-brew-modal" hidden>
+        <div class="shelf-brew-sheet" role="dialog" aria-labelledby="shelfBrewTitle">
+          <div class="shelf-brew-sheet-h"><span id="shelfBrewTitle">Зерно</span><button type="button" class="shelf-brew-close" id="shelfBrewClose" aria-label="Закрыть">×</button></div>
+          <div id="shelfBrewStepChoose">
+            <p class="flight-hint" style="margin-top:0">Как удобнее?</p>
+            <div class="shelf-brew-choice">
+              <button type="button" class="shelf-brew-choice-btn primary" id="shelfBrewSuggest">✨ Подскажи из моих рецептов</button>
+              <button type="button" class="shelf-brew-choice-btn" id="shelfBrewPickMethod">☕ Выберу способ сама</button>
+            </div>
+          </div>
+          <div id="shelfBrewStepMethod" hidden>
+            <button type="button" class="ref-back" data-shelf-brew-back style="margin-bottom:10px">← Назад</button>
+            <div id="shelfBrewMethodList"></div>
+          </div>
+          <div id="shelfBrewStepPlan" hidden>
+            <button type="button" class="ref-back" data-shelf-brew-back style="margin-bottom:10px">← Назад</button>
+            <div id="shelfBrewPlanBody"></div>
+            <div class="profile-label" style="margin-top:8px">Объём в чашке</div>
+            <div class="shelf-brew-vols" id="shelfBrewVolumes"></div>
+            <div class="shelf-brew-actions">
+              <button type="button" class="flight-pair-btn primary" id="shelfBrewGo">Открыть рецепт →</button>
+            </div>
+          </div>
+        </div>
+      </div>
     `;
 
-    const MOBILE_ACC_TABS = new Set(['flights', 'diary', 'shelf', 'profile']);
+    const MOBILE_ACC_TABS = new Set(['diary', 'shelf', 'profile']);
     function syncAccountNav(name: string) {
       document.querySelectorAll('.mobile-acc-nav a[data-acc-tab]').forEach((a) => {
         const tab = a.getAttribute('data-acc-tab');
@@ -1385,8 +1436,6 @@ import Nav from '../components/Nav.astro';
     const tabs = Array.from(page.querySelectorAll('.acc-tab')) as HTMLElement[];
     const panels = Array.from(page.querySelectorAll('.acc-panel')) as HTMLElement[];
     function activateTab(name: string) {
-      const prev = tabs.find((t) => t.classList.contains('active'))?.getAttribute('data-tab');
-      if (prev === 'reference' && name !== 'reference') resetReferenceToHome(page);
       tabs.forEach(t => t.classList.toggle('active', t.getAttribute('data-tab') === name));
       panels.forEach(p => p.classList.toggle('active', p.getAttribute('data-panel') === name));
       syncAccountNav(name);
@@ -1397,9 +1446,9 @@ import Nav from '../components/Nav.astro';
       history.replaceState({}, '', url.pathname + url.search);
     }
     tabs.forEach(t => t.addEventListener('click', () => activateTab(t.getAttribute('data-tab')!)));
-    bindReferencePanel(page);
     let startTab = 'shelf';
-    const urlTab = new URL(location.href).searchParams.get('tab');
+    let urlTab = new URL(location.href).searchParams.get('tab');
+    if (urlTab === 'flights' || urlTab === 'reference') urlTab = urlTab === 'flights' ? 'shelf' : 'profile';
     if (urlTab && page.querySelector('.acc-tab[data-tab="' + urlTab + '"]')) startTab = urlTab;
     else {
       try { const sv = localStorage.getItem('acc_tab'); if (sv && page.querySelector('.acc-tab[data-tab="' + sv + '"]')) startTab = sv; } catch (e) {}
@@ -1411,7 +1460,7 @@ import Nav from '../components/Nav.astro';
       });
     }
 
-    bindFlightsPanel(page, supabase, user.id, shelf, cups, savedPairs, init);
+    bindShelfBrewFlow(page, { beansById, cups, equipItems });
 
     const availableBeans = filterAvailableShelfBeans(shelf.filter((s: any) => s.kind === 'bean'));
     const beanCount = availableBeans.length;
@@ -1425,6 +1474,8 @@ import Nav from '../components/Nav.astro';
 
     function applyDiaryFilters() {
       const brew = (document.getElementById('diaryFilterBrew') as HTMLSelectElement)?.value || '';
+      const country = (document.getElementById('diaryFilterCountry') as HTMLSelectElement)?.value || '';
+      const bean = (document.getElementById('diaryFilterBean') as HTMLSelectElement)?.value || '';
       const recipeId = (document.getElementById('diaryFilterRecipe') as HTMLSelectElement)?.value || '';
       const saved = savedRecipes.find((r: any) => r.id === recipeId);
       const fp = saved ? recipeFingerprint(saved.recipe) : '';
@@ -1432,8 +1483,10 @@ import Nav from '../components/Nav.astro';
       document.querySelectorAll('#diaryList .cup-item').forEach((el) => {
         const item = el as HTMLElement;
         const matchBrew = !brew || item.dataset.brew === brew;
+        const matchCountry = !country || item.dataset.country === country;
+        const matchBean = !bean || item.dataset.name === bean;
         const matchRecipe = !recipeId || item.dataset.recipeId === recipeId || (!!fp && item.dataset.recipeFp === fp);
-        const show = matchBrew && matchRecipe;
+        const show = matchBrew && matchCountry && matchBean && matchRecipe;
         item.style.display = show ? '' : 'none';
         if (show) visible++;
       });
@@ -1441,6 +1494,8 @@ import Nav from '../components/Nav.astro';
       if (empty) empty.style.display = visible ? 'none' : 'block';
     }
     document.getElementById('diaryFilterBrew')?.addEventListener('change', applyDiaryFilters);
+    document.getElementById('diaryFilterCountry')?.addEventListener('change', applyDiaryFilters);
+    document.getElementById('diaryFilterBean')?.addEventListener('change', applyDiaryFilters);
     document.getElementById('diaryFilterRecipe')?.addEventListener('change', applyDiaryFilters);
 
     function applyShelfSearch() {

@@ -97,6 +97,28 @@ export function normalizeRecipe(raw: unknown): BrewRecipe | null {
   return recipeHasData(out as Record<string, unknown>) ? out : null;
 }
 
+/** Масштаб рецепта под целевый объём в чашке (вода + bypass в water_g / pours). */
+export function scaleRecipeToTargetVolume(recipe: BrewRecipe | unknown, targetMl: number): BrewRecipe | null {
+  const r = normalizeRecipe(recipe);
+  if (!r?.water_g || targetMl <= 0) return r;
+  const baseTotal = r.water_g;
+  if (baseTotal <= 0) return r;
+  const factor = targetMl / baseTotal;
+  const out: BrewRecipe = { ...r };
+  if (r.coffee_g) out.coffee_g = Math.round(r.coffee_g * factor * 10) / 10;
+  out.water_g = Math.round(targetMl);
+  if (r.blooming?.ml) {
+    out.blooming = { ...r.blooming, ml: Math.max(1, Math.round(r.blooming.ml * factor)) };
+  }
+  if (r.pours?.length) {
+    out.pours = r.pours.map((p) => ({
+      ...p,
+      ml: p.ml != null && p.ml > 0 ? Math.max(1, Math.round(p.ml * factor)) : p.ml,
+    }));
+  }
+  return out;
+}
+
 export function formatCupRecipe(recipe: unknown): string {
   const r = normalizeRecipe(recipe);
   if (!r) return '';

@@ -19,6 +19,19 @@ function countryDetailHtml(key: string): string {
   </div>`;
 }
 
+export function renderProfileReferenceLinks(): string {
+  return `<div class="profile-card ref-links-compact" id="refLinks">
+    <div class="sub-h" style="margin-top:0">📚 Справочник</div>
+    <div class="ref-links-grid">
+      <a href="/countries" class="ref-link-card" target="_blank" rel="noopener">🌍 Страны</a>
+      <a href="/processing" class="ref-link-card" target="_blank" rel="noopener">⚗️ Обработки</a>
+      <a href="/brewing" class="ref-link-card" target="_blank" rel="noopener">☕ Методы</a>
+      <a href="/wheel" class="ref-link-card" target="_blank" rel="noopener">🎯 Колесо вкусов</a>
+      <a href="/blog/chempionskie-recepty" class="ref-link-card" target="_blank" rel="noopener">🏆 Чемпионские рецепты</a>
+    </div>
+  </div>`;
+}
+
 export function renderReferencePanel(): string {
   const countryCards = countryOrder
     .map((k) => {
