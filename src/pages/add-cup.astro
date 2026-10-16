@@ -429,6 +429,7 @@ import { DB, countryOrder } from '../data/countries';
   import { PROCESS_OPTIONS } from '../data/processing';
   import { CHAMPION_PICKER_ITEMS } from '../data/championRecipePicker';
   import { defaultSavedRecipeName, savedRecipeSummary } from '../lib/savedRecipesUi';
+  import { filterAvailableShelfBeans } from '../lib/shelfAvailability';
 
   const supabase = createClient(
     import.meta.env.PUBLIC_SUPABASE_URL,
@@ -690,7 +691,9 @@ import { DB, countryOrder } from '../data/countries';
     process: string | null;
     variety: string | null;
   };
-  let shelfBeans: ShelfBean[] = [];
+  let shelfBeansAvailable: ShelfBean[] = [];
+  /** Все лоты на полке (в т.ч. «закончилось») — для подсказки «уже на полке». */
+  let shelfBeansAll: ShelfBean[] = [];
   let shelfChoiceTouched = false;
 
   const beanKey = (name: string) => name.trim().toLowerCase().replace(/\s+/g, ' ');
@@ -702,7 +705,7 @@ import { DB, countryOrder } from '../data/countries';
   function matchShelfBean(): ShelfBean | null {
     const name = (document.getElementById('f_name') as HTMLInputElement).value.trim();
     if (!name) return null;
-    return shelfBeans.find((b) => beanKey(b.name) === beanKey(name)) || null;
+    return shelfBeansAll.find((b) => beanKey(b.name) === beanKey(name)) || null;
   }
 
   function updateShelfAddState() {
@@ -737,12 +740,12 @@ import { DB, countryOrder } from '../data/countries';
     const wrap = document.getElementById('shelfBeanPicker') as HTMLElement | null;
     const sel = document.getElementById('f_shelf_bean') as HTMLSelectElement | null;
     if (!wrap || !sel) return;
-    if (editCupId || !shelfBeans.length) {
+    if (editCupId || !shelfBeansAvailable.length) {
       wrap.style.display = 'none';
       return;
     }
     sel.innerHTML = `<option value="">— выбрать зерно с полки —</option>` +
-      shelfBeans.map((b) => {
+      shelfBeansAvailable.map((b) => {
         const label = b.roaster ? `${b.name} · ${b.roaster}` : b.name;
         return `<option value="${escShelfOpt(b.id)}">${escShelfOpt(label)}</option>`;
       }).join('');
@@ -758,7 +761,7 @@ import { DB, countryOrder } from '../data/countries';
       updateShelfAddState();
       return;
     }
-    const bean = shelfBeans.find((b) => b.id === id);
+    const bean = shelfBeansAvailable.find((b) => b.id === id);
     if (!bean) return;
     (document.getElementById('f_name') as HTMLInputElement).value = bean.name || '';
     (document.getElementById('f_roaster') as HTMLInputElement).value = bean.roaster || '';
@@ -771,11 +774,13 @@ import { DB, countryOrder } from '../data/countries';
   async function loadShelfBeans(userId: string) {
     const { data } = await supabase
       .from('shelf_items')
-      .select('id, name, roaster, country, process, variety')
+      .select('id, name, roaster, country, process, variety, status')
       .eq('user_id', userId)
       .eq('kind', 'bean')
       .order('name', { ascending: true });
-    shelfBeans = (data as ShelfBean[]) || [];
+    const rows = (data || []) as (ShelfBean & { status?: string | null })[];
+    shelfBeansAll = rows;
+    shelfBeansAvailable = filterAvailableShelfBeans(rows);
     populateShelfBeanSelect();
     updateShelfAddState();
   }

@@ -158,6 +158,11 @@ create index if not exists shelf_items_user_status_idx on shelf_items (user_id, 
 drop policy if exists "shelf_items_update" on shelf_items;
 create policy "shelf_items_update" on shelf_items for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
+-- 7b. source photo_import — см. migration-shelf-source-photo.sql
+alter table shelf_items drop constraint if exists shelf_items_source_check;
+alter table shelf_items add constraint shelf_items_source_check
+  check (source in ('manual', 'selection', 'photo_import'));
+
 -- 8. AI-ассистент на полке (см. migration-shelf-assistant.sql)
 create table if not exists shelf_assistant_subscriptions (
   user_id uuid primary key references auth.users(id) on delete cascade,

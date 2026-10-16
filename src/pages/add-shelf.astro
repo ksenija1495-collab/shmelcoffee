@@ -381,7 +381,7 @@ import { DB, countryOrder } from '../data/countries';
         r.querySelector('.parse-country-custom') as HTMLInputElement,
       ),
       process: (r.querySelector('.parse-process') as HTMLSelectElement).value || null,
-      source: 'photo_import',
+      source: 'manual',
     })).filter((b) => b.name);
 
     const msg = document.getElementById('bulkMsg')!;
