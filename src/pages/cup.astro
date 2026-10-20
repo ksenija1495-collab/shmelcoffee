@@ -404,13 +404,28 @@ import Nav from '../components/Nav.astro';
           ${isOwner ? `<a class="btn ${isNew ? 'btn-ghost' : 'btn-primary'}" href="/add-cup?edit=${cup.id}" style="display:block;text-align:center;text-decoration:none">✏️ Редактировать</a>` : ''}
           ${isOwner && (recipeShort || recipeLines.length) ? `<button type="button" class="btn btn-ghost" id="saveRecipeBtn" style="width:100%">⭐ В мои рецепты</button>` : ''}
           <button type="button" class="btn ${isOwner ? 'btn-ghost' : 'btn-primary'}" id="shareBtn">Поделиться карточкой</button>
-          <a href="/account" class="btn btn-ghost" style="display:block;text-align:center;text-decoration:none;padding:11px">← В дневник</a>
+          ${isOwner ? `<button type="button" class="btn btn-ghost" id="deleteCupBtn" style="width:100%;color:var(--text-muted)">Удалить чашку</button>` : ''}
+          <a href="/account?tab=diary" class="btn btn-ghost" style="display:block;text-align:center;text-decoration:none;padding:11px">← В дневник</a>
           <div class="cupcard-msg" id="cupMsg"></div>
         </div>
       </div>`;
 
     document.getElementById('shareBtn')!.addEventListener('click', shareCard);
     document.getElementById('saveRecipeBtn')?.addEventListener('click', () => saveCupToMyRecipes(cup));
+    document.getElementById('deleteCupBtn')?.addEventListener('click', async () => {
+      if (!confirm('Удалить эту чашку из дневника?')) return;
+      const btn = document.getElementById('deleteCupBtn') as HTMLButtonElement;
+      btn.disabled = true;
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { window.location.href = '/login'; return; }
+      const { error } = await supabase.from('cups').delete().eq('id', cup.id).eq('user_id', user.id);
+      if (error) {
+        alert('Не удалось удалить: ' + error.message);
+        btn.disabled = false;
+        return;
+      }
+      window.location.href = '/account?tab=diary';
+    });
   }
 
   async function waitForAuthUser() {

@@ -381,6 +381,14 @@ import Nav from '../components/Nav.astro';
   .shelf-brew-plan-line { font-size: .84rem; font-weight: 600; margin: 8px 0 4px; }
   .shelf-brew-plan-why { font-size: .78rem; color: var(--text-dim); line-height: 1.45; }
   .shelf-brew-plan-src { font-size: .72rem; color: var(--accent); font-weight: 700; text-transform: uppercase; letter-spacing: .03em; }
+  .shelf-brew-steps { margin: 10px 0 0; padding-left: 1.1rem; font-size: .78rem; line-height: 1.45; color: var(--text); }
+  .shelf-brew-steps li { margin-bottom: 6px; }
+  .shelf-brew-plan-tip { font-size: .72rem; color: var(--text-dim); margin-top: 8px; line-height: 1.4; font-style: italic; }
+  .shelf-brew-plan-champ { font-size: .8rem; font-weight: 700; margin-top: 6px; }
+  .shelf-brew-plan-champ span { font-weight: 500; color: var(--text-dim); }
+  .diary-search { width: 100%; padding: 9px 11px; border: 1px solid var(--border); border-radius: 10px; font-size: .82rem; margin-bottom: 10px; grid-column: 1 / -1; }
+  .cup-del-btn { margin-top: 8px; font-size: .68rem; color: var(--text-muted); background: none; border: 0; cursor: pointer; text-decoration: underline; padding: 0; font-family: inherit; }
+  .cup-actions-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 6px; }
   .shelf-brew-method { display: block; width: 100%; margin-bottom: 8px; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); cursor: pointer; font-weight: 600; font-family: 'Inter', sans-serif; }
   .shelf-brew-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
   .shelf-brew-actions .flight-pair-btn { flex: 1; min-width: 120px; }
@@ -606,6 +614,19 @@ import Nav from '../components/Nav.astro';
     }
     const { data: refreshed } = await supabase.auth.refreshSession();
     return refreshed.session?.access_token || '';
+  }
+
+  function renderMyRecipesBlock(recipes: any[], unavailable: boolean): string {
+    if (unavailable) return migrationRecipesBox();
+    if (!recipes.length) {
+      return `<details class="acc-recipe-block"><summary><span>📋 Мои рецепты</span><span class="acc-champ-count">0</span></summary>
+        <div class="acc-recipe-block-body"><p class="field-hint" style="margin:0">Сохраняй удачные заварки из карточки чашки или формы «Добавить кофе».</p></div></details>`;
+    }
+    const items = recipes.map((r: any) => {
+      const q = applyRecipeToParams(r.recipe, r.brew_method || '');
+      return `<a class="acc-champ-item" href="/add-cup?${q.toString()}"><span class="acc-champ-item-title">${esc(r.name)}</span><span class="acc-champ-item-sub">${esc(r.brew_method || '—')} · ${esc(savedRecipeSummary(r))}</span></a>`;
+    }).join('');
+    return `<details class="acc-recipe-block"><summary><span>📋 Мои рецепты</span><span class="acc-champ-count">${recipes.length}</span></summary><div class="acc-recipe-block-body">${items}</div></details>`;
   }
 
   function renderChampionRecipesBlock(): string {
@@ -1311,18 +1332,26 @@ import Nav from '../components/Nav.astro';
     const brewMethods = [...new Set(cups.map((c: any) => c.brew_method).filter(Boolean))].sort() as string[];
     const diaryCountries = [...new Set(cups.map((c: any) => c.country).filter(Boolean))].sort() as string[];
     const diaryNames = [...new Set(cups.map((c: any) => c.name).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ru')) as string[];
+    const diaryProcesses = [...new Set(cups.map((c: any) => c.process).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ru')) as string[];
+    const diaryVarieties = [...new Set(cups.map((c: any) => c.variety).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ru')) as string[];
     const diaryFilters = cups.length ? `<div class="diary-filters">
+      <input type="search" id="diarySearch" class="diary-search" placeholder="Поиск: зерно, обжарщик, комментарий…" autocomplete="off"/>
       <select id="diaryFilterBrew"><option value="">Все способы</option>${brewMethods.map((m) => `<option value="${esc(m)}">${esc(m)}</option>`).join('')}</select>
       <select id="diaryFilterCountry"><option value="">Все страны</option>${diaryCountries.map((m) => `<option value="${esc(m)}">${esc(m)}</option>`).join('')}</select>
+      <select id="diaryFilterProcess"><option value="">Все обработки</option>${diaryProcesses.map((m) => `<option value="${esc(m)}">${esc(m)}</option>`).join('')}</select>
+      <select id="diaryFilterVariety"><option value="">Все сорта</option>${diaryVarieties.map((m) => `<option value="${esc(m)}">${esc(m)}</option>`).join('')}</select>
       <select id="diaryFilterBean"><option value="">Все зёрна</option>${diaryNames.map((m) => `<option value="${esc(m)}">${esc(m)}</option>`).join('')}</select>
-      <select id="diaryFilterRecipe"><option value="">Мои рецепты</option>${savedRecipes.map((r: any) => `<option value="${r.id}">${esc(r.name)}</option>`).join('')}</select>
+      <select id="diaryFilterRecipe"><option value="">По сохранённому рецепту</option>${savedRecipes.map((r: any) => `<option value="${r.id}">${esc(r.name)}</option>`).join('')}</select>
     </div>` : '';
+    const recipeBank = `${renderMyRecipesBlock(savedRecipes, recipesUnavailable)}${renderChampionRecipesBlock()}`;
     const showTasteChar = cups.length >= 10;
     const renderCupItem = (c: any) => {
       const recipeLine = formatCupRecipe(c.recipe);
       const fp = recipeFingerprint(c.recipe);
       const charLine = showTasteChar ? formatTasteCharacterLine(normalizeTasteCharacter(c.taste_character)) : '';
-      return `<div class="cup-item" data-brew="${esc(c.brew_method || '')}" data-country="${esc(c.country || '')}" data-name="${esc(c.name || '')}" data-recipe-id="${esc(c.brew_recipe_id || '')}" data-recipe-fp="${esc(fp)}">
+      const searchBlob = [c.name, c.roaster, c.country, c.process, c.variety, c.brew_method, c.comment, recipeLine]
+        .filter(Boolean).join(' ').toLowerCase();
+      return `<div class="cup-item" data-brew="${esc(c.brew_method || '')}" data-country="${esc(c.country || '')}" data-process="${esc(c.process || '')}" data-variety="${esc(c.variety || '')}" data-name="${esc(c.name || '')}" data-recipe-id="${esc(c.brew_recipe_id || '')}" data-recipe-fp="${esc(fp)}" data-search="${esc(searchBlob)}">
         <div class="cup-head"><a href="/cup?id=${c.id}" class="cup-card-link">${esc(c.name)}</a>${c.rating ? ` <span class="cup-star">${'★'.repeat(c.rating)}</span>` : ''}</div>
         <div class="coffee-detail">${[c.roaster, c.country, c.process, c.brew_method].filter(Boolean).map(esc).join(' · ') || '—'}</div>
         ${recipeLine ? `<div class="coffee-detail">${esc(recipeLine)}</div>` : ''}
@@ -1330,13 +1359,16 @@ import Nav from '../components/Nav.astro';
         ${charLine ? `<div class="coffee-detail">${esc(charLine)}</div>` : ''}
         ${asNoteList(c.notes).length ? `<div class="profile-tags" style="margin-top:6px">${asNoteList(c.notes).map((n: string) => `<span class="profile-tag">${esc(n)}</span>`).join('')}</div>` : ''}
         ${c.comment ? `<div class="coffee-detail" style="margin-top:4px;font-style:italic">${esc(c.comment)}</div>` : ''}
-        <a href="/cup?id=${c.id}" class="cup-open-card">Карточка →</a>
-        <a href="/add-cup?edit=${c.id}" class="cup-open-card cup-open-edit">Редактировать →</a>
+        <div class="cup-actions-row">
+          <a href="/cup?id=${c.id}" class="cup-open-card">Карточка →</a>
+          <a href="/add-cup?edit=${c.id}" class="cup-open-card cup-open-edit">Редактировать →</a>
+          <button type="button" class="cup-del-btn" data-cup-del="${esc(c.id)}">Удалить</button>
+        </div>
       </div>`;
     };
     const diaryPanel = cups.length
-      ? `<div class="profile-card">${diaryFilters}<div id="diaryList">${cups.map(renderCupItem).join('')}</div><div id="diaryEmpty" class="empty-state" style="display:none">Нет чашек по этому фильтру</div></div>`
-      : `<div class="empty-state">Записывайте кофе, который пьёте дома или заказали сами — он наполнит вашу Карту вкуса.<br><a href="/add-cup">Добавить первую чашку →</a></div>`;
+      ? `<div class="sub-h" style="margin-top:0">📖 Банк рецептов</div><div class="profile-card" style="margin-bottom:14px">${recipeBank}</div><div class="sub-h">📔 Чашки</div><div class="profile-card">${diaryFilters}<div id="diaryList">${cups.map(renderCupItem).join('')}</div><div id="diaryEmpty" class="empty-state" style="display:none">Нет чашек по этому фильтру</div></div>`
+      : `<div class="sub-h" style="margin-top:0">📖 Банк рецептов</div><div class="profile-card" style="margin-bottom:14px">${recipeBank}</div><div class="empty-state">Записывайте кофе, который пьёте дома или заказали сами — он наполнит вашу Карту вкуса.<br><a href="/add-cup">Добавить первую чашку →</a></div>`;
 
     const shelfHasStatus = shelf.length > 0 && Object.prototype.hasOwnProperty.call(shelf[0], 'status');
     const shelfSorted = shelfHasStatus
@@ -1402,10 +1434,11 @@ import Nav from '../components/Nav.astro';
         <div class="shelf-brew-sheet" role="dialog" aria-labelledby="shelfBrewTitle">
           <div class="shelf-brew-sheet-h"><span id="shelfBrewTitle">Зерно</span><button type="button" class="shelf-brew-close" id="shelfBrewClose" aria-label="Закрыть">×</button></div>
           <div id="shelfBrewStepChoose">
-            <p class="flight-hint" style="margin-top:0">Как удобнее?</p>
+            <p class="flight-hint" style="margin-top:0">Заварить это зерно?</p>
+            <p class="field-hint" id="shelfBrewEquipHint" style="margin:0 0 10px"></p>
             <div class="shelf-brew-choice">
-              <button type="button" class="shelf-brew-choice-btn primary" id="shelfBrewSuggest">✨ Подскажи из моих рецептов</button>
-              <button type="button" class="shelf-brew-choice-btn" id="shelfBrewPickMethod">☕ Выберу способ сама</button>
+              <button type="button" class="shelf-brew-choice-btn primary" id="shelfBrewSuggest">✨ Подсказать способ и рецепт</button>
+              <button type="button" class="shelf-brew-choice-btn" id="shelfBrewPickMethod">☕ Я знаю способ — выберу сама</button>
             </div>
           </div>
           <div id="shelfBrewStepMethod" hidden>
@@ -1415,10 +1448,11 @@ import Nav from '../components/Nav.astro';
           <div id="shelfBrewStepPlan" hidden>
             <button type="button" class="ref-back" data-shelf-brew-back style="margin-bottom:10px">← Назад</button>
             <div id="shelfBrewPlanBody"></div>
-            <div class="profile-label" style="margin-top:8px">Объём в чашке</div>
+            <div class="profile-label" style="margin-top:8px">Объём в чашке (ориентир 150 ml)</div>
             <div class="shelf-brew-vols" id="shelfBrewVolumes"></div>
             <div class="shelf-brew-actions">
-              <button type="button" class="flight-pair-btn primary" id="shelfBrewGo">Открыть рецепт →</button>
+              <button type="button" class="flight-pair-btn primary" id="shelfBrewGo">Шаг 1 · полный рецепт</button>
+              <button type="button" class="flight-pair-btn" id="shelfBrewGoTaste">Шаг 2 · дегустация</button>
             </div>
           </div>
         </div>
@@ -1477,11 +1511,31 @@ import Nav from '../components/Nav.astro';
 
     renderTasteWheel(prefFams);
 
+    function syncDiaryFiltersToUrl() {
+      const url = new URL(location.href);
+      url.searchParams.set('tab', 'diary');
+      const setOrDel = (key: string, val: string) => {
+        if (val) url.searchParams.set(key, val);
+        else url.searchParams.delete(key);
+      };
+      setOrDel('d_brew', (document.getElementById('diaryFilterBrew') as HTMLSelectElement)?.value || '');
+      setOrDel('d_country', (document.getElementById('diaryFilterCountry') as HTMLSelectElement)?.value || '');
+      setOrDel('d_process', (document.getElementById('diaryFilterProcess') as HTMLSelectElement)?.value || '');
+      setOrDel('d_variety', (document.getElementById('diaryFilterVariety') as HTMLSelectElement)?.value || '');
+      setOrDel('d_bean', (document.getElementById('diaryFilterBean') as HTMLSelectElement)?.value || '');
+      setOrDel('d_recipe', (document.getElementById('diaryFilterRecipe') as HTMLSelectElement)?.value || '');
+      setOrDel('d_q', (document.getElementById('diarySearch') as HTMLInputElement)?.value.trim() || '');
+      history.replaceState({}, '', url.pathname + url.search);
+    }
+
     function applyDiaryFilters() {
       const brew = (document.getElementById('diaryFilterBrew') as HTMLSelectElement)?.value || '';
       const country = (document.getElementById('diaryFilterCountry') as HTMLSelectElement)?.value || '';
+      const process = (document.getElementById('diaryFilterProcess') as HTMLSelectElement)?.value || '';
+      const variety = (document.getElementById('diaryFilterVariety') as HTMLSelectElement)?.value || '';
       const bean = (document.getElementById('diaryFilterBean') as HTMLSelectElement)?.value || '';
       const recipeId = (document.getElementById('diaryFilterRecipe') as HTMLSelectElement)?.value || '';
+      const q = ((document.getElementById('diarySearch') as HTMLInputElement)?.value || '').trim().toLowerCase();
       const saved = savedRecipes.find((r: any) => r.id === recipeId);
       const fp = saved ? recipeFingerprint(saved.recipe) : '';
       let visible = 0;
@@ -1489,19 +1543,59 @@ import Nav from '../components/Nav.astro';
         const item = el as HTMLElement;
         const matchBrew = !brew || item.dataset.brew === brew;
         const matchCountry = !country || item.dataset.country === country;
+        const matchProcess = !process || item.dataset.process === process;
+        const matchVariety = !variety || item.dataset.variety === variety;
         const matchBean = !bean || item.dataset.name === bean;
         const matchRecipe = !recipeId || item.dataset.recipeId === recipeId || (!!fp && item.dataset.recipeFp === fp);
-        const show = matchBrew && matchCountry && matchBean && matchRecipe;
+        const matchQ = !q || (item.dataset.search || '').includes(q);
+        const show = matchBrew && matchCountry && matchProcess && matchVariety && matchBean && matchRecipe && matchQ;
         item.style.display = show ? '' : 'none';
         if (show) visible++;
       });
       const empty = document.getElementById('diaryEmpty');
       if (empty) empty.style.display = visible ? 'none' : 'block';
+      syncDiaryFiltersToUrl();
     }
-    document.getElementById('diaryFilterBrew')?.addEventListener('change', applyDiaryFilters);
-    document.getElementById('diaryFilterCountry')?.addEventListener('change', applyDiaryFilters);
-    document.getElementById('diaryFilterBean')?.addEventListener('change', applyDiaryFilters);
-    document.getElementById('diaryFilterRecipe')?.addEventListener('change', applyDiaryFilters);
+
+    if (cups.length) {
+      const diaryUrl = new URL(location.href);
+      const setDiarySelect = (id: string, param: string) => {
+        const v = diaryUrl.searchParams.get(param);
+        const el = document.getElementById(id) as HTMLSelectElement | HTMLInputElement | null;
+        if (v && el) el.value = v;
+      };
+      setDiarySelect('diaryFilterBrew', 'd_brew');
+      setDiarySelect('diaryFilterCountry', 'd_country');
+      setDiarySelect('diaryFilterProcess', 'd_process');
+      setDiarySelect('diaryFilterVariety', 'd_variety');
+      setDiarySelect('diaryFilterBean', 'd_bean');
+      setDiarySelect('diaryFilterRecipe', 'd_recipe');
+      setDiarySelect('diarySearch', 'd_q');
+      applyDiaryFilters();
+
+      document.getElementById('diaryFilterBrew')?.addEventListener('change', applyDiaryFilters);
+      document.getElementById('diaryFilterCountry')?.addEventListener('change', applyDiaryFilters);
+      document.getElementById('diaryFilterProcess')?.addEventListener('change', applyDiaryFilters);
+      document.getElementById('diaryFilterVariety')?.addEventListener('change', applyDiaryFilters);
+      document.getElementById('diaryFilterBean')?.addEventListener('change', applyDiaryFilters);
+      document.getElementById('diaryFilterRecipe')?.addEventListener('change', applyDiaryFilters);
+      document.getElementById('diarySearch')?.addEventListener('input', applyDiaryFilters);
+    }
+
+    page.querySelectorAll('[data-cup-del]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const id = (btn as HTMLElement).dataset.cupDel;
+        if (!id || !confirm('Удалить эту чашку из дневника?')) return;
+        (btn as HTMLButtonElement).disabled = true;
+        const { error } = await supabase.from('cups').delete().eq('id', id).eq('user_id', user.id);
+        if (error) {
+          alert('Не удалось удалить: ' + error.message);
+          (btn as HTMLButtonElement).disabled = false;
+          return;
+        }
+        init();
+      });
+    });
 
     function applyShelfSearch() {
       const q = ((document.getElementById('shelfSearch') as HTMLInputElement)?.value || '').trim().toLowerCase();

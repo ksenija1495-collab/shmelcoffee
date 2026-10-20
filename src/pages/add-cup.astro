@@ -99,6 +99,7 @@ import { DB, countryOrder } from '../data/countries';
         <div id="recipeHint" class="recipe-hint" style="display:none">Подставлен рецепт — поправь под то, как заварил на самом деле.</div>
         <div id="recipeActions" class="recipe-actions">
           <button type="button" class="recipe-act-btn" id="saveBaseRecipeBtn">⭐ Сохранить в мои рецепты</button>
+          <button type="button" class="recipe-act-btn" id="shelfGoTasteBtn" style="display:none">Заварила — к дегустации ↓</button>
         </div>
         <label class="fl">Баланс вкуса</label>
         <p class="balance-hint">Слайдер — сила. Теги — характер, можно несколько.</p>
@@ -384,6 +385,8 @@ import { DB, countryOrder } from '../data/countries';
   .fromguide .fg-chip { font-size: .78rem; padding: 4px 11px; border-radius: 20px; background: var(--surface); border: 1px solid var(--border); color: var(--text-dim); font-weight: 600; }
   .fromguide .fg-note { font-size: .8rem; color: var(--text-dim); line-height: 1.5; }
   .fromguide .fg-note b { color: var(--text); }
+  .fromguide .fg-steps { margin: 8px 0 0; padding-left: 1.15rem; font-size: .78rem; line-height: 1.45; color: var(--text-dim); }
+  .fromguide .fg-steps li { margin-bottom: 5px; }
   @media (max-width: 600px) {
     .addcup-page { padding-top: 72px; }
     .row2 { grid-template-columns: 1fr; }
@@ -430,6 +433,7 @@ import { DB, countryOrder } from '../data/countries';
   import { CHAMPION_PICKER_ITEMS } from '../data/championRecipePicker';
   import { defaultSavedRecipeName, savedRecipeSummary } from '../lib/savedRecipesUi';
   import { filterAvailableShelfBeans } from '../lib/shelfAvailability';
+  import { detailForPlan } from '../lib/shelfRecipeDetail';
 
   const supabase = createClient(
     import.meta.env.PUBLIC_SUPABASE_URL,
@@ -1366,9 +1370,35 @@ import { DB, countryOrder } from '../data/countries';
     if (g('notes')) prefillNotesFromParam(g('notes'));
     maybeOpenRecipePickerFromParams();
     if (g('from_shelf') === '1') {
+      const brewStep = g('brew_step') || 'recipe';
+      const brewMethod = g('brew') || (document.getElementById('f_brew') as HTMLSelectElement)?.value || '';
+      const detail = detailForPlan(brewMethod, g('champion_id') || null);
+      const stepsHtml = detail.steps.map((s) => `<li>${s.replace(/</g, '&lt;')}</li>`).join('');
+      const volHint = g('target_ml') ? ` · ${g('target_ml')} ml в чашке` : ' · ориентир 150 ml';
       const el = document.getElementById('fromGuide')!;
-      el.innerHTML = `<div class="fg-h">🫘 Зерно на полке</div><div class="fg-note">Когда заваришь — сохрани чашку. Она попадёт в <a href="/account?tab=diary" style="color:var(--accent);font-weight:600">дневник</a> и откроет страну в профиле.</div>`;
+      el.innerHTML = `<div class="fg-h">🫘 Заварка с полки${volHint}</div>
+        ${detail.title ? `<div class="fg-note"><b>${detail.title.replace(/</g, '&lt;')}</b>${detail.subtitle ? ` · ${detail.subtitle.replace(/</g, '&lt;')}` : ''}</div>` : ''}
+        <ol class="fg-steps">${stepsHtml}</ol>
+        ${detail.tip ? `<div class="fg-note" style="margin-top:8px;font-style:italic">${detail.tip.replace(/</g, '&lt;')}</div>` : ''}
+        <div class="fg-note">${brewStep === 'taste' ? 'Рецепт уже подставлен — отметь баланс, ноты и оценку.' : 'Шаг 1: сверь параметры ниже. Потом — «К дегустации».'}</div>`;
       el.style.display = 'block';
+      const toShelf = document.getElementById('f_to_shelf') as HTMLInputElement | null;
+      if (toShelf) toShelf.checked = false;
+      const tasteBtn = document.getElementById('shelfGoTasteBtn') as HTMLButtonElement | null;
+      if (tasteBtn) {
+        tasteBtn.style.display = brewStep === 'recipe' ? '' : 'none';
+        tasteBtn.onclick = () => {
+          document.getElementById('tasteSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        };
+      }
+      if (brewStep === 'taste') {
+        requestAnimationFrame(() => {
+          document.getElementById('tasteSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+      }
+    }
+    if (g('target_ml') && !g('water_g')) {
+      (document.getElementById('r_water_g') as HTMLInputElement).value = g('target_ml');
     }
     if (g('from_flight') === '1') {
       const focus = g('focus');
