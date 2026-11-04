@@ -553,10 +553,10 @@ import Nav from '../components/Nav.astro';
   import { beanOutUrl } from '../lib/beanOutUrl';
   import { formatCupRecipe, recipeFingerprint, applyRecipeToParams } from '../lib/cupRecipe';
   import { formatTasteCharacterLine, normalizeTasteCharacter } from '../lib/tasteCharacter';
-  import { savedRecipeSummary } from '../lib/savedRecipesUi';
   import { resolveCountryKey } from '../lib/countryResolve';
   import { fetchSavedBrewRecipes } from '../lib/savedBrewRecipeApi';
-  import { CHAMPION_PICKER_ITEMS } from '../data/championRecipePicker';
+  import { renderRecipesPanel } from '../lib/accountRecipesPanel';
+  import { cupCountsByCountryKey, renderDiscoCountryGrid, renderProfileInsightsSection } from '../lib/accountProfileInsights';
   import { isVarietyBlend } from '../lib/varietyBlend';
   import { renderProfileReferenceLinks } from '../lib/accountReferencePanel';
   import { bindShelfBrewFlow, type ShelfBeanRow } from '../lib/accountShelfBrewFlow';
@@ -614,56 +614,6 @@ import Nav from '../components/Nav.astro';
     }
     const { data: refreshed } = await supabase.auth.refreshSession();
     return refreshed.session?.access_token || '';
-  }
-
-  function renderMyRecipesBlock(recipes: any[], unavailable: boolean): string {
-    if (unavailable) return migrationRecipesBox();
-    if (!recipes.length) {
-      return `<details class="acc-recipe-block"><summary><span>📋 Мои рецепты</span><span class="acc-champ-count">0</span></summary>
-        <div class="acc-recipe-block-body"><p class="field-hint" style="margin:0">Сохраняй удачные заварки из карточки чашки или формы «Добавить кофе».</p></div></details>`;
-    }
-    const items = recipes.map((r: any) => {
-      const q = applyRecipeToParams(r.recipe, r.brew_method || '');
-      return `<a class="acc-champ-item" href="/add-cup?${q.toString()}"><span class="acc-champ-item-title">${esc(r.name)}</span><span class="acc-champ-item-sub">${esc(r.brew_method || '—')} · ${esc(savedRecipeSummary(r))}</span></a>`;
-    }).join('');
-    return `<details class="acc-recipe-block"><summary><span>📋 Мои рецепты</span><span class="acc-champ-count">${recipes.length}</span></summary><div class="acc-recipe-block-body">${items}</div></details>`;
-  }
-
-  function renderChampionRecipesBlock(): string {
-    const byBrew = new Map<string, typeof CHAMPION_PICKER_ITEMS>();
-    for (const item of CHAMPION_PICKER_ITEMS) {
-      const list = byBrew.get(item.brewMethod) || [];
-      list.push(item);
-      byBrew.set(item.brewMethod, list);
-    }
-    const brews = [...byBrew.keys()].sort((a, b) => a.localeCompare(b, 'ru'));
-    const inner = brews.map((brew) => {
-      const items = byBrew.get(brew)!;
-      return `<details class="acc-champ-brew">
-        <summary><span>${esc(brew)}</span><span class="acc-champ-count">${items.length}</span></summary>
-        <div class="acc-champ-list">${items.map((item) => {
-          const q = applyRecipeToParams(item.recipe as any, item.brewMethod);
-          return `<a class="acc-champ-item" href="/add-cup?${q.toString()}">
-            <span class="acc-champ-item-title">${esc(item.methodIcon)} ${esc(item.title)}</span>
-            <span class="acc-champ-item-sub">${esc(item.badgeText)} · ${esc(item.methodName)}</span>
-          </a>`;
-        }).join('')}</div>
-      </details>`;
-    }).join('');
-    return `<details class="acc-recipe-block acc-champ-block">
-      <summary><span>🏆 Чемпионские</span><span class="acc-champ-count">${CHAMPION_PICKER_ITEMS.length}</span></summary>
-      <div class="acc-recipe-block-body">${inner}<a class="acc-champ-more" href="/blog/chempionskie-recepty">Все в блоге →</a></div>
-    </details>`;
-  }
-
-  function migrationRecipesBox(): string {
-    return `<div class="migration-box"><b>Сохранённые рецепты недоступны — нужна миграция в Supabase</b>
-      <ol>
-        <li>Открой <a href="https://supabase.com/dashboard/project/vakdjxdbfoxkrsedgwcl/sql/new" target="_blank" rel="noopener">SQL Editor</a></li>
-        <li>Вставь файл <code>supabase/FIX-RUN-NOW.sql</code> из репозитория</li>
-        <li>Нажми Run → обнови эту страницу</li>
-      </ol>
-      Чемпионские рецепты ниже работают без миграции.</div>`;
   }
 
   function showLoadError(message: string) {
@@ -1309,6 +1259,11 @@ import Nav from '../components/Nav.astro';
     });
     const topKeys = calcTop(answers);
     const recommendedFirst = topKeys.filter(k => !openedKeys.has(k)).slice(0, 3);
+    const cupCountsByKey = cupCountsByCountryKey(cups);
+    const discoGridHtml = renderDiscoCountryGrid(openedKeys, cupCountsByKey);
+    const profileInsightsHtml = renderProfileInsightsSection(cups);
+    const equipItemsForRecipes = shelf.filter((s: any) => s.kind === 'equipment');
+    const recipesPanelHtml = renderRecipesPanel(savedRecipes, recipesUnavailable, cups, equipItemsForRecipes);
     const prefFams = new Set<string>();
     (answers?.flavors || []).forEach((f: string) => (FLAVOR_TO_FAM[f] || []).forEach(x => prefFams.add(x)));
     const famColor: Record<string, string> = {};
@@ -1324,10 +1279,10 @@ import Nav from '../components/Nav.astro';
       ? `<div class="profile-card tastemap-card"><svg id="tasteWheel" class="tastemap-wheel" viewBox="0 0 360 360"></svg><div class="tastemap-side"><div class="tm-row"><span class="profile-label">Кислотность</span><span class="profile-value">${ACID[answers.acidity] || '—'}</span></div><div class="tm-row"><span class="profile-label">Тело</span><span class="profile-value">${BODY[answers.body] || '—'}</span></div><div class="tm-row"><span class="profile-label">Сладость</span><span class="profile-value">${SWEET[answers.sweetness] || '—'}</span></div><div class="tm-fams">${[...prefFams].map(f => `<span class="tm-fam" style="background:${famColor[f] || 'var(--accent)'}">${f}</span>`).join('') || '<span class="profile-tag">—</span>'}</div><div class="tm-hint">Нажми на сектор — откроется список нот.</div></div></div><div id="tmInfo" class="info-panel"></div>`
       : '';
 
-    const pathPanel = `<div class="sub-h">🧭 Мой путь</div><div class="profile-card"><div class="disco-top"><div class="disco-ring">${ringSVG(openedKeys.size, countryOrder.length)}</div><div><div class="disco-count">${openedKeys.size} / ${countryOrder.length}</div><div class="profile-label" style="min-width:0">стран открыто в дневнике</div></div></div>${quizCountryNames.length ? `<div class="profile-label" style="min-width:0;margin-top:14px">Из теста — начни с:</div><div class="path-quiz-countries">${quizCountryNames.map((n: string) => `<span class="profile-tag">${esc(n)}</span>`).join('')}</div>` : ''}${recommendedFirst.length ? `<div class="disco-subtitle">Ещё не пробовала — под профиль</div><div class="disco-rec">${recommendedFirst.map((k: string) => { const c: any = DB[k]; return `<a class="disco-rec-card" href="/add-shelf?kind=bean&country=${encodeURIComponent(c.name)}"><span class="drc-flag">${c.flag}</span><span class="drc-name">${c.name}</span><span class="drc-why">${c.flavors.slice(0, 3).join(' · ')}</span><span class="drc-cta">На полку →</span></a>`; }).join('')}</div>` : ''}<div class="disco-subtitle">Карта стран</div><div class="disco-grid">${countryOrder.map((k: string) => { const c: any = DB[k]; const open = openedKeys.has(k); return `<span class="disco-chip ${open ? 'open' : 'closed'}" data-k="${k}">${c.flag} ${c.name}${open ? ' ✓' : ''}</span>`; }).join('')}</div><div id="discoInfo" class="info-panel"></div></div><p style="font-size:.78rem;color:var(--text-muted);margin-top:12px"><a href="${COMMUNITY_TG}" target="_blank" rel="noopener" style="color:var(--accent);font-weight:600">Telegram-сообщество</a></p>`;
+    const pathPanel = `<div class="sub-h">🧭 Мой путь</div><div class="profile-card"><div class="disco-top"><div class="disco-ring">${ringSVG(openedKeys.size, countryOrder.length)}</div><div><div class="disco-count">${openedKeys.size} / ${countryOrder.length}</div><div class="profile-label" style="min-width:0">стран открыто · цифра — чашек в дневнике</div></div></div>${quizCountryNames.length ? `<div class="profile-label" style="min-width:0;margin-top:14px">Из теста — начни с:</div><div class="path-quiz-countries">${quizCountryNames.map((n: string) => `<span class="profile-tag">${esc(n)}</span>`).join('')}</div>` : ''}${recommendedFirst.length ? `<div class="disco-subtitle">Ещё не пробовала — под профиль</div><div class="disco-rec">${recommendedFirst.map((k: string) => { const c: any = DB[k]; return `<a class="disco-rec-card" href="/add-shelf?kind=bean&country=${encodeURIComponent(c.name)}"><span class="drc-flag">${c.flag}</span><span class="drc-name">${c.name}</span><span class="drc-why">${c.flavors.slice(0, 3).join(' · ')}</span><span class="drc-cta">На полку →</span></a>`; }).join('')}</div>` : ''}<div class="disco-subtitle">Карта стран</div><div class="disco-grid">${discoGridHtml}</div><div id="discoInfo" class="info-panel"></div></div><p style="font-size:.78rem;color:var(--text-muted);margin-top:12px"><a href="${COMMUNITY_TG}" target="_blank" rel="noopener" style="color:var(--accent);font-weight:600">Telegram-сообщество</a></p>`;
 
     const checklist = renderChecklist(user.id, latestProfile, cups, shelf);
-    const profilePanel = `${profileCard}${renderProfileReferenceLinks()}${tasteCard ? `<div class="sub-h">🗺️ Карта вкуса</div>${tasteCard}` : ''}${pathPanel}<div id="shelfAssistantMount"></div>`;
+    const profilePanel = `${profileInsightsHtml}${profileCard}${renderProfileReferenceLinks()}${tasteCard ? `<div class="sub-h">🗺️ Карта вкуса</div>${tasteCard}` : ''}${pathPanel}<div id="shelfAssistantMount"></div>`;
 
     const brewMethods = [...new Set(cups.map((c: any) => c.brew_method).filter(Boolean))].sort() as string[];
     const diaryCountries = [...new Set(cups.map((c: any) => c.country).filter(Boolean))].sort() as string[];
@@ -1343,7 +1298,6 @@ import Nav from '../components/Nav.astro';
       <select id="diaryFilterBean"><option value="">Все зёрна</option>${diaryNames.map((m) => `<option value="${esc(m)}">${esc(m)}</option>`).join('')}</select>
       <select id="diaryFilterRecipe"><option value="">По сохранённому рецепту</option>${savedRecipes.map((r: any) => `<option value="${r.id}">${esc(r.name)}</option>`).join('')}</select>
     </div>` : '';
-    const recipeBank = `${renderMyRecipesBlock(savedRecipes, recipesUnavailable)}${renderChampionRecipesBlock()}`;
     const showTasteChar = cups.length >= 10;
     const renderCupItem = (c: any) => {
       const recipeLine = formatCupRecipe(c.recipe);
@@ -1367,8 +1321,8 @@ import Nav from '../components/Nav.astro';
       </div>`;
     };
     const diaryPanel = cups.length
-      ? `<div class="sub-h" style="margin-top:0">📖 Банк рецептов</div><div class="profile-card" style="margin-bottom:14px">${recipeBank}</div><div class="sub-h">📔 Чашки</div><div class="profile-card">${diaryFilters}<div id="diaryList">${cups.map(renderCupItem).join('')}</div><div id="diaryEmpty" class="empty-state" style="display:none">Нет чашек по этому фильтру</div></div>`
-      : `<div class="sub-h" style="margin-top:0">📖 Банк рецептов</div><div class="profile-card" style="margin-bottom:14px">${recipeBank}</div><div class="empty-state">Записывайте кофе, который пьёте дома или заказали сами — он наполнит вашу Карту вкуса.<br><a href="/add-cup">Добавить первую чашку →</a></div>`;
+      ? `<div class="profile-card">${diaryFilters}<div id="diaryList">${cups.map(renderCupItem).join('')}</div><div id="diaryEmpty" class="empty-state" style="display:none">Нет чашек по этому фильтру</div></div>`
+      : `<div class="empty-state">Записывайте кофе, который пьёте дома или заказали сами — он наполнит вашу Карту вкуса.<br><a href="/add-cup">Добавить первую чашку →</a><br><a href="/account?tab=recipes" style="margin-top:8px;display:inline-block">Рецепты и чемпионские →</a></div>`;
 
     const shelfHasStatus = shelf.length > 0 && Object.prototype.hasOwnProperty.call(shelf[0], 'status');
     const shelfSorted = shelfHasStatus
@@ -1423,11 +1377,13 @@ import Nav from '../components/Nav.astro';
       <div class="acc-tabs" id="accTabs">
         <button class="acc-tab" data-tab="shelf">🫘 Зерно</button>
         <button class="acc-tab" data-tab="diary">📔 Дневник</button>
+        <button class="acc-tab" data-tab="recipes">📖 Рецепты</button>
         <button class="acc-tab" data-tab="profile">👤 Профиль</button>
       </div>
 
       <section class="acc-panel" data-panel="shelf"><div class="panel-h"><span>🫘 Зерно${shelfHasStatus ? ` <span class="shelf-low-count"${lowCount ? '' : ' style="display:none"'}">${lowCount} заканчивается</span>` : ''}</span><span style="display:flex;gap:6px;flex-wrap:wrap"><a href="/add-shelf?kind=bean" class="add-cup-btn">+ Зерно</a><a href="/add-shelf?mode=photo" class="add-cup-btn">📷 С фото</a></span></div>${checklist}${equipSection}<div id="shelfImportBanner" class="paid-banner" style="display:none"></div>${beansBlock}</section>
       <section class="acc-panel" data-panel="diary"><div class="panel-h"><span>📔 Дневник</span><a href="/add-cup" class="add-cup-btn">+ Чашка</a></div>${diaryPanel}</section>
+      <section class="acc-panel" data-panel="recipes"><div class="panel-h"><span>📖 Рецепты</span><a href="/add-cup" class="add-cup-btn">+ Чашка</a></div>${recipesPanelHtml}</section>
       <section class="acc-panel" data-panel="profile"><div class="panel-h">👤 Профиль</div>${profilePanel}</section>
 
       <div id="shelfBrewModal" class="shelf-brew-modal" hidden>
@@ -1459,7 +1415,7 @@ import Nav from '../components/Nav.astro';
       </div>
     `;
 
-    const MOBILE_ACC_TABS = new Set(['diary', 'shelf', 'profile']);
+    const MOBILE_ACC_TABS = new Set(['diary', 'shelf', 'profile', 'recipes']);
     function syncAccountNav(name: string) {
       document.querySelectorAll('.mobile-acc-nav a[data-acc-tab]').forEach((a) => {
         const tab = a.getAttribute('data-acc-tab');

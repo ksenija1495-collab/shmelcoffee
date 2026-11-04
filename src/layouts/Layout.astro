@@ -69,7 +69,7 @@ const accountNavTab = (() => {
   <meta property="og:title" content={title}>
   <meta property="og:description" content={description}>
   <meta property="og:url" content={canonicalUrl}>
-  <meta property="og:site_name" content="Shmelco">
+  <meta property="og:site_name" content="Shmelcoffee">
   <meta property="og:locale" content="ru_RU">
   <meta property="og:image" content={ogImageUrl}>
   <meta property="og:image:width" content="1200">
@@ -99,6 +99,7 @@ const accountNavTab = (() => {
     <div class="mobile-nav mobile-acc-nav" role="navigation" aria-label="Кабинет">
       <a href="/account?tab=shelf" class:list={[{ active: accountNavTab === 'shelf' }]} data-acc-tab="shelf"><span class="mn-icon">🫘</span>Зерно</a>
       <a href="/account?tab=diary" class:list={[{ active: accountNavTab === 'diary' }]} data-acc-tab="diary"><span class="mn-icon">📔</span>Дневник</a>
+      <a href="/account?tab=recipes" class:list={[{ active: accountNavTab === 'recipes' }]} data-acc-tab="recipes"><span class="mn-icon">📖</span>Рецепты</a>
       <a href="/account?tab=profile" class:list={[{ active: accountNavTab === 'profile' }]} data-acc-tab="profile"><span class="mn-icon">👤</span>Профиль</a>
     </div>
   ) : (
@@ -109,7 +110,7 @@ const accountNavTab = (() => {
       <a href="/account" id="mobileAccount" class={isAccount ? 'active' : ''}><span class="mn-icon">👤</span>Кабинет</a>
     </div>
   )}
-  <div class="footer">Shmelco · product atelier · Specialty Coffee Guide</div>
+  <div class="footer">Shmelcoffee</div>
   <Analytics />
 </body>
 </html>

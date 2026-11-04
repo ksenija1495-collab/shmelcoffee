@@ -6,20 +6,14 @@ import {
   scaleRecipeToTargetVolume,
   type BrewRecipe,
 } from './cupRecipe';
-import { equipmentItemMatchesTag, EQUIPMENT_TAGS } from './equipmentTags';
-import {
-  bestDiaryRecipeForBean,
-  lookupPreset,
-  presetForFlight,
-  type DiaryCupLike,
-} from './tastingFlights';
+import { brewMethodsForEquipment } from './equipmentTags';
+import { recipeRecToBrewRecipe, scaleStandardToMl } from './brewStandards';
+import { bestDiaryRecipeForBean, type DiaryCupLike } from './tastingFlights';
 import {
   DEFAULT_CUP_ML,
   detailForPlan,
-  mergeChampionIntoPlan,
   pickChampionForMethod,
   scaledPlanRecipe,
-  type RecipeDetail,
 } from './shelfRecipeDetail';
 
 export type ShelfBeanRow = {
@@ -43,65 +37,23 @@ export type ShelfBrewPlan = {
   detail?: RecipeDetail;
 };
 
-const CORE_BREW_METHODS = ['V60', 'Aeropress', 'Hario Switch', 'Турка'] as const;
+export { brewMethodsForEquipment } from './equipmentTags';
 
-const EQUIP_TO_BREW: Record<string, string> = {
-  v60: 'V60',
-  aeropress: 'Aeropress',
-  turka: 'Турка',
-  chemex: 'Chemex',
-  french: 'Френч-пресс',
-  moka: 'Гейзерная',
-  espresso: 'Эспрессо',
-};
-
-export function brewMethodsForEquipment(equipItems: { name?: string | null; category?: string | null }[]): string[] {
-  const out = new Set<string>();
-  for (const tag of EQUIPMENT_TAGS) {
-    if (equipItems.some((item) => equipmentItemMatchesTag(item, tag))) {
-      const m = EQUIP_TO_BREW[tag.id];
-      if (m) out.add(m);
-    }
-  }
-  if (!out.size) return [...CORE_BREW_METHODS];
-  if (out.has('V60')) out.add('Hario Switch');
-  return [...out];
-}
-
-function presetToRecipe(preset: ReturnType<typeof lookupPreset>): BrewRecipe {
-  return {
-    coffee_g: parseFloat(preset.coffee_g) || null,
-    water_g: parseFloat(preset.water_g) || null,
-    temp: preset.temp || null,
-    time: preset.time || null,
-    grind: preset.grind || null,
-    blooming: preset.blooming_ml
-      ? { ml: parseFloat(preset.blooming_ml), time: preset.blooming || null }
-      : null,
-  };
-}
-
-function recToRecipe(rec: BrewRecommendation['primary'], method: string): BrewRecipe {
-  const coffee = parseFloat(rec.dose.replace(/[^\d.,]/g, '').replace(',', '.'));
-  const water = parseFloat(rec.water.replace(/[^\d.,]/g, '').replace(',', '.'));
-  return {
-    coffee_g: Number.isFinite(coffee) ? coffee : null,
-    water_g: Number.isFinite(water) ? water : null,
-    temp: rec.temp || null,
-    grind: rec.grind || null,
-    time: rec.time || null,
-  };
+function recToRecipe(rec: BrewRecommendation['primary'], method: string, targetMl: number): BrewRecipe {
+  const base = recipeRecToBrewRecipe(rec);
+  const scaled = scaleRecipeToTargetVolume(base, targetMl);
+  return scaled || scaleStandardToMl(method, targetMl);
 }
 
 function enrichPlan(plan: ShelfBrewPlan, _bean: ShelfBeanRow, targetMl: number): ShelfBrewPlan {
-  let recipe = scaledPlanRecipe(plan.recipe, targetMl);
+  let recipe =
+    plan.source === 'diary'
+      ? scaledPlanRecipe(plan.recipe, targetMl)
+      : scaleStandardToMl(plan.brewMethod, targetMl);
   let championId = plan.championId;
   if (plan.source !== 'diary') {
     const champ = pickChampionForMethod(plan.brewMethod, targetMl);
-    if (champ) {
-      championId = champ.id;
-      recipe = mergeChampionIntoPlan(recipe, champ, targetMl);
-    }
+    if (champ) championId = champ.id;
   }
   const detail = detailForPlan(plan.brewMethod, championId);
   return { ...plan, recipe, championId, detail };
@@ -142,18 +94,17 @@ export function suggestBrewPlan(
       brewMethod: pick.method,
       headline: rules.headline,
       reason: pick.note || rules.why,
-      recipe: recToRecipe(pick, pick.method),
+      recipe: recToRecipe(pick, pick.method, targetMl),
     };
     return enrichPlan(base, bean, targetMl);
   }
 
-  const preset = presetForFlight(preferredMethod);
   const base: ShelfBrewPlan = {
     source: 'preset',
-    brewMethod: preset.brew,
-    headline: preset.label,
-    reason: 'Базовый рецепт под способ заваривания',
-    recipe: presetToRecipe(preset),
+    brewMethod: preferredMethod,
+    headline: 'Базовый рецепт',
+    reason: 'Стартовые параметры Shmelco под выбранный метод',
+    recipe: scaleStandardToMl(preferredMethod, targetMl),
   };
   return enrichPlan(base, bean, targetMl);
 }
@@ -183,17 +134,16 @@ export function planForMethod(
       brewMethod: method,
       headline: `${rules.headline} · ${method}`,
       reason: pick.note || rules.why,
-      recipe: recToRecipe(pick, method),
+      recipe: recToRecipe(pick, method, targetMl),
     };
     return enrichPlan(base, bean, targetMl);
   }
-  const preset = lookupPreset(method, method) || presetForFlight(method);
   const base: ShelfBrewPlan = {
     source: 'preset',
-    brewMethod: preset.brew,
-    headline: preset.label,
-    reason: 'Стартовые параметры — подстрой под вкус',
-    recipe: presetToRecipe(preset),
+    brewMethod: method,
+    headline: 'Базовый рецепт',
+    reason: 'Стартовые параметры Shmelco — подстрой температуру, не дозу',
+    recipe: scaleStandardToMl(method, targetMl),
   };
   return enrichPlan(base, bean, targetMl);
 }
