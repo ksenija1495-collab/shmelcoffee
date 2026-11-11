@@ -13,6 +13,7 @@ const SITEMAP_EXCLUDE = [
   '/auth/callback',
   '/generate',
   '/metrics',
+  '/g',
   '/api/',
 ];
 
@@ -22,7 +23,13 @@ export default defineConfig({
   site: 'https://shmelcoffee.com',
   integrations: [
     sitemap({
-      filter: (page) => !SITEMAP_EXCLUDE.some((p) => page.includes(p)),
+      filter: (page) => {
+        const path = new URL(page).pathname.replace(/\/$/, '') || '/';
+        return !SITEMAP_EXCLUDE.some((prefix) => {
+          const p = prefix.replace(/\/$/, '') || '/';
+          return path === p || path.startsWith(`${p}/`);
+        });
+      },
       serialize(item) {
         const path = new URL(item.url).pathname;
         const lastmod = blogSitemapDates[path] || blogSitemapDates[`${path.replace(/\/$/, '')}/`];

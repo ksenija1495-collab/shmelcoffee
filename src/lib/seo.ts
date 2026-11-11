@@ -18,6 +18,7 @@ export const NOINDEX_PATH_PREFIXES = [
   '/auth/callback',
   '/generate',
   '/metrics',
+  '/g',
 ];
 
 export const SITEMAP_EXCLUDE_PREFIXES = [

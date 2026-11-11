@@ -11,6 +11,7 @@ interface Props {
   ogImageAlt?: string;
   canonical?: string;
   noindex?: boolean;
+  bare?: boolean;
   publishedTime?: string;
   modifiedTime?: string;
 }
@@ -24,6 +25,7 @@ const {
   ogImageAlt,
   canonical,
   noindex: noindexProp = false,
+  bare = false,
   publishedTime,
   modifiedTime,
 } = Astro.props;
@@ -93,9 +95,9 @@ const accountNavTab = (() => {
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
-<body>
+<body class={bare ? 'page-bare' : undefined}>
   <slot />
-  {isAccountZone ? (
+  {!bare && (isAccountZone ? (
     <div class="mobile-nav mobile-acc-nav" role="navigation" aria-label="Кабинет">
       <a href="/account?tab=shelf" class:list={[{ active: accountNavTab === 'shelf' }]} data-acc-tab="shelf"><span class="mn-icon">🫘</span>Зерно</a>
       <a href="/account?tab=diary" class:list={[{ active: accountNavTab === 'diary' }]} data-acc-tab="diary"><span class="mn-icon">📔</span>Дневник</a>
@@ -109,8 +111,8 @@ const accountNavTab = (() => {
       <a href="/countries" class={isCountries ? 'active' : ''}><span class="mn-icon">🌍</span>Страны</a>
       <a href="/account" id="mobileAccount" class={isAccount ? 'active' : ''}><span class="mn-icon">👤</span>Кабинет</a>
     </div>
-  )}
-  <div class="footer">Shmelcoffee</div>
+  ))}
+  {!bare && <div class="footer">Shmelcoffee</div>}
   <Analytics />
 </body>
 </html>

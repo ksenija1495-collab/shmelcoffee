@@ -3,21 +3,20 @@ import Layout from '../layouts/Layout.astro';
 import Nav from '../components/Nav.astro';
 import { SITE_URL } from '../lib/seo';
 
-const pageTitle = 'Shmelcoffee — практика вкуса';
-const pageDesc = 'Coffee Journeys в лаборатории, бесплатный кофейный дневник и дрип-наборы. Учимся слышать чашку.';
+const pageTitle = 'Shmelcoffee — specialty coffee дома';
+const pageDesc = 'Любить — это узнавать. Исследуем вкусы кофе и учимся слышать чашку: встречи, дневник и дрип-наборы.';
 const ogImage = `${SITE_URL}/og/home.png`;
 
 const seatUrl = 'https://t.me/ksenijashmel?text=' + encodeURIComponent('Хочу на Coffee Journey «История кофе», 22 ноября');
-const kitUrl = 'https://t.me/ksenijashmel?text=' + encodeURIComponent('Хочу дрип-набор, когда появится');
 const threadsUrl = 'https://www.threads.com/@shmelcoffee';
 const channelUrl = 'https://t.me/shmel_coffee';
 
 const lots = [
-  { flag: '🇪🇹', name: 'Эфиопия', note: 'мытая' },
-  { flag: '🇪🇹', name: 'Эфиопия', note: 'натуральная' },
-  { flag: '🇮🇩', name: 'Индонезия Гайо', note: '' },
-  { flag: '🇷🇼', name: 'Руанда Муремуре', note: '' },
-  { flag: '🇰🇪', name: 'Кения Гитура', note: '' },
+  { flag: '🇪🇹', name: 'Эфиопия Арича', note: 'мытая' },
+  { flag: '🇪🇹', name: 'Эфиопия Хоро Бетела', note: 'натуральная' },
+  { flag: '🇷🇼', name: 'Руанда Ньюнгве', note: 'натуральная' },
+  { flag: '🇮🇩', name: 'Индонезия Керинчи', note: 'мытая' },
+  { flag: '🇰🇪', name: 'Кения Барагви', note: 'мытая' },
 ];
 ---
 
@@ -32,21 +31,41 @@ const lots = [
 
   <header class="eco-hero">
     <div class="container">
-      <p class="eco-eyebrow">Shmelcoffee</p>
-      <h1>Практика вкуса</h1>
-      <p class="eco-lead">Комната, дневник и наборы. Чтобы слышать чашку, а не пить её на автомате.</p>
+      <div class="eco-hero-grid">
+        <div class="eco-hero-copy">
+          <p class="eco-eyebrow">Shmelcoffee</p>
+          <h1>Specialty coffee дома</h1>
+          <p class="eco-line">Любить — это узнавать</p>
+          <p class="eco-lead">Исследуем вкусы кофе, учимся знать его глубже, понимать тонкости заварки для раскрытия максимального вкуса.</p>
+          <p class="eco-closer">Всё, чтобы слышать чашку, а не пить её на автомате.</p>
+        </div>
+        <div class="eco-photos">
+          <figure>
+            <img src="/lab/pour.jpg" alt="Пролив воронки на весах, в солнечном свете" width="768" height="1024" />
+          </figure>
+          <figure>
+            <img src="/lab/table.jpg" alt="Стаканы, золотые пачки и дегустационный гид на деревянном столе" width="576" height="1024" />
+          </figure>
+          <figure>
+            <img src="/lab/overhead.jpg" alt="Стол к каппингу: пачки зерна, стаканы, чайник и воронка" width="576" height="1024" />
+          </figure>
+        </div>
+      </div>
       <div class="eco-doors">
         <a href="#journeys" class="eco-door">
+          <span class="eco-kicker">01</span>
           <b>Coffee Journeys</b>
-          <span>Офлайн в лаборатории</span>
+          <span class="eco-door-meta">Офлайн в лаборатории</span>
         </a>
         <a href="#diary" class="eco-door">
+          <span class="eco-kicker">02</span>
           <b>Дневник</b>
-          <span>Бесплатно</span>
+          <span class="eco-door-meta">Бесплатно, каждый день</span>
         </a>
         <a href="#kits" class="eco-door">
+          <span class="eco-kicker">03</span>
           <b>Дрип-наборы</b>
-          <span>Скоро</span>
+          <span class="eco-door-meta">Скоро в продаже</span>
         </a>
       </div>
     </div>
@@ -55,60 +74,116 @@ const lots = [
   <div class="container eco-body">
 
     <section id="journeys" class="eco-block">
-      <h2>Coffee Journeys</h2>
-      <p class="eco-text">Встречи в моей кофейной лаборатории. Одна тема, несколько чашек, маленькая компания. Разбираем страну, обработку и вкус — и пробуем это в чашке.</p>
+      <div class="eco-intro">
+        <div>
+          <h2>Coffee Journeys</h2>
+          <p class="eco-text">Офлайн погружение в кофе в тёплой компании в моей кофейной лаборатории.</p>
+        </div>
+        <img src="/lab/journey.jpg" alt="Каппинг за общим столом в лаборатории" width="1024" height="682" />
+      </div>
 
+      <h3 class="eco-kicker">Ближайшие мероприятия</h3>
       <article class="eco-event">
-        <p class="eco-eyebrow">Ближайшая встреча</p>
-        <h3>История кофе</h3>
-        <p class="eco-event-sub">От эфиопского наследия до современной селекции</p>
-        <ul class="eco-meta">
-          <li>22 ноября, воскресенье, 11:30</li>
-          <li>2 часа · моя кофейная лаборатория</li>
-          <li>2 800 ₽</li>
-          <li>Осталось 2 из 5</li>
-        </ul>
-        <p class="eco-text">Пять лотов и есть маршрут. Сравниваем аромат, кислотность, сладость, плотность и послевкусие.</p>
-        <ul class="eco-lots">
-          {lots.map((lot) => (
-            <li>
-              <span aria-hidden="true">{lot.flag}</span>
-              <b>{lot.name}</b>
-              {lot.note && <small>{lot.note}</small>}
-            </li>
-          ))}
-        </ul>
-        <p class="eco-text">Домой каждый уносит дрип-пакеты с этой дегустации — продолжить те же чашки уже у себя.</p>
-        <p class="eco-fit">Подойдёт и тем, кто только знакомится со specialty, и тем, кто уже в кофе и хочет глубже.</p>
-        <a class="btn btn-primary" href={seatUrl} target="_blank" rel="noopener">Занять место</a>
+        <div class="eco-event-row">
+          <div>
+            <p class="eco-eyebrow">Coffee Journey</p>
+            <h3>История кофе</h3>
+            <p class="eco-when">22 ноября, 11:30</p>
+          </div>
+          <div class="eco-event-actions">
+            <button type="button" class="btn" id="eventMore" aria-expanded="false" aria-controls="eventDetails">Подробнее</button>
+            <a class="btn btn-primary" href={seatUrl} target="_blank" rel="noopener">Записаться</a>
+          </div>
+        </div>
+        <div id="eventDetails" class="eco-event-details" hidden>
+          <p class="eco-event-sub">От эфиопского наследия до современной селекции</p>
+          <ul class="eco-meta">
+            <li>Воскресенье, 2 часа</li>
+            <li>Моя кофейная лаборатория</li>
+            <li>2 800 ₽</li>
+            <li>Осталось 2 из 5</li>
+          </ul>
+          <p class="eco-text">Пять лотов и есть маршрут. Сравниваем аромат, кислотность, сладость, плотность и послевкусие.</p>
+          <ul class="eco-lots">
+            {lots.map((lot) => (
+              <li>
+                <span aria-hidden="true">{lot.flag}</span>
+                <b>{lot.name}</b>
+                {lot.note && <small>{lot.note}</small>}
+              </li>
+            ))}
+          </ul>
+          <p class="eco-text">Домой каждый уносит дрип-пакеты с этой дегустации — продолжить те же чашки уже у себя.</p>
+          <p class="eco-fit">Подойдёт и тем, кто только знакомится со specialty, и тем, кто уже в кофе и хочет глубже.</p>
+        </div>
       </article>
     </section>
 
     <section id="diary" class="eco-block">
-      <h2>Дневник</h2>
-      <p class="eco-text">Бесплатно. Записываешь чашку — остаётся язык, которым потом пользуешься на встрече.</p>
-      <div class="eco-pair">
-        <a class="eco-link" href="/quiz">
-          <b>Твой дневник</b>
-          <span>Кабинет: чашки, полка, страны</span>
-        </a>
-        <a class="eco-link" href={threadsUrl} target="_blank" rel="noopener">
-          <b>Мой дневник</b>
-          <span>Threads · @shmelcoffee</span>
-        </a>
+      <div class="eco-intro">
+        <div>
+          <h2>Кофейный дневник</h2>
+          <p class="eco-text">Чтобы знать кофе — нужно пить много кофе осознанно: фиксировать каждую чашку и делать каждое прикосновение моментом знакомства и изучения. Для этого я создала кофейный дневник, которым можно пользоваться каждый день.</p>
+        </div>
+        <img src="/lab/table.jpg" alt="Дегустационный гид на столе" width="576" height="1024" />
+      </div>
+      <div class="eco-panel">
+        <ul class="eco-list">
+          <li>искать рецепты</li>
+          <li>записывать заварки в своём методе: воронка, аэропресс, мокапот, дрип и другие</li>
+          <li>записывать вкусы и наблюдения</li>
+          <li>оценивать каждую чашку</li>
+          <li>открывать новые страны и вкусы</li>
+        </ul>
+        <a class="btn btn-primary" href="/quiz">Начать бесплатно</a>
       </div>
     </section>
 
     <section id="kits" class="eco-block">
-      <h2>Дрип-наборы</h2>
-      <p class="eco-text">Домашнее погружение между встречами: набор дрип-пакетов, чтобы самой пройти вкусы. Скоро в продаже.</p>
-      <p class="eco-note">Пакеты с встречи 22 ноября — продолжение той дегустации. Набор — отдельный продукт.</p>
-      <a class="btn" href={kitUrl} target="_blank" rel="noopener">Написать, когда выйдет</a>
+      <div class="eco-intro">
+        <div>
+          <h2>Образовательные дрип-наборы</h2>
+          <p class="eco-text">Наборы дрипов по определённой тематике. Каждый набор собираю для вас вручную и подписываю.</p>
+        </div>
+        <img src="/lab/drips.jpg" alt="Дрип-пакеты, стаканы и воронка на деревянном столе" width="682" height="1024" />
+      </div>
+      <div class="eco-panel">
+        <p class="eco-text">В набор входит:</p>
+        <ul class="eco-list">
+          <li>2 единицы каждого лота</li>
+          <li>карточки для фиксации вкусов</li>
+          <li>цифровой гайд о каждом лоте и о цели набора — исследование вкуса и изучение кофе</li>
+        </ul>
+        <p class="eco-note">Скоро в продаже. Следите за анонсами <a href={channelUrl} target="_blank" rel="noopener">в канале</a>.</p>
+      </div>
     </section>
 
-    <section class="eco-materials">
-      <a href={channelUrl} target="_blank" rel="noopener">Канал с анонсами · @shmel_coffee</a>
-      <a href="/blog">Блог</a>
+    <section class="eco-more">
+      <h2>Где можно узнать больше</h2>
+      <div class="eco-more-grid">
+        <a class="eco-more-btn" href="/blog">
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5 5.2A2.2 2.2 0 0 1 7.2 3H18v16.2H7.2A2.2 2.2 0 0 0 5 21.4V5.2z"></path>
+            <path d="M5 5.2A2.2 2.2 0 0 1 7.2 3"></path>
+            <path d="M8.5 8h6M8.5 11.5h6"></path>
+          </svg>
+          Блог о кофе
+        </a>
+        <a class="eco-more-btn" href={threadsUrl} target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="8.2"></circle>
+            <path d="M15.4 9.6c-.4-1.3-1.5-2.1-2.9-2-1.7.1-2.8 1.4-2.7 3.1.1 1.5 1.1 2.5 2.6 2.6 1 0 1.7-.4 2.1-1.1"></path>
+            <path d="M15.6 11.4v2.2c0 1.7-1.3 2.9-3.2 2.8"></path>
+          </svg>
+          Дневник в Threads
+        </a>
+        <a class="eco-more-btn" href={channelUrl} target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="currentColor">
+            <path d="M20.6 4.4 3.7 10.9c-1.15.44-1.14 1.08-.2 1.36l4.32 1.35 10.02-6.32c.47-.29.9-.13.55.18l-8.11 7.32-.32 4.58c.46 0 .66-.21.92-.46l2.2-2.14 4.58 3.38c.84.46 1.45.22 1.66-.78l2.86-13.5c.3-1.22-.46-1.77-1.48-1.37z"></path>
+          </svg>
+          Анонсы в телеграме
+        </a>
+      </div>
     </section>
 
   </div>
@@ -120,40 +195,107 @@ const lots = [
     background: linear-gradient(180deg, var(--surface) 0%, var(--bg) 100%);
     border-bottom: 1px solid var(--border);
   }
+  .eco-kicker,
   .eco-eyebrow {
-    font-size: .68rem;
-    font-weight: 700;
-    letter-spacing: .18em;
-    text-transform: uppercase;
-    color: var(--accent);
-    margin-bottom: 12px;
-  }
-  .eco-hero h1 {
-    font-family: 'Cormorant Garamond', Georgia, serif;
-    font-size: 3.4rem;
-    line-height: 1.02;
+    font-family: 'Inter', sans-serif;
+    font-size: .75rem;
     font-weight: 600;
-    letter-spacing: -.02em;
-    margin-bottom: 14px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    line-height: 1.3;
+    color: var(--accent);
+    margin: 0 0 10px;
   }
-  .eco-lead {
-    max-width: 460px;
-    font-size: 1.05rem;
-    line-height: 1.6;
-    color: var(--text-dim);
+  .eco-event .eco-kicker { margin: 0 0 8px; }
+  .eco-hero-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+    gap: 36px;
+    align-items: end;
     margin-bottom: 28px;
   }
+  .eco-hero h1,
+  .eco-block h2,
+  .eco-more h2,
+  .eco-event h3,
+  .eco-door b,
+  .eco-line {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-weight: 600;
+    letter-spacing: 0;
+    line-height: 1.12;
+  }
+  .eco-hero h1 {
+    font-size: 3rem;
+    margin-bottom: 12px;
+  }
+  .eco-line {
+    font-size: 1.5rem;
+    font-weight: 500;
+    font-style: italic;
+    margin-bottom: 16px;
+  }
+  .eco-lead,
+  .eco-closer,
+  .eco-text,
+  .eco-list li,
+  .eco-event-sub,
+  .eco-when,
+  .eco-lots li,
+  .eco-fit,
+  .eco-note {
+    font-family: 'Inter', sans-serif;
+    font-size: .9375rem;
+    font-weight: 400;
+    line-height: 1.6;
+  }
+  .eco-lead,
+  .eco-text,
+  .eco-event-sub,
+  .eco-fit {
+    color: var(--text-dim);
+  }
+  .eco-lead {
+    max-width: 28rem;
+    margin-bottom: 12px;
+  }
+  .eco-closer {
+    max-width: 28rem;
+    color: var(--text);
+  }
+  .eco-when { font-weight: 600; color: var(--text); margin-top: 4px; }
+  .eco-photos {
+    display: grid;
+    grid-template-columns: 1.15fr 0.9fr 0.9fr;
+    gap: 8px;
+    height: 340px;
+  }
+  .eco-photos figure {
+    margin: 0;
+    border-radius: 14px;
+    overflow: hidden;
+    background: var(--surface-2);
+  }
+  .eco-photos img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .eco-photos figure:nth-child(1) img { object-position: center 42%; }
+  .eco-photos figure:nth-child(2) img { object-position: center 38%; }
+  .eco-photos figure:nth-child(3) img { object-position: center 28%; }
   .eco-doors {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 12px;
-    max-width: 720px;
   }
   .eco-door {
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    padding: 18px 16px;
+    align-items: flex-start;
+    min-height: 148px;
+    padding: 16px 18px 14px;
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
     background: var(--surface);
@@ -162,45 +304,118 @@ const lots = [
     box-shadow: var(--shadow);
   }
   .eco-door:hover { border-color: var(--border-hover); box-shadow: var(--shadow-hover); }
-  .eco-door b { font-size: .92rem; }
-  .eco-door span { font-size: .78rem; color: var(--text-muted); }
+  .eco-door .eco-kicker { margin-bottom: 8px; }
+  .eco-door b {
+    font-size: 1.75rem;
+    margin-bottom: 12px;
+  }
+  .eco-intro {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 220px;
+    gap: 28px;
+    align-items: start;
+    margin-bottom: 8px;
+  }
+  .eco-intro h2 { margin-top: 0; }
+  .eco-intro .eco-text { margin-bottom: 0; max-width: none; }
+  .eco-intro img {
+    width: 100%;
+    height: 112px;
+    object-fit: cover;
+    border-radius: 14px;
+    display: block;
+  }
+  .eco-intro img[src*="journey"] { object-position: 58% 40%; }
+  .eco-intro img[src*="table"] { object-position: center 70%; }
+  .eco-intro img[src*="drips"] { object-position: center 58%; }
+  .eco-door-meta {
+    margin-top: auto;
+    font-family: 'Inter', sans-serif;
+    font-size: .75rem;
+    font-weight: 600;
+    letter-spacing: .04em;
+    line-height: 1.3;
+    color: var(--text-muted);
+  }
 
   .eco-body { padding-top: 8px; }
-  .eco-block { padding: 56px 0 8px; }
-  .eco-block h2 {
-    font-family: 'Cormorant Garamond', Georgia, serif;
+  .eco-block {
+    margin-top: 20px;
+    padding: 40px 0 12px;
+    border-top: 1px solid var(--border);
+    scroll-margin-top: 72px;
+  }
+  .eco-text,
+  .eco-list,
+  .eco-note,
+  .eco-fit { max-width: 40rem; }
+  .eco-block h2,
+  .eco-more h2 {
     font-size: 2rem;
-    font-weight: 600;
     margin-bottom: 10px;
   }
-  .eco-text {
-    max-width: 560px;
-    color: var(--text-dim);
-    font-size: .92rem;
-    line-height: 1.65;
-    margin-bottom: 16px;
+  .eco-text { margin-bottom: 14px; }
+  .eco-list {
+    list-style: none;
+    margin: 0 0 18px;
   }
-  .eco-event {
+  .eco-list li {
+    position: relative;
+    padding-left: 14px;
+    margin-bottom: 6px;
+    color: var(--text);
+  }
+  .eco-list li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: .62em;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+  .eco-block > .eco-kicker { margin-top: 6px; }
+  .eco-event,
+  .eco-panel {
     margin-top: 8px;
-    padding: 28px 26px;
+    padding: 22px 22px 18px;
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 18px;
     box-shadow: var(--shadow);
-    max-width: 640px;
   }
-  .eco-event h3 {
-    font-family: 'Cormorant Garamond', Georgia, serif;
-    font-size: 2.1rem;
+  .eco-panel .eco-list { margin-bottom: 16px; max-width: none; }
+  .eco-panel .eco-text { margin-bottom: 10px; max-width: none; }
+  .eco-panel .eco-note { max-width: none; }
+  .eco-event-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .eco-when {
+    font-size: .95rem;
     font-weight: 600;
-    line-height: 1.1;
-    margin-bottom: 6px;
+    margin-top: 4px;
   }
-  .eco-event-sub {
-    color: var(--text-dim);
-    font-size: .92rem;
-    margin-bottom: 16px;
+  .eco-event-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    flex-shrink: 0;
   }
+  .eco-event-details {
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+  }
+  .eco-event-details[hidden] { display: none; }
+  .eco-event h3 {
+    font-size: 2rem;
+    margin-bottom: 4px;
+  }
+  .eco-event-sub { margin-bottom: 16px; }
   .eco-meta {
     list-style: none;
     display: flex;
@@ -209,8 +424,10 @@ const lots = [
     margin-bottom: 18px;
   }
   .eco-meta li {
-    font-size: .78rem;
+    font-family: 'Inter', sans-serif;
+    font-size: .75rem;
     font-weight: 600;
+    line-height: 1.3;
     color: var(--text);
     background: var(--surface-2);
     border-radius: 8px;
@@ -227,21 +444,18 @@ const lots = [
     display: flex;
     align-items: baseline;
     gap: 8px;
-    font-size: .9rem;
   }
-  .eco-lots small { color: var(--text-muted); font-size: .78rem; }
-  .eco-fit {
-    font-size: .84rem;
-    color: var(--text-dim);
-    line-height: 1.55;
-    margin-bottom: 18px;
-    max-width: 520px;
+  .eco-lots small {
+    font-size: .75rem;
+    font-weight: 600;
+    letter-spacing: .02em;
+    color: var(--text-muted);
   }
+  .eco-fit { margin-bottom: 0; }
   .eco-pair {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 12px;
-    max-width: 640px;
   }
   .eco-link {
     display: flex;
@@ -255,33 +469,91 @@ const lots = [
     color: inherit;
   }
   .eco-link:hover { border-color: var(--border-hover); box-shadow: var(--shadow-hover); }
-  .eco-link b { font-size: .92rem; }
-  .eco-link span { font-size: .78rem; color: var(--text-muted); }
-  .eco-note {
-    font-size: .82rem;
-    color: var(--text-muted);
-    max-width: 520px;
-    margin: -6px 0 16px;
-    line-height: 1.5;
-  }
-  .eco-materials {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px 18px;
-    padding: 48px 0 24px;
-  }
-  .eco-materials a {
-    font-size: .84rem;
+  .eco-link b {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: 1.75rem;
     font-weight: 600;
-    color: var(--text-dim);
+    line-height: 1.12;
+  }
+  .eco-link span {
+    font-size: .75rem;
+    font-weight: 600;
+    color: var(--text-muted);
+  }
+  .eco-note { margin: 4px 0 0; color: var(--text); }
+  .eco-note a {
+    color: var(--accent);
+    font-weight: 600;
     text-decoration: none;
   }
-  .eco-materials a:hover { color: var(--accent); }
+  .eco-more {
+    margin-top: 20px;
+    padding: 40px 0 36px;
+    border-top: 1px solid var(--border);
+  }
+  .eco-more-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .eco-more-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface);
+    color: var(--text);
+    text-decoration: none;
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: .875rem;
+    line-height: 1.2;
+    box-shadow: var(--shadow);
+  }
+  .eco-event .btn,
+  .eco-panel .btn,
+  .eco-block > .btn,
+  .eco-more-btn {
+    font-family: 'Inter', sans-serif;
+    font-size: .875rem;
+    font-weight: 600;
+  }
+  .eco-more-btn svg { flex-shrink: 0; color: var(--accent); }
+  .eco-more-btn:hover {
+    border-color: var(--border-hover);
+    box-shadow: var(--shadow-hover);
+    color: var(--accent);
+  }
 
-  @media (max-width: 700px) {
+  @media (max-width: 800px) {
     .eco-hero { padding-top: 88px; }
+    .eco-hero-grid { grid-template-columns: 1fr; gap: 22px; align-items: start; }
     .eco-hero h1 { font-size: 2.5rem; }
+    .eco-line,
+    .eco-door b,
+    .eco-block h2,
+    .eco-more h2,
+    .eco-event h3 { font-size: 1.75rem; }
+    .eco-door { min-height: 0; }
+    .eco-intro { grid-template-columns: 1fr; }
+    .eco-intro img { height: 160px; }
+    .eco-photos { height: 240px; }
     .eco-doors, .eco-pair { grid-template-columns: 1fr; }
-    .eco-event { padding: 22px 18px; }
+    .eco-event { padding: 18px 16px; }
+    .eco-event-row { flex-direction: column; align-items: flex-start; }
+    .eco-more-btn { width: 100%; }
   }
 </style>
+
+<script>
+  const more = document.getElementById('eventMore');
+  const details = document.getElementById('eventDetails');
+  more?.addEventListener('click', () => {
+    const willOpen = details?.hasAttribute('hidden');
+    details?.toggleAttribute('hidden');
+    more.setAttribute('aria-expanded', String(!!willOpen));
+    more.textContent = willOpen ? 'Скрыть' : 'Подробнее';
+  });
+</script>

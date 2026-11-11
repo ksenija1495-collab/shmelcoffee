@@ -1,0 +1,92 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { roomGuides } from '../../data/roomGuides';
+---
+
+<Layout
+  bare
+  noindex
+  title="Гайды — Shmelcoffee"
+  description="Материалы каппинг-встреч и дрип-наборов."
+>
+  <main class="room">
+    <p class="mark">Shmelcoffee</p>
+    <h1>Гайды</h1>
+    <p class="lead">Каппинги и наборы. Страницы нет в меню — её открывает QR на карточке или на пачке.</p>
+    <ul class="tabs">
+      {roomGuides.map((guide) => (
+        <li>
+          <a href={guide.href}>
+            <span class="kind">{guide.kind}{guide.when ? ` · ${guide.when}` : ''}</span>
+            <b>{guide.tab}</b>
+            <span class="full">{guide.title}</span>
+          </a>
+        </li>
+      ))}
+    </ul>
+  </main>
+</Layout>
+
+<style>
+  .room {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 28px 20px 64px;
+  }
+  .mark {
+    font-size: .68rem;
+    font-weight: 600;
+    letter-spacing: .22em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 18px;
+  }
+  h1 {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: 2.6rem;
+    font-weight: 600;
+    line-height: 1.05;
+    margin-bottom: 12px;
+  }
+  .lead {
+    color: var(--text-dim);
+    max-width: 36rem;
+    margin-bottom: 28px;
+  }
+  .tabs {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .tabs a {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    padding: 16px 16px 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+    text-decoration: none;
+    color: inherit;
+  }
+  .tabs a:hover { border-color: var(--border-hover); }
+  .kind {
+    font-size: .72rem;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .tabs b {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: 1.55rem;
+    font-weight: 600;
+    line-height: 1.15;
+  }
+  .full {
+    color: var(--text-dim);
+    font-size: .9rem;
+  }
+</style>
