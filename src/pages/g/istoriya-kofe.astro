@@ -9,6 +9,7 @@ const types = [
     text: 'Кофе и вода контактируют всё время заварки.',
     gives: ['сладость', 'плотность', 'стабильность'],
     methods: ['French Press', 'Cupping', 'AeroPress', 'Syphon (нижняя фаза)'],
+    photos: ['immersion-1', 'immersion-2'],
   },
   {
     n: '02',
@@ -17,6 +18,7 @@ const types = [
     text: 'Вода проходит сквозь слой кофе.',
     gives: ['чистоту', 'кислотность', 'ароматику'],
     methods: ['V60', 'Kalita', 'Chemex', 'automatic фильтры'],
+    photos: ['pour-1', 'pour-2'],
   },
   {
     n: '03',
@@ -25,6 +27,7 @@ const types = [
     text: 'Экстракция происходит под давлением.',
     gives: ['концентрат', 'кремовость', 'насыщенность'],
     methods: ['Эспрессо', 'Мока', 'Nespresso', 'AeroPress'],
+    photos: ['pressure-1', 'pressure-2'],
   },
   {
     n: '04',
@@ -33,6 +36,7 @@ const types = [
     text: 'Кофе варится вместе с водой.',
     gives: ['плотность', 'насыщенность'],
     methods: ['Турка'],
+    photos: ['decoction-1', 'decoction-2'],
   },
   {
     n: '05',
@@ -41,6 +45,7 @@ const types = [
     text: 'Температура ниже 20°C, экстракция очень медленная.',
     gives: ['мягкость', 'сладость', 'низкую кислотность'],
     methods: ['Cold Brew', 'Kyoto Drip', 'Japanese Iced Pour Over'],
+    photos: ['cold-1', 'cold-2'],
   },
 ];
 
@@ -48,6 +53,7 @@ const ways = [
   {
     n: '01',
     name: 'Турка',
+    photo: 'turka',
     grind: 'очень мелкий (как пудра)',
     time: '2–4 минуты',
     taste: ['крепкий', 'густой', 'пряный'],
@@ -57,6 +63,7 @@ const ways = [
   {
     n: '02',
     name: 'Френч-пресс',
+    photo: 'french',
     grind: 'крупный',
     time: '4 минуты',
     taste: ['мягкий', 'плотный', 'с маслами'],
@@ -66,6 +73,7 @@ const ways = [
   {
     n: '03',
     name: 'V60 (пуровер)',
+    photo: 'v60',
     grind: 'средний',
     time: '2,5–3 минуты',
     taste: ['чистый', 'яркий', 'фруктовый'],
@@ -75,6 +83,7 @@ const ways = [
   {
     n: '04',
     name: 'Аэропресс',
+    photo: 'aeropress',
     grind: 'средний',
     time: '1,5–2,5 минуты',
     taste: ['насыщенный', 'мягкий'],
@@ -84,6 +93,7 @@ const ways = [
   {
     n: '05',
     name: 'Кемекс',
+    photo: 'chemex',
     grind: 'средне-крупный',
     time: '4–5 минут',
     taste: ['лёгкий', 'чистый', 'чайный'],
@@ -93,6 +103,7 @@ const ways = [
   {
     n: '06',
     name: 'Эспрессо-машина',
+    photo: 'espresso',
     grind: 'крупный',
     time: '4 минуты',
     taste: ['концентрированный, с крема сверху'],
@@ -102,6 +113,7 @@ const ways = [
   {
     n: '07',
     name: 'Cold Brew',
+    photo: 'cold-brew',
     grind: 'крупный',
     time: '8–12 часов',
     taste: ['мягкий', 'сладковатый', 'без горечи'],
@@ -280,6 +292,9 @@ const lots = [
           <ul>
             {item.methods.map((m) => <li>{m}</li>)}
           </ul>
+          <div class="shots">
+            {item.photos.map((src) => <img src={`/guide/${src}.jpg`} alt="" />)}
+          </div>
         </article>
       ))}
     </section>
@@ -287,16 +302,19 @@ const lots = [
     <section id="ways">
       <h2>7 способов заварить кофе</h2>
       {ways.map((item) => (
-        <article class="block">
-          <p class="num">[{item.n}]</p>
-          <h3>{item.name}</h3>
-          <dl>
-            <div><dt>Помол</dt><dd>{item.grind}</dd></div>
-            <div><dt>Время</dt><dd>{item.time}</dd></div>
-            <div><dt>Вкус</dt><dd>{item.taste.join(' · ')}</dd></div>
-          </dl>
-          <p><b>Особенность.</b> {item.note}</p>
-          <p><b>Мини-хак.</b> {item.hack}</p>
+        <article class="block method">
+          <img src={`/guide/${item.photo}.jpg`} alt={item.name} />
+          <div>
+            <p class="num">[{item.n}]</p>
+            <h3>{item.name}</h3>
+            <dl>
+              <div><dt>Помол</dt><dd>{item.grind}</dd></div>
+              <div><dt>Время</dt><dd>{item.time}</dd></div>
+              <div><dt>Вкус</dt><dd>{item.taste.join(' · ')}</dd></div>
+            </dl>
+            <p><b>Особенность.</b> {item.note}</p>
+            <p><b>Мини-хак.</b> {item.hack}</p>
+          </div>
         </article>
       ))}
     </section>
@@ -690,6 +708,28 @@ const lots = [
   #story h2:not(:first-child) { margin-top: 36px; }
   h3 { font-size: 1.55rem; margin: 0 0 10px; color: var(--text); }
   p, li { font-size: .95rem; }
+  .shots {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 14px;
+    max-width: 420px;
+  }
+  .shots img, .method img {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 3 / 4;
+    object-fit: cover;
+    border-radius: 16px;
+    display: block;
+  }
+  .method {
+    display: grid;
+    grid-template-columns: 148px 1fr;
+    gap: 4px 22px;
+    align-items: start;
+  }
+  .method img { margin-top: 4px; }
   .block, .lot {
     margin-top: 28px;
     padding-top: 22px;
@@ -804,6 +844,7 @@ const lots = [
     h1 { font-size: 2.25rem; }
     .toc a { font-size: 1.15rem; padding: 14px 12px; }
     .pair { grid-template-columns: 1fr; }
+    .method { grid-template-columns: 108px 1fr; gap: 4px 14px; }
     .blank li { grid-template-columns: 96px 1fr; }
   }
 </style>
