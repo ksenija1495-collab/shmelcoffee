@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1180" role="img">
+  <rect width="1200" height="1180" fill="#F8F7ED"/>
+  <text x="48" y="48" fill="#462918" font-family="Georgia, 'Times New Roman', serif" font-size="28">Карта родословных</text>
+  <text x="48" y="76" fill="#8a7363" font-family="Inter, sans-serif" font-size="14">Линия — связь. Пунктир — непрямая или вероятная. Вторая строка узла — чашка, где разновидность есть в дегустации.</text>
+  <g fill="none" stroke="#a87c4f" stroke-width="1.6">
+
+    <path d="M 590.0 191.0 C 590.0 230.0, 300.0 230.0, 300.0 269.0"/>
+    <path d="M 590.0 191.0 C 590.0 234.0, 880.0 234.0, 880.0 277.0"/>
+    <path d="M 880.0 323.0 C 880.0 366.0, 300.0 366.0, 300.0 409.0"/>
+    <path d="M 880.0 323.0 C 880.0 370.0, 880.0 370.0, 880.0 417.0"/>
+    <path d="M 300.0 471.0 C 300.0 515.0, 120.0 515.0, 120.0 559.0"/>
+    <path d="M 300.0 471.0 C 300.0 515.0, 360.0 515.0, 360.0 559.0" stroke-dasharray="5 4"/>
+    <path d="M 300.0 471.0 C 300.0 515.0, 600.0 515.0, 600.0 559.0"/>
+    <path d="M 300.0 471.0 C 300.0 515.0, 840.0 515.0, 840.0 559.0"/>
+    <path d="M 880.0 463.0 C 880.0 511.0, 840.0 511.0, 840.0 559.0"/>
+    <path d="M 880.0 463.0 C 880.0 511.0, 1080.0 511.0, 1080.0 559.0" stroke-dasharray="5 4"/>
+    <path d="M 590.0 191.0 C 590.0 455.0, 120.0 455.0, 120.0 719.0" stroke-dasharray="5 4"/>
+    <path d="M 120.0 621.0 C 120.0 670.0, 840.0 670.0, 840.0 719.0"/>
+    <path d="M 840.0 621.0 C 840.0 670.0, 840.0 670.0, 840.0 719.0"/>
+    <path d="M 120.0 781.0 C 120.0 830.0, 120.0 830.0, 120.0 879.0"/>
+    <path d="M 120.0 621.0 C 120.0 750.0, 120.0 750.0, 120.0 879.0"/>
+    <path d="M 600.0 621.0 C 600.0 750.0, 400.0 750.0, 400.0 879.0"/>
+    <path d="M 120.0 781.0 C 120.0 830.0, 400.0 830.0, 400.0 879.0"/>
+    <path d="M 120.0 941.0 C 120.0 910.0, 680.0 910.0, 680.0 879.0"/>
+    <path d="M 360.0 621.0 C 360.0 750.0, 680.0 750.0, 680.0 879.0" stroke-dasharray="5 4"/>
+    <path d="M 360.0 621.0 C 360.0 750.0, 960.0 750.0, 960.0 879.0"/>
+    <path d="M 1080.0 621.0 C 1080.0 750.0, 960.0 750.0, 960.0 879.0"/>
+    <path d="M 120.0 781.0 C 120.0 830.0, 960.0 830.0, 960.0 879.0" stroke-dasharray="5 4"/>
+    <path d="M 120.0 941.0 C 120.0 990.0, 120.0 990.0, 120.0 1039.0"/>
+  </g>
+  <rect x="492.0" y="145.0" width="196" height="46" rx="10" fill="#e5f0e4" stroke="#5d7c5c" stroke-width="1.4"/>
+  <text x="590" y="173" text-anchor="middle" fill="#462918" font-family="Inter, sans-serif" font-size="15" font-weight="600">Эфиопская арабика</text>
+  <rect x="202.0" y="269.0" width="196" height="62" rx="10" fill="#e5f0e4" stroke="#5d7c5c" stroke-width="1.4"/>
+  <text x="300" y="292" text-anchor="middle" fill="#462918" font-family="Inter, sans-serif" font-size="15" font-weight="600">Местные разновидности</text>
+  <text x="300" y="314" text-anchor="middle" fill="#6b5344" font-family="Inter, sans-serif" font-size="12">Хоро Бетела · Арича</text>
+  <rect x="782.0" y="277.0" width="196" height="46" rx="10" fill="#e5f0e4" stroke="#5d7c5c" stroke-width="1.4"/>
+  <text x="880" y="305" text-anchor="middle" fill="#462918" font-family="Inter, sans-serif" font-size="15" font-weight="600">Йеменские популяции</text>
+  <rect x="202.0" y="409.0" width="196" height="62" rx="10" fill="#f6efe4" stroke="#a87c4f" stroke-width="1.4"/>
+  <text x="300" y="432" text-anchor="middle" fill="#462918" font-family="Inter, sans-serif" font-size="15" font-weight="600">Bourbon</text>
+  <text x="300" y="454" text-anchor="middle" fill="#6b5344" font-family="Inter, sans-serif" font-size="12">Ньюнгве</text>
+  <rect x="782.0" y="417.0" width="196" height="46" rx="10" fill="#f6efe4" stroke="#a87c4f" stroke-width="1.4"/>
+  <text x="880" y="445" text-anchor="middle" fill="#462918" font-family="Inter, sans-serif" font-size="15" font-weight="600">Typica</text>
+  <rect x="22.0" y="559.0" width="196" height="62" rx="10" fill="#f6efe4" stroke="#a87c4f" stroke-width="1.4"/>
+  <text x="120" y="582" text-anchor="middle" fill="#462918" font-family="Inter, sans-serif" font-size="15" font-weight="600">Caturra</text>
+  <text x="120" y="604" text-anchor="middle" fill="#6b5344" font-family="Inter, sans-serif" font-size="12">мутация Bourbon</text>
+  <rect x="262.0" y="559.0" width="196" height="62" rx="10" fill="#f6efe4" stroke="#a87c4f" stroke-width="1.4"/>
+  <text x="360" y="582" text-anchor="middle" fill="#462918" font-family="Inter, sans-serif" font-size="15" font-weight="600">SL28</text>
+  <text x="360" y="604" text-anchor="middle" fill="#6b5344" font-family="Inter, sans-serif" font-size="12">Мутиту · Барагви</text>
+  <rect x="502.0" y="559.0" width="196" height="62" rx="10" fill="#f6efe4" stroke="#a87c4f" stroke-width="1.4"/>
+  <text x="600" y="582" text-anchor="middle" fill="#462918" font-family="Inter, sans-serif" font-size="15" font-weight="600">Villa Sarchí</text>
+  <text x="600" y="604" text-anchor="middle" fill="#6b5344" font-family="Inter, sans-serif" font-size="12">мутация Bourbon</text>
+  <rect x="742.0" y="559.0" width="196" height="62" rx="10" fill="#f6efe4" stroke="#a87c4f" stroke-width="1.4"/>
+  <text x="840" y="582" text-anchor="middle" fill="#462918" font-family="Inter, sans-serif" font-size="15" font-weight="600">Mundo Novo</text>
+  <text x="840" y="604" text-anchor="middle" fill="#6b5344" font-family="Inter, sans-serif" font-size="12">Typica × Bourbon</text>
+  <rect x="982.0" y="559.0" width="196" height="62" rx="10" fill="#f6efe4" stroke="#a87c4f" stroke-width="1.4"/>
+  <text x="1080" y="582" text-anchor="middle" fill="#462918" font-family="Inter, sans-serif" font-size="15" font-weight="600">SL34</text>
+  <text x="1080" y="604" text-anchor="middle" fill="#6b5344" font-family="Inter, sans-serif" font-size="12">Барагви</text>
+  <rect x="22.0" y="719.0" width="196" height="62" rx="10" fill="#e6eef3" stroke="#5d7f96" stroke-width="1.4"/>
+  <text x="120" y="742" text-anchor="middle" fill="#462918" font-family="Inter, sans-serif" font-size="15" font-weight="600">Timor Hybrid</text>
+  <text x="120" y="764" text-anchor="middle" fill="#6b5344" font-family="Inter, sans-serif" font-size="12">арабика × канефора</text>
+  <rect x="742.0" y="719.0" width="196" height="62" rx="10" fill="#f6efe4" stroke="#a87c4f" stroke-width="1.4"/>
+  <text x="840" y="742" text-anchor="middle" fill="#462918" font-family="Inter, sans-serif" font-size="15" font-weight="600">Catuaí</text>
+  <text x="840" y="764" text-anchor="middle" fill="#6b5344" font-family="Inter, sans-serif" font-size="12">Рио Паранайба</text>
+  <rect x="22.0" y="879.0" width="196" height="62" rx="10" fill="#e6eef3" stroke="#5d7f96" stroke-width="1.4"/>
+  <text x="120" y="902" text-anchor="middle" fill="#462918" font-family="Inter, sans-serif" font-size="15" font-weight="600">Catimor</text>
+  <text x="120" y="924" text-anchor="middle" fill="#6b5344" font-family="Inter, sans-serif" font-size="12">Timor × Caturra</text>
+  <rect x="302.0" y="879.0" width="196" height="62" rx="10" fill="#e6eef3" stroke="#5d7f96" stroke-width="1.4"/>
+  <text x="400" y="902" text-anchor="middle" fill="#462918" font-family="Inter, sans-serif" font-size="15" font-weight="600">Sarchimor</text>
+  <text x="400" y="924" text-anchor="middle" fill="#6b5344" font-family="Inter, sans-serif" font-size="12">Хуангуан</text>
+  <rect x="582.0" y="879.0" width="196" height="62" rx="10" fill="#e6eef3" stroke="#5d7f96" stroke-width="1.4"/>
+  <text x="680" y="902" text-anchor="middle" fill="#462918" font-family="Inter, sans-serif" font-size="15" font-weight="600">Ruiru 11</text>
+  <text x="680" y="924" text-anchor="middle" fill="#6b5344" font-family="Inter, sans-serif" font-size="12">Барагви</text>
+  <rect x="862.0" y="879.0" width="196" height="62" rx="10" fill="#e6eef3" stroke="#5d7f96" stroke-width="1.4"/>
+  <text x="960" y="902" text-anchor="middle" fill="#462918" font-family="Inter, sans-serif" font-size="15" font-weight="600">Batian</text>
+  <text x="960" y="924" text-anchor="middle" fill="#6b5344" font-family="Inter, sans-serif" font-size="12">Барагви</text>
+  <rect x="22.0" y="1039.0" width="196" height="62" rx="10" fill="#e6eef3" stroke="#5d7f96" stroke-width="1.4"/>
+  <text x="120" y="1062" text-anchor="middle" fill="#462918" font-family="Inter, sans-serif" font-size="15" font-weight="600">Andungsari</text>
+  <text x="120" y="1084" text-anchor="middle" fill="#6b5344" font-family="Inter, sans-serif" font-size="12">Каро Аро · Керинчи</text>
+  <rect x="302.0" y="1039.0" width="196" height="62" rx="10" fill="#e6eef3" stroke="#5d7f96" stroke-width="1.4"/>
+  <text x="400" y="1062" text-anchor="middle" fill="#462918" font-family="Inter, sans-serif" font-size="15" font-weight="600">Sigarar Utang</text>
+  <text x="400" y="1084" text-anchor="middle" fill="#6b5344" font-family="Inter, sans-serif" font-size="12">Каро Аро · Керинчи</text>
+  <text x="48" y="1148" fill="#8a7363" font-family="Inter, sans-serif" font-size="13">Сигарар утанг без линии: родители не установлены. SL28 ближе к Bourbon, SL34 ближе к Typica — это не доказанная пара родителей.</text>
+</svg>
