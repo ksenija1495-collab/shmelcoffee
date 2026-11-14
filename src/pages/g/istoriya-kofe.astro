@@ -530,11 +530,6 @@ const lots = [
           </li>
         ))}
       </ul>
-      <nav class="jumps" aria-label="Лоты">
-        {lots.map((lot, i) => (
-          <a href={`#${lot.id}`}><span>0{i + 1}</span>{lot.name.split(' (')[0].split(' ').slice(-1)}</a>
-        ))}
-      </nav>
       {lots.map((lot) => (
         <article class="lot" id={lot.id}>
           <h3>{lot.name}</h3>
@@ -801,24 +796,6 @@ const lots = [
     background: var(--surface);
     border-left: 3px solid var(--accent);
   }
-  .jumps {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin: 20px 0 4px;
-  }
-  .jumps a {
-    display: inline-flex;
-    gap: 6px;
-    align-items: baseline;
-    text-decoration: none;
-    color: var(--text);
-    border-bottom: 1px solid var(--border);
-    padding: 4px 0;
-    font-size: .85rem;
-    font-weight: 600;
-  }
-  .jumps span { color: var(--accent); }
   .lot { scroll-margin-top: 12px; }
   .blank { list-style: none; padding: 0; }
   .blank li {
