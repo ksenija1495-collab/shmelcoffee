@@ -17,4 +17,11 @@ export const roomGuides: RoomGuide[] = [
     when: '22 ноября',
     href: '/g/istoriya-kofe',
   },
+  {
+    slug: 'istoriya-kofe-nabor',
+    tab: 'История кофе — набор',
+    title: 'История кофе в пяти чашках',
+    kind: 'Дрип-набор',
+    href: '/g/istoriya-kofe-nabor',
+  },
 ];
