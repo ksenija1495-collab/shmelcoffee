@@ -244,11 +244,13 @@ const lots = [
   <main class="guide">
     <p class="back"><a href="/g">Все гайды</a></p>
 
-    <header class="cover">
+    <header class="cover" id="top">
       <p class="mark">каппинг встреча 22 ноября</p>
       <h1>История кофе от Эфиопии до современных селекций</h1>
     </header>
 
+    <div class="dock">
+    <div class="dock-scroll">
     <nav class="toc" aria-label="Разделы гайда">
       <a href="#set">Кофе на дегустации</a>
       <a href="#story">История кофе</a>
@@ -261,6 +263,9 @@ const lots = [
       <a href="#run">Как проводить дегустацию</a>
       <a href="#map">Карта твоих вкусовых предпочтений</a>
     </nav>
+    </div>
+    <a class="totop" href="#top">Наверх</a>
+    </div>
 
     <section id="story">
       <figure class="figure">
@@ -743,49 +748,60 @@ const lots = [
     line-height: 1.08;
   }
   h1 { font-size: 2.7rem; }
-  .toc {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-    margin: 32px 0 8px;
-  }
-  .toc a {
+  .dock {
+    position: sticky;
+    top: 0;
+    z-index: 20;
     display: flex;
     align-items: center;
-    justify-content: center;
-    text-align: center;
-    padding: 18px 16px;
-    text-decoration: none;
-    color: var(--text);
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 2px;
-    font-family: 'Cormorant Garamond', Georgia, serif;
-    font-size: 1.28rem;
-    font-weight: 500;
-    line-height: 1.2;
-  }
-  .toc a:hover { border-color: var(--border-hover); }
-  .subtoc {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
     gap: 8px;
-    margin-top: 10px;
+    margin: 20px -20px 0;
+    padding: 8px 12px 8px 16px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
   }
-  .subtoc a {
+  .dock-scroll {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 6px;
+    flex: 1;
+    min-width: 0;
+    overflow-x: auto;
+    mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+  }
+  .toc, .subtoc { display: contents; }
+  .toc a, .subtoc a {
+    flex: 0 0 auto;
+    white-space: nowrap;
     text-decoration: none;
     text-align: center;
     color: var(--text);
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 2px;
-    padding: 10px 12px;
-    font-size: .8rem;
+    padding: 8px 12px;
+    font-size: .78rem;
     font-weight: 600;
     line-height: 1.3;
   }
-  .subtoc a:hover { border-color: var(--border-hover); }
-  section { padding-top: 56px; scroll-margin-top: 16px; }
+  .toc a:hover, .subtoc a:hover { border-color: var(--border-hover); }
+  .totop {
+    flex: 0 0 auto;
+    padding: 8px 12px;
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    text-decoration: none;
+    font-size: .78rem;
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .totop:hover { border-color: var(--border-hover); }
+  :global(html) { scroll-padding-top: 56px; }
+  section { padding-top: 56px; scroll-margin-top: 0; }
   section > h2, #story h2 {
     font-size: 1.85rem;
     margin: 0 0 18px;
@@ -930,7 +946,7 @@ const lots = [
     background: var(--surface);
     border-left: 3px solid var(--accent);
   }
-  .lot { scroll-margin-top: 12px; }
+  .lot { scroll-margin-top: 8px; }
   .blank { list-style: none; padding: 0; }
   .blank li {
     display: grid;
@@ -948,12 +964,37 @@ const lots = [
   .links a, section a { color: var(--accent-2); }
   @media (min-width: 800px) {
     .guide { padding: 40px 40px 96px; }
-    .subtoc { grid-template-columns: repeat(3, 1fr); }
+    .dock {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: start;
+      column-gap: 8px;
+      margin: 28px -40px 0;
+      padding: 10px 40px 12px;
+    }
+    .dock-scroll { display: block; overflow: visible; mask-image: none; }
+    .toc, .subtoc { display: grid; gap: 8px; }
+    .toc { grid-template-columns: 1fr 1fr; }
+    .subtoc { grid-template-columns: repeat(3, 1fr); margin-top: 10px; }
+    .toc a, .subtoc a { white-space: normal; }
+    .toc a {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px;
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-size: 1.15rem;
+      font-weight: 500;
+      line-height: 1.2;
+    }
+    .subtoc a { padding: 10px 12px; font-size: .8rem; }
+    .totop { margin-top: 0; }
     h1 { font-size: 3.2rem; }
+    :global(html) { scroll-padding-top: 148px; }
+    .lot { scroll-margin-top: 48px; }
   }
   @media (max-width: 640px) {
     h1 { font-size: 2.25rem; }
-    .toc a { font-size: 1.15rem; padding: 14px 12px; }
     .pair { grid-template-columns: 1fr; }
     .timeline li { grid-template-columns: 1fr; gap: 2px; }
     .method { grid-template-columns: 108px 1fr; gap: 4px 14px; }
