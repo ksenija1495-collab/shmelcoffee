@@ -261,7 +261,6 @@ const lots = [
       <a href="#filter">Вода и фильтр</a>
       <a href="#taste">Как дегустировать</a>
       <a href="#run">Как проводить дегустацию</a>
-      <a href="#map">Карта твоих вкусовых предпочтений</a>
     </nav>
     </div>
     <a class="totop" href="#top">Наверх</a>
@@ -704,28 +703,7 @@ const lots = [
       </ul>
     </section>
 
-    <section id="map">
-      <h2>Составь свою карту предпочтений</h2>
-      <p>Какой кофе нравится именно тебе?</p>
-      <p class="k">По кислотности</p>
-      <ul class="blank">
-        <li><span>мягкая</span><i></i></li>
-        <li><span>средняя</span><i></i></li>
-        <li><span>яркая</span><i></i></li>
-      </ul>
-      <p class="k">По сладости</p>
-      <ul class="blank">
-        <li><span>шоколадная</span><i></i></li>
-        <li><span>карамельная</span><i></i></li>
-        <li><span>фруктовая</span><i></i></li>
-      </ul>
-      <p class="k">По телу</p>
-      <ul class="blank">
-        <li><span>лёгкое</span><i></i></li>
-        <li><span>среднее</span><i></i></li>
-        <li><span>плотное</span><i></i></li>
-      </ul>
-
+    <section>
       <h3>Сеты для дома</h3>
       <p>Если вам понравился наш кофейный сет — заказать его в дрипах или зерне можно у нас <a href="https://t.me/ksenijashmel">@ksenijashmel</a>.</p>
       <p>В канале — как заваривать дома, новые наборы и мастер-классы. В Threads меняемся тем, что почувствовали в чашке.</p>
@@ -996,19 +974,6 @@ const lots = [
     border-left: 3px solid var(--accent);
   }
   .lot { scroll-margin-top: 8px; }
-  .blank { list-style: none; padding: 0; }
-  .blank li {
-    display: grid;
-    grid-template-columns: 110px 1fr;
-    gap: 10px;
-    align-items: end;
-    margin: 8px 0;
-  }
-  .blank i {
-    display: block;
-    border-bottom: 1px solid var(--border-hover);
-    height: 1.2em;
-  }
   .links { display: flex; gap: 14px; margin-top: 12px; }
   .links a, section a { color: var(--accent-2); }
   @media (min-width: 800px) {
@@ -1047,6 +1012,5 @@ const lots = [
     .pair { grid-template-columns: 1fr; }
     .timeline li { grid-template-columns: 1fr; gap: 2px; }
     .method { grid-template-columns: 108px 1fr; gap: 4px 14px; }
-    .blank li { grid-template-columns: 96px 1fr; }
   }
 </style>
