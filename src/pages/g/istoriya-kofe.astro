@@ -590,7 +590,7 @@ const lots = [
     <section id="taste">
       <h2>Как дегустировать кофе и развивать насмотренность</h2>
       <p>У кофе есть три основных параметра: кислотность, сладость, горечь.</p>
-      <div class="pair">
+      <div class="params">
         <div>
           <p class="k">Кислотность</p>
           <p>Делает кофе ярким. Может напоминать цитрус или яблоко.</p>
@@ -604,9 +604,27 @@ const lots = [
           <p>Даёт глубину, но её должно быть немного.</p>
         </div>
       </div>
-      <h3>Практика дегустации</h3>
-      <p>Попробуй в чашке услышать: кислотность, сладость, горечь.</p>
-      <p>Обращай внимание на: аромат, вкусовые ноты, послевкусие.</p>
+      <div class="practice">
+        <h3>Практика дегустации</h3>
+        <div class="pair">
+          <div>
+            <p>Попробуй в чашке услышать:</p>
+            <ul>
+              <li>кислотность</li>
+              <li>сладость</li>
+              <li>горечь</li>
+            </ul>
+          </div>
+          <div>
+            <p>Обращай внимание на:</p>
+            <ul>
+              <li>аромат</li>
+              <li>вкусовые ноты</li>
+              <li>послевкусие</li>
+            </ul>
+          </div>
+        </div>
+      </div>
       <p>После того как вы изучите каждый сорт, их важно сравнивать — так различия ощущаются ярче.</p>
     </section>
 
@@ -910,6 +928,37 @@ const lots = [
     gap: 14px 18px;
     margin-top: 8px;
   }
+  .params {
+    display: grid;
+    gap: 18px;
+    margin-top: 22px;
+    max-width: 460px;
+  }
+  .params .k {
+    display: inline-block;
+    margin: 0 0 8px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--accent);
+  }
+  .practice {
+    margin-top: 32px;
+    padding: 16px 18px 8px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+  }
+  .practice h3 {
+    font-family: Inter, system-ui, sans-serif;
+    font-size: .78rem;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    margin: 0 0 14px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .practice .pair { margin-top: 0; }
+  .practice p { margin: 0 0 6px; }
+  .practice + p { margin-top: 18px; }
   .sheet { list-style: none; padding: 0; display: grid; gap: 8px; margin: 14px 0; }
   .sheet li {
     display: grid;
