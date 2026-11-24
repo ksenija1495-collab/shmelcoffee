@@ -11,6 +11,15 @@ export type { BrewPour };
 
 export type AeropressMode = 'standard' | 'inverted';
 
+/** Когда закрываешь клапан Switch (иммерсия). */
+export type SwitchValveCloseWhen = 'fill_start' | 'after_bloom' | 'after_last_pour';
+
+export type SwitchValve = {
+  close_when?: SwitchValveCloseWhen | null;
+  /** Момент открытия клапана (м:сс от старта заварки). */
+  open_at?: string | null;
+};
+
 export type BrewRecipe = {
   coffee_g?: number | null;
   water_g?: number | null;
@@ -22,6 +31,7 @@ export type BrewRecipe = {
   aeropress_mode?: AeropressMode | null;
   blooming?: BrewPour | null;
   pours?: BrewPour[];
+  switch_valve?: SwitchValve | null;
 };
 
 const RECIPE_KEYS = [
@@ -34,7 +44,45 @@ const RECIPE_KEYS = [
   'aeropress_mode',
   'blooming',
   'pours',
+  'switch_valve',
 ] as const;
+
+const SWITCH_CLOSE_LABELS: Record<SwitchValveCloseWhen, string> = {
+  fill_start: 'перед заливом',
+  after_bloom: 'после блума',
+  after_last_pour: 'после последнего пролива',
+};
+
+export function normalizeSwitchValveCloseWhen(raw: unknown): SwitchValveCloseWhen | null {
+  const v = String(raw || '').trim().toLowerCase();
+  if (v === 'fill_start' || v === 'start' || v.includes('залив')) return 'fill_start';
+  if (v === 'after_bloom' || v.includes('блум')) return 'after_bloom';
+  if (v === 'after_last_pour' || v.includes('пролив')) return 'after_last_pour';
+  return null;
+}
+
+export function normalizeSwitchValve(raw: unknown): SwitchValve | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const o = raw as Record<string, unknown>;
+  const close_when = normalizeSwitchValveCloseWhen(o.close_when);
+  const openRaw = o.open_at != null && o.open_at !== '' ? String(o.open_at).trim() : null;
+  const open_at = openRaw || null;
+  if (!close_when && !open_at) return null;
+  return { close_when: close_when || null, open_at };
+}
+
+export function formatSwitchValve(v: SwitchValve | null | undefined): string {
+  if (!v) return '';
+  const parts: string[] = [];
+  if (v.close_when) parts.push(`закрыт ${SWITCH_CLOSE_LABELS[v.close_when]}`);
+  if (v.open_at) parts.push(`открыть @ ${v.open_at}`);
+  return parts.length ? `клапан: ${parts.join(' · ')}` : '';
+}
+
+export function defaultSwitchValveForMethod(method: string): SwitchValve | null {
+  if (!/switch|свитч/i.test(method)) return null;
+  return { close_when: 'after_bloom', open_at: '2:00' };
+}
 
 export function normalizeAeropressMode(raw: unknown): AeropressMode | null {
   const v = String(raw || '').trim().toLowerCase();
@@ -94,6 +142,8 @@ export function normalizeRecipe(raw: unknown): BrewRecipe | null {
     const pours = r.pours.map(normalizePour).filter((p): p is BrewPour => pourHasData(p));
     if (pours.length) out.pours = pours;
   }
+  const sw = normalizeSwitchValve(r.switch_valve);
+  if (sw) out.switch_valve = sw;
   return recipeHasData(out as Record<string, unknown>) ? out : null;
 }
 
@@ -143,6 +193,8 @@ export function formatCupRecipe(recipe: unknown): string {
       parts.push(`${pourN}-й ${v}`);
     }
   });
+  const sw = formatSwitchValve(r.switch_valve);
+  if (sw) parts.push(sw);
   return parts.join(' · ');
 }
 
@@ -193,6 +245,8 @@ export function cupRecipeLines(recipe: unknown): CupRecipeLine[] {
       lines.push({ label: `${pourN}-й пролив${toMark}`, value: v });
     }
   });
+  const sw = formatSwitchValve(r.switch_valve);
+  if (sw) lines.push({ label: 'Switch · клапан', value: sw.replace(/^клапан:\s*/i, '') });
   return lines;
 }
 
@@ -226,6 +280,8 @@ export function applyRecipeToParams(recipe: BrewRecipe, brewMethod?: string | nu
       recipe.pours.map(encodePourToken).filter(Boolean).join(','),
     );
   }
+  if (recipe.switch_valve?.close_when) q.set('switch_close', recipe.switch_valve.close_when);
+  if (recipe.switch_valve?.open_at) q.set('switch_open_at', recipe.switch_valve.open_at);
   return q;
 }
 

@@ -1,10 +1,13 @@
 import { recommendBrew, type BrewRecommendation } from './brewRecommend';
 import {
   applyRecipeToParams,
+  defaultSwitchValveForMethod,
   formatCupRecipe,
   normalizeRecipe,
+  normalizeSwitchValveCloseWhen,
   scaleRecipeToTargetVolume,
   type BrewRecipe,
+  type SwitchValve,
 } from './cupRecipe';
 import { brewMethodsForEquipment } from './equipmentTags';
 import { recipeRecToBrewRecipe, scaleStandardToMl } from './brewStandards';
@@ -15,6 +18,7 @@ import {
   pickChampionForMethod,
   scaledPlanRecipe,
 } from './shelfRecipeDetail';
+import { bindBrewTimeInput, readBrewTimeInput } from './brewTime';
 
 export type ShelfBeanRow = {
   id: string;
@@ -148,16 +152,33 @@ export function planForMethod(
   return enrichPlan(base, bean, targetMl);
 }
 
+/** Только зерно с полки — метод, доза и проливы в add-cup без автоподстановки. */
+export function buildManualAddCupUrl(bean: ShelfBeanRow): string {
+  const q = new URLSearchParams();
+  if (bean.name) q.set('name', bean.name);
+  if (bean.roaster) q.set('roaster', bean.roaster);
+  if (bean.country) q.set('country', bean.country);
+  if (bean.process) q.set('process', bean.process);
+  if (bean.variety) q.set('variety', bean.variety);
+  q.set('from_shelf', '1');
+  q.set('brew_step', 'manual');
+  return '/add-cup?' + q.toString();
+}
+
 export function buildAddCupUrl(
   bean: ShelfBeanRow,
   plan: ShelfBrewPlan,
   targetMl?: number,
   step: 'recipe' | 'taste' = 'recipe',
+  switchValve?: SwitchValve | null,
 ): string {
   let recipe = plan.recipe;
   if (targetMl && recipe.water_g) {
     const scaled = scaleRecipeToTargetVolume(recipe, targetMl);
     if (scaled) recipe = scaled;
+  }
+  if (switchValve && /switch|свитч/i.test(plan.brewMethod)) {
+    recipe = { ...recipe, switch_valve: switchValve };
   }
   const q = applyRecipeToParams(recipe, plan.brewMethod);
   if (bean.name) q.set('name', bean.name);
@@ -188,8 +209,12 @@ export function bindShelfBrewFlow(
 
   const titleEl = modal.querySelector('#shelfBrewTitle') as HTMLElement;
   const stepChoose = modal.querySelector('#shelfBrewStepChoose') as HTMLElement;
+  const stepRecipeFork = modal.querySelector('#shelfBrewStepRecipeFork') as HTMLElement;
   const stepPlan = modal.querySelector('#shelfBrewStepPlan') as HTMLElement;
   const stepMethod = modal.querySelector('#shelfBrewStepMethod') as HTMLElement;
+  const switchRow = modal.querySelector('#shelfBrewSwitchRow') as HTMLElement | null;
+  const switchClose = modal.querySelector('#shelfBrewSwitchClose') as HTMLSelectElement | null;
+  const switchOpen = modal.querySelector('#shelfBrewSwitchOpen') as HTMLInputElement | null;
   const planBody = modal.querySelector('#shelfBrewPlanBody') as HTMLElement;
   const methodList = modal.querySelector('#shelfBrewMethodList') as HTMLElement;
   const volumeRow = modal.querySelector('#shelfBrewVolumes') as HTMLElement;
@@ -232,6 +257,7 @@ export function bindShelfBrewFlow(
         ? suggestBrewPlan(currentBean, ctx.cups, methods, targetMl)
         : planForMethod(currentBean, ctx.cups, planMode.method, targetMl);
     if (planBody) planBody.innerHTML = planHtml(currentPlan, targetMl);
+    if (currentPlan) syncSwitchRow(currentPlan);
   };
 
   const planHtml = (plan: ShelfBrewPlan, vol?: number) => {
@@ -253,13 +279,40 @@ export function bindShelfBrewFlow(
       ${tipHtml}`;
   };
 
+  const readSwitchValveFromModal = (): SwitchValve | null => {
+    if (!currentPlan || !/switch|свитч/i.test(currentPlan.brewMethod)) return null;
+    const close_when = normalizeSwitchValveCloseWhen(switchClose?.value || 'after_bloom') || 'after_bloom';
+    const open_at = switchOpen ? readBrewTimeInput(switchOpen) : null;
+    return { close_when, open_at: open_at || null };
+  };
+
+  const syncSwitchRow = (plan: ShelfBrewPlan) => {
+    if (!switchRow) return;
+    const on = /switch|свитч/i.test(plan.brewMethod);
+    switchRow.hidden = !on;
+    if (on) {
+      const def = defaultSwitchValveForMethod(plan.brewMethod);
+      if (switchClose && def?.close_when) switchClose.value = def.close_when;
+      if (switchOpen && def?.open_at) switchOpen.value = def.open_at;
+    }
+  };
+
   const openPlan = (plan: ShelfBrewPlan) => {
     currentPlan = plan;
     stepChoose.hidden = true;
+    stepRecipeFork.hidden = true;
     stepMethod.hidden = true;
     stepPlan.hidden = false;
     renderVolumes();
+    syncSwitchRow(plan);
     if (planBody) planBody.innerHTML = planHtml(plan, targetMl);
+  };
+
+  const showChoose = () => {
+    stepChoose.hidden = false;
+    stepRecipeFork.hidden = true;
+    stepPlan.hidden = true;
+    stepMethod.hidden = true;
   };
 
   const openForBean = (bean: ShelfBeanRow) => {
@@ -267,11 +320,11 @@ export function bindShelfBrewFlow(
     targetMl = DEFAULT_CUP_ML;
     planMode = null;
     titleEl.textContent = bean.name;
-    stepChoose.hidden = false;
-    stepPlan.hidden = true;
-    stepMethod.hidden = true;
+    showChoose();
     modal.hidden = false;
   };
+
+  if (switchOpen) bindBrewTimeInput(switchOpen);
 
   root.querySelectorAll('[data-shelf-brew]').forEach((btn) => {
     btn.addEventListener('click', (e) => {
@@ -284,13 +337,34 @@ export function bindShelfBrewFlow(
 
   modal.querySelector('#shelfBrewClose')?.addEventListener('click', close);
   modal.querySelector('[data-shelf-brew-back]')?.addEventListener('click', () => {
-    stepPlan.hidden = true;
-    stepMethod.hidden = true;
-    stepChoose.hidden = false;
+    if (!stepPlan.hidden) {
+      stepPlan.hidden = true;
+      stepRecipeFork.hidden = false;
+      return;
+    }
+    if (!stepMethod.hidden) {
+      stepMethod.hidden = true;
+      stepRecipeFork.hidden = false;
+      return;
+    }
+  });
+  modal.querySelector('[data-shelf-brew-back-fork]')?.addEventListener('click', () => {
+    stepRecipeFork.hidden = true;
+    showChoose();
   });
 
   const equipHint = modal.querySelector('#shelfBrewEquipHint');
   if (equipHint) equipHint.textContent = methodsHint;
+
+  modal.querySelector('#shelfBrewNeedRecipe')?.addEventListener('click', () => {
+    stepChoose.hidden = true;
+    stepRecipeFork.hidden = false;
+  });
+
+  modal.querySelector('#shelfBrewLogCup')?.addEventListener('click', () => {
+    if (!currentBean) return;
+    window.location.href = buildManualAddCupUrl(currentBean);
+  });
 
   modal.querySelector('#shelfBrewSuggest')?.addEventListener('click', () => {
     if (!currentBean) return;
@@ -299,7 +373,7 @@ export function bindShelfBrewFlow(
   });
 
   modal.querySelector('#shelfBrewPickMethod')?.addEventListener('click', () => {
-    stepChoose.hidden = true;
+    stepRecipeFork.hidden = true;
     stepPlan.hidden = true;
     stepMethod.hidden = false;
     if (methodList) {
@@ -322,11 +396,13 @@ export function bindShelfBrewFlow(
 
   modal.querySelector('#shelfBrewGo')?.addEventListener('click', () => {
     if (!currentBean || !currentPlan) return;
-    window.location.href = buildAddCupUrl(currentBean, currentPlan, targetMl, 'recipe');
+    const sw = readSwitchValveFromModal();
+    window.location.href = buildAddCupUrl(currentBean, currentPlan, targetMl, 'recipe', sw);
   });
   modal.querySelector('#shelfBrewGoTaste')?.addEventListener('click', () => {
     if (!currentBean || !currentPlan) return;
-    window.location.href = buildAddCupUrl(currentBean, currentPlan, targetMl, 'taste');
+    const sw = readSwitchValveFromModal();
+    window.location.href = buildAddCupUrl(currentBean, currentPlan, targetMl, 'taste', sw);
   });
 
   modal.addEventListener('click', (e) => {

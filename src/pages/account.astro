@@ -222,6 +222,28 @@ import Nav from '../components/Nav.astro';
   .shelf-guide-btn { margin-top: 9px; width: 100%; font-size: .7rem; padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); color: var(--text-dim); cursor: pointer; font-family: 'Inter', sans-serif; transition: all .2s; }
   .shelf-guide-btn:hover { border-color: var(--accent); color: var(--accent); }
   .shelf-del { position: absolute; top: 6px; right: 6px; width: 24px; height: 24px; border-radius: 50%; border: 0; background: rgba(0,0,0,.5); color: #fff; cursor: pointer; font-size: 15px; line-height: 1; }
+  .shelf-edit { position: absolute; top: 6px; left: 6px; width: 24px; height: 24px; border-radius: 50%; border: 0; background: rgba(0,0,0,.45); color: #fff; cursor: pointer; font-size: 12px; line-height: 1; }
+  .shelf-edit:hover { background: rgba(0,0,0,.62); }
+  .shelf-edit-sheet { max-width: 420px; }
+  .shelf-edit-fl { display: block; font-size: .72rem; font-weight: 600; color: var(--text-dim); margin: 10px 0 5px; text-transform: uppercase; letter-spacing: .04em; }
+  .shelf-edit-fl:first-of-type { margin-top: 0; }
+  .shelf-edit-inp { width: 100%; padding: 9px 11px; border: 1px solid var(--border); border-radius: 9px; font-size: .86rem; background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; }
+  .shelf-edit-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 4px; }
+  .shelf-edit-msg { margin-top: 10px; font-size: .78rem; min-height: 18px; color: var(--text-muted); }
+  .shelf-edit-msg.err { color: var(--accent-warm); }
+  @media (max-width: 520px) { .shelf-edit-row2 { grid-template-columns: 1fr; } }
+  .shelf-card-view { margin-top: 6px; width: 100%; font-size: .68rem; padding: 5px 8px; border-radius: 6px; border: 1px solid var(--border); background: transparent; color: var(--text-muted); cursor: pointer; font-family: 'Inter', sans-serif; }
+  .shelf-card-view:hover { border-color: var(--accent); color: var(--accent); }
+  .shelf-name-btn { display: block; width: 100%; text-align: left; border: 0; padding: 0; background: none; cursor: pointer; font: inherit; color: inherit; }
+  .shelf-name-btn:hover { color: var(--accent); }
+  .shelf-card-dl { margin: 0 0 12px; font-size: .84rem; }
+  .shelf-card-dl-row { display: grid; grid-template-columns: 96px 1fr; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--border); }
+  .shelf-card-dl-row:last-child { border-bottom: 0; }
+  .shelf-card-dl dt { margin: 0; font-size: .72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: .04em; }
+  .shelf-card-dl dd { margin: 0; color: var(--text); font-weight: 500; }
+  .shelf-card-diary { font-size: .78rem; color: var(--text-dim); margin-bottom: 12px; line-height: 1.45; padding: 8px 10px; background: var(--surface-2); border-radius: 8px; }
+  .shelf-edit-actions { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+  .shelf-edit-actions .shelf-brew-choice-btn { flex: 1; min-width: 120px; }
   .shelf-status { margin-top: 8px; width: 100%; font-size: .68rem; font-weight: 600; padding: 5px 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text-dim); cursor: pointer; font-family: 'Inter', sans-serif; transition: all .2s; }
   .shelf-status:hover { border-color: var(--text-dim); }
   .shelf-status.st-low { border-color: #d99a2b; background: rgba(217,154,43,.12); color: #a9751a; }
@@ -560,6 +582,7 @@ import Nav from '../components/Nav.astro';
   import { isVarietyBlend } from '../lib/varietyBlend';
   import { renderProfileReferenceLinks } from '../lib/accountReferencePanel';
   import { bindShelfBrewFlow, type ShelfBeanRow } from '../lib/accountShelfBrewFlow';
+  import { bindShelfEdit } from '../lib/accountShelfEdit';
   import { bestDiaryRecipeForBean } from '../lib/tastingFlights';
   import { filterAvailableShelfBeans } from '../lib/shelfAvailability';
   import { EQUIPMENT_TAGS, findEquipmentItemForTag, equipmentItemMatchesTag } from '../lib/equipmentTags';
@@ -1350,6 +1373,8 @@ import Nav from '../components/Nav.astro';
             ? (esc(s.roaster) || 'зерно')
             : ([s.roaster, s.variety, s.process].filter(Boolean).map(esc).join(' · ') || 'зерно');
           const blendTag = blend ? `<div class="shelf-blend-tag">смесь сортов</div>` : '';
+          const diaryBest = bestDiaryRecipeForBean(cups, { name: s.name, roaster: s.roaster });
+          const diaryRecLine = diaryBest ? formatCupRecipe(diaryBest.recipe) : '';
           beansById.set(s.id, {
             id: s.id,
             name: s.name,
@@ -1357,15 +1382,15 @@ import Nav from '../components/Nav.astro';
             country: s.country,
             process: s.process,
             variety: s.variety,
+            status: shelfStatus(s),
+            diaryLine: diaryRecLine || null,
           });
-          const diaryBest = bestDiaryRecipeForBean(cups, { name: s.name, roaster: s.roaster });
-          const diaryRecLine = diaryBest ? formatCupRecipe(diaryBest.recipe) : '';
           const brewTip = diaryBest && diaryRecLine
             ? `<div class="brew-rec-note" style="margin-top:6px;font-size:.72rem;color:var(--text-dim)">⭐ ${diaryBest.rating ? `${'★'.repeat(diaryBest.rating)} · ` : ''}${esc(diaryRecLine)}</div>`
             : '';
           const searchBlob = [s.name, s.roaster, s.country, s.process, s.variety]
             .filter(Boolean).join(' ').toLowerCase();
-          return `<div class="shelf-card shelf-st-${st}" data-shelf-q="${esc(searchBlob)}">${cover}<div class="shelf-body"><div class="shelf-name">${esc(s.name)}</div><div class="shelf-meta">${meta}</div>${blendTag}${statusBtn}${brewTip}<button type="button" class="shelf-brew-btn" data-shelf-brew="${esc(s.id)}">☕ Заварить</button><a class="shelf-brew-log" href="${shelfBrewHref(s)}" style="display:block;margin-top:6px;font-size:.68rem;text-align:center;color:var(--text-muted)">Уже заварила → записать</a></div><button class="shelf-del" data-shelf-del="${s.id}" title="удалить">×</button></div>`;
+          return `<div class="shelf-card shelf-st-${st}" data-shelf-q="${esc(searchBlob)}">${cover}<div class="shelf-body"><button type="button" class="shelf-name-btn shelf-name" data-shelf-view="${s.id}" title="Карточка зерна">${esc(s.name)}</button><div class="shelf-meta">${meta}</div>${blendTag}${statusBtn}${brewTip}<button type="button" class="shelf-card-view" data-shelf-view="${s.id}">Карточка →</button><button type="button" class="shelf-brew-btn" data-shelf-brew="${esc(s.id)}">☕ Заварить</button></div><button type="button" class="shelf-edit" data-shelf-edit="${s.id}" title="редактировать">✎</button><button class="shelf-del" data-shelf-del="${s.id}" title="удалить">×</button></div>`;
         };
     const beansBlock = beanItems.length
       ? `${shelfSearch}<div class="shelf-grid" id="shelfGrid">${beanItems.map(renderBeanCard).join('')}</div>${shelfHasStatus ? '' : shelfStatusMigrationBox()}`
@@ -1390,11 +1415,20 @@ import Nav from '../components/Nav.astro';
         <div class="shelf-brew-sheet" role="dialog" aria-labelledby="shelfBrewTitle">
           <div class="shelf-brew-sheet-h"><span id="shelfBrewTitle">Зерно</span><button type="button" class="shelf-brew-close" id="shelfBrewClose" aria-label="Закрыть">×</button></div>
           <div id="shelfBrewStepChoose">
-            <p class="flight-hint" style="margin-top:0">Заварить это зерно?</p>
+            <p class="flight-hint" style="margin-top:0">Что делаем с этим лотом?</p>
             <p class="field-hint" id="shelfBrewEquipHint" style="margin:0 0 10px"></p>
             <div class="shelf-brew-choice">
-              <button type="button" class="shelf-brew-choice-btn primary" id="shelfBrewSuggest">✨ Подсказать способ и рецепт</button>
-              <button type="button" class="shelf-brew-choice-btn" id="shelfBrewPickMethod">☕ Я знаю способ — выберу сама</button>
+              <button type="button" class="shelf-brew-choice-btn primary" id="shelfBrewNeedRecipe">✨ Предложить рецепт</button>
+              <button type="button" class="shelf-brew-choice-btn" id="shelfBrewLogCup">📝 Записать заварку</button>
+            </div>
+            <p class="field-hint" style="margin:8px 0 0;font-size:.72rem">Рецепт — под лот или метод. Запись — рецепт уже в голове (или из «Мои рецепты»).</p>
+          </div>
+          <div id="shelfBrewStepRecipeFork" hidden>
+            <button type="button" class="ref-back" data-shelf-brew-back-fork style="margin-bottom:10px">← Назад</button>
+            <p class="field-hint" style="margin:0 0 10px">Как подобрать рецепт? (ориентир 10 g / 150 ml)</p>
+            <div class="shelf-brew-choice">
+              <button type="button" class="shelf-brew-choice-btn primary" id="shelfBrewSuggest">Лучший для этого лота</button>
+              <button type="button" class="shelf-brew-choice-btn" id="shelfBrewPickMethod">Я выберу метод</button>
             </div>
           </div>
           <div id="shelfBrewStepMethod" hidden>
@@ -1406,6 +1440,23 @@ import Nav from '../components/Nav.astro';
             <div id="shelfBrewPlanBody"></div>
             <div class="profile-label" style="margin-top:8px">Объём в чашке (ориентир 150 ml)</div>
             <div class="shelf-brew-vols" id="shelfBrewVolumes"></div>
+            <div id="shelfBrewSwitchRow" class="shelf-brew-switch" hidden>
+              <div class="profile-label" style="margin-top:10px">Hario Switch — клапан</div>
+              <div class="shelf-edit-row2" style="margin-top:6px;grid-template-columns:1fr 1fr">
+                <div>
+                  <label class="shelf-edit-fl">Закрыть</label>
+                  <select id="shelfBrewSwitchClose" class="shelf-edit-inp">
+                    <option value="fill_start">перед заливом воды</option>
+                    <option value="after_bloom" selected>после блума</option>
+                    <option value="after_last_pour">после последнего пролива</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="shelf-edit-fl">Открыть в</label>
+                  <input type="text" id="shelfBrewSwitchOpen" class="shelf-edit-inp brew-time-inp" inputmode="numeric" placeholder="2:00" value="2:00"/>
+                </div>
+              </div>
+            </div>
             <div class="shelf-brew-actions">
               <button type="button" class="flight-pair-btn primary" id="shelfBrewGo">Шаг 1 · полный рецепт</button>
               <button type="button" class="flight-pair-btn" id="shelfBrewGoTaste">Шаг 2 · дегустация</button>
@@ -1456,6 +1507,12 @@ import Nav from '../components/Nav.astro';
     }
 
     bindShelfBrewFlow(page, { beansById, cups, equipItems });
+    bindShelfEdit(page, {
+      supabase,
+      userId: user.id,
+      getBean: (id) => beansById.get(id),
+      onSaved: () => init(),
+    });
 
     const availableBeans = filterAvailableShelfBeans(shelf.filter((s: any) => s.kind === 'bean'));
     const beanCount = availableBeans.length;

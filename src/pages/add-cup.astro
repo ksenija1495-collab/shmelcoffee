@@ -44,6 +44,24 @@ import { DB, countryOrder } from '../data/countries';
         </div>
         <label class="fl">Способ заваривания</label>
         <select id="f_brew"></select>
+        <div id="switchValveWrap" class="switch-valve-wrap" hidden>
+          <label class="fl">Hario Switch · клапан</label>
+          <p class="field-hint" style="margin-top:0">Когда держишь иммерсию закрытым и в какой момент открываешь на сток.</p>
+          <div class="row2">
+            <div>
+              <label class="fl" for="r_switch_close">Закрыть</label>
+              <select id="r_switch_close" class="shelf-edit-inp">
+                <option value="fill_start">перед заливом воды</option>
+                <option value="after_bloom">после блума</option>
+                <option value="after_last_pour">после последнего пролива</option>
+              </select>
+            </div>
+            <div>
+              <label class="fl" for="r_switch_open">Открыть в</label>
+              <input type="text" id="r_switch_open" class="brew-time-inp" inputmode="numeric" placeholder="2:00"/>
+            </div>
+          </div>
+        </div>
         <div id="apModeWrap" class="ap-mode-wrap" hidden>
           <label class="fl">AeroPress · как заваривала</label>
           <div class="ap-mode-chips">
@@ -407,6 +425,8 @@ import { DB, countryOrder } from '../data/countries';
     decodePoursParam,
     normalizeAeropressMode,
     normalizeRecipe,
+    normalizeSwitchValveCloseWhen,
+    defaultSwitchValveForMethod,
     recipeHasData,
     parseGramsFromRatioText,
     type AeropressMode,
@@ -814,6 +834,44 @@ import { DB, countryOrder } from '../data/countries';
     return (document.getElementById('f_brew') as HTMLSelectElement)?.value === 'Aeropress';
   }
 
+  function isSwitchSelected() {
+    return (document.getElementById('f_brew') as HTMLSelectElement)?.value === 'Hario Switch';
+  }
+
+  function setSwitchValveOnForm(sw: { close_when?: string | null; open_at?: string | null } | null) {
+    const closeEl = document.getElementById('r_switch_close') as HTMLSelectElement;
+    const openEl = document.getElementById('r_switch_open') as HTMLInputElement;
+    if (!closeEl || !openEl) return;
+    if (!sw) {
+      const def = defaultSwitchValveForMethod('Hario Switch');
+      closeEl.value = def?.close_when || 'after_bloom';
+      openEl.value = def?.open_at || '';
+      return;
+    }
+    closeEl.value = sw.close_when || 'after_bloom';
+    setBrewTimeInputValue(openEl, sw.open_at || null);
+  }
+
+  function readSwitchValveFromForm() {
+    if (!isSwitchSelected()) return null;
+    const close_when = normalizeSwitchValveCloseWhen(
+      (document.getElementById('r_switch_close') as HTMLSelectElement).value,
+    );
+    const open_at = readBrewTimeInput(document.getElementById('r_switch_open') as HTMLInputElement);
+    if (!close_when && !open_at) return null;
+    return { close_when: close_when || 'after_bloom', open_at: open_at || null };
+  }
+
+  function syncSwitchValveVisibility() {
+    const wrap = document.getElementById('switchValveWrap') as HTMLElement | null;
+    if (!wrap) return;
+    const show = isSwitchSelected();
+    wrap.hidden = !show;
+    if (show && !(document.getElementById('r_switch_open') as HTMLInputElement).value.trim()) {
+      setSwitchValveOnForm(null);
+    }
+  }
+
   function readAeropressMode(): AeropressMode {
     const active = document.querySelector('.ap-mode-chip.on') as HTMLElement | null;
     const mode = normalizeAeropressMode(active?.dataset.apMode);
@@ -848,6 +906,7 @@ import { DB, countryOrder } from '../data/countries';
     setBloomOnForm(null);
     setPourRows([]);
     setAeropressMode('standard');
+    setSwitchValveOnForm(null);
     const hint = document.getElementById('recipeHint') as HTMLElement | null;
     if (hint) hint.style.display = 'none';
   }
@@ -856,10 +915,12 @@ import { DB, countryOrder } from '../data/countries';
     if (brewMethod) setSelect('f_brew', brewMethodForForm(brewMethod));
     updateChampToggleLabel();
     syncApModeVisibility();
+    syncSwitchValveVisibility();
     const r = normalizeRecipe(recipeRaw);
     if (!r) {
       clearRecipeForm();
       syncApModeVisibility();
+      syncSwitchValveVisibility();
       return;
     }
     (document.getElementById('r_coffee_g') as HTMLInputElement).value = r.coffee_g ? String(r.coffee_g) : '';
@@ -872,6 +933,9 @@ import { DB, countryOrder } from '../data/countries';
     setPourRows(r.pours ?? []);
     if (r.aeropress_mode) setAeropressMode(r.aeropress_mode);
     else if (isAeropressSelected()) setAeropressMode('standard');
+    if (r.switch_valve) setSwitchValveOnForm(r.switch_valve);
+    else if (isSwitchSelected()) setSwitchValveOnForm(null);
+    syncSwitchValveVisibility();
     (document.getElementById('recipeHint') as HTMLElement).style.display = 'block';
   }
 
@@ -1018,6 +1082,8 @@ import { DB, countryOrder } from '../data/countries';
     const pours = collectPours();
     if (pours.length) recipe.pours = pours;
     if (isAeropressSelected()) recipe.aeropress_mode = readAeropressMode();
+    const sw = readSwitchValveFromForm();
+    if (sw) recipe.switch_valve = sw;
     return recipe;
   }
 
@@ -1078,6 +1144,7 @@ import { DB, countryOrder } from '../data/countries';
     document.getElementById('f_brew')!.addEventListener('change', () => {
       updateChampToggleLabel();
       syncApModeVisibility();
+      syncSwitchValveVisibility();
       if (champDetails.open) renderChampRecipesPanel();
     });
     document.querySelectorAll('.ap-mode-chip').forEach((chip) => {
@@ -1087,6 +1154,7 @@ import { DB, countryOrder } from '../data/countries';
       });
     });
     syncApModeVisibility();
+    syncSwitchValveVisibility();
   }
 
   function setEditModeUI() {
@@ -1332,6 +1400,13 @@ import { DB, countryOrder } from '../data/countries';
     setSelect('f_process', g('process'));
     setSelect('f_brew', g('brew'));
     syncApModeVisibility();
+    syncSwitchValveVisibility();
+    if (g('switch_close') || g('switch_open_at')) {
+      setSwitchValveOnForm({
+        close_when: g('switch_close') || null,
+        open_at: g('switch_open_at') || null,
+      });
+    }
     const apMode = normalizeAeropressMode(g('ap_mode'));
     if (apMode) setAeropressMode(apMode);
     (document.getElementById('r_coffee_g') as HTMLInputElement).value = g('coffee_g');
@@ -1372,21 +1447,27 @@ import { DB, countryOrder } from '../data/countries';
     if (g('from_shelf') === '1') {
       const brewStep = g('brew_step') || 'recipe';
       const brewMethod = g('brew') || (document.getElementById('f_brew') as HTMLSelectElement)?.value || '';
+      const el = document.getElementById('fromGuide')!;
+      if (brewStep === 'manual') {
+        el.innerHTML = `<div class="fg-h">🫘 Зерно с полки</div>
+          <div class="fg-note">Метод, граммы, проливы и температура — только твои. Можно подтянуть <b>сохранённый рецепт</b> из кабинета или оставить пустым.</div>`;
+        el.style.display = 'block';
+      } else {
       const detail = detailForPlan(brewMethod, g('champion_id') || null);
       const stepsHtml = detail.steps.map((s) => `<li>${s.replace(/</g, '&lt;')}</li>`).join('');
       const volHint = g('target_ml') ? ` · ${g('target_ml')} ml в чашке` : ' · ориентир 150 ml';
-      const el = document.getElementById('fromGuide')!;
       el.innerHTML = `<div class="fg-h">🫘 Заварка с полки${volHint}</div>
-        ${detail.title ? `<div class="fg-note"><b>${detail.title.replace(/</g, '&lt;')}</b>${detail.subtitle ? ` · ${detail.subtitle.replace(/</g, '&lt;')}` : ''}</div>` : ''}
+        ${detail.title ? `<div class="fg-note"><b>${detail.title.replace(/</g, '&lt;')}</b>${detail.subtitle ? ` · <span>${detail.subtitle.replace(/</g, '&lt;')}</span>` : ''}</div>` : ''}
         <ol class="fg-steps">${stepsHtml}</ol>
-        ${detail.tip ? `<div class="fg-note" style="margin-top:8px;font-style:italic">${detail.tip.replace(/</g, '&lt;')}</div>` : ''}
+        ${detail.tip ? `<div class="fg-note" style="margin-top:8px;font-style: italic">${detail.tip.replace(/</g, '&lt;')}</div>` : ''}
         <div class="fg-note">${brewStep === 'taste' ? 'Рецепт уже подставлен — отметь баланс, ноты и оценку.' : 'Шаг 1: сверь параметры ниже. Потом — «К дегустации».'}</div>`;
       el.style.display = 'block';
+      }
       const toShelf = document.getElementById('f_to_shelf') as HTMLInputElement | null;
       if (toShelf) toShelf.checked = false;
       const tasteBtn = document.getElementById('shelfGoTasteBtn') as HTMLButtonElement | null;
       if (tasteBtn) {
-        tasteBtn.style.display = brewStep === 'recipe' ? '' : 'none';
+        tasteBtn.style.display = brewStep === 'recipe' || brewStep === 'manual' ? '' : 'none';
         tasteBtn.onclick = () => {
           document.getElementById('tasteSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         };
@@ -1429,6 +1510,7 @@ import { DB, countryOrder } from '../data/countries';
     initPours();
     bindBrewTimeInput(document.getElementById('p_bloom') as HTMLInputElement);
     bindBrewTimeInput(document.getElementById('r_time') as HTMLInputElement);
+    bindBrewTimeInput(document.getElementById('r_switch_open') as HTMLInputElement);
     buildTasteSection();
     buildNotes();
     document.getElementById('f_name')!.addEventListener('blur', guessCountryFromName);
