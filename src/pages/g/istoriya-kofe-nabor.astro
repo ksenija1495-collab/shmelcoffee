@@ -1,5 +1,6 @@
 ---
 import Layout from '../../layouts/Layout.astro';
+import Book from '../../components/guide/Book.astro';
 
 const types = [
   {
@@ -239,36 +240,20 @@ const lots = [
   description="Пять чашек: от эфиопских местных разновидностей до сарчимора. Как заваривать и дегустировать набор."
 >
   <main class="guide">
-    <p class="back"><a href="/g">Все гайды</a></p>
+  <Book>
+    <article class="leaf cover" id="top" data-part="Начало" data-title="Обложка">
+      <div class="leaf-copy">
+        <p class="mark">набор</p>
+        <h1>История кофе в пяти чашках</h1>
+      </div>
+    </article>
 
-    <header class="cover" id="top">
-      <p class="mark">набор</p>
-      <h1>История кофе в пяти чашках</h1>
-    </header>
-
-    <div class="dock">
-    <div class="dock-scroll">
-    <nav class="toc" aria-label="Разделы гайда">
-      <a href="#set">Кофе на дегустации</a>
-      <a href="#story">История кофе</a>
-    </nav>
-    <nav class="subtoc" aria-label="Ещё в гайде">
-      <a href="#taste">Как дегустировать</a>
-      <a href="#run">Как проводить дегустацию</a>
-      <a href="#types">5 типов заваривания</a>
-      <a href="#ways">7 способов заварить кофе</a>
-      <a href="#filter">Вода и фильтр</a>
-    </nav>
-    </div>
-    <a class="totop" href="#top">Наверх</a>
-    </div>
-
-    <section id="story">
+    <article class="leaf" id="story" data-part="История" data-title="Что такое кофе">
       <figure class="figure">
         <img src="/guide/history-forest.jpg" alt="Кофейные деревья в горном лесу" />
         <figcaption>Кофейный лес. Художественная реконструкция, не документальная фотография.</figcaption>
       </figure>
-
+      <div class="leaf-copy">
       <p class="num">[01]</p>
       <h2>Что такое кофе</h2>
       <p>Кофе — род растений Coffea семейства мареновых (Rubiaceae). То, что называют кофейным зерном, — семя плода кофейного дерева, обычно называемого кофейной вишней. Ботанических видов кофе известно более 120, но в мировом выращивании важнейшими остаются арабика и канефора.</p>
@@ -280,6 +265,10 @@ const lots = [
       </ul>
       <p>Вид — ботаническая категория. Сорт или культивар — наследственно определённая разновидность внутри вида. Bourbon, Typica, Caturra, SL28 и Batian — культивары арабики. Catimor — группа родственных селекционных линий. Регион (например, Guji) и метод обработки (washed, natural) не являются сортами.</p>
 
+      </div>
+    </article>
+    <article class="leaf" data-part="История" data-title="Эфиопия">
+      <div class="leaf-copy">
       <p class="num">[02]</p>
       <h2>Эфиопия: биологическая родина арабики</h2>
       <p>Арабика возникла в результате древней естественной гибридизации Coffea canephora и Coffea eugenioides. Её природный ареал и крупнейшее генетическое разнообразие связаны с горными лесами юго-западной Эфиопии. Именно генетические исследования, природные популяции и ботаническая история, а не легенда о пастухе Калди, объясняют, почему Эфиопию называют родиной арабики.</p>
@@ -294,25 +283,41 @@ const lots = [
       </ul>
       <p>Названия регионов не определяют сорт автоматически: один регион может объединять множество разновидностей и практик выращивания.</p>
 
-      <p class="num">[03]</p>
-      <h2>Йемен: начало культурного кофе</h2>
-      <p>Выращивание и торговля кофе приобретают устойчивый масштаб в Йемене приблизительно к XV веку. Через Красное море туда попала лишь часть эфиопского разнообразия. В горных условиях и при фермерском отборе возникло генетическое бутылочное горлышко — сужение исходной популяции. Через порт Моха кофе вошёл в торговые сети Ближнего Востока и дальше — Европы и Азии.</p>
+      </div>
+    </article>
+    <article class="leaf" data-part="История" data-title="Йемен">
       <figure class="figure">
         <img src="/guide/history-yemen.jpg" alt="Террасы и каменные дома в горах Йемена" />
         <figcaption>Террасные горные хозяйства Йемена. Художественная реконструкция.</figcaption>
       </figure>
+      <div class="leaf-copy">
+      <p class="num">[03]</p>
+      <h2>Йемен: начало культурного кофе</h2>
+      <p>Выращивание и торговля кофе приобретают устойчивый масштаб в Йемене приблизительно к XV веку. Через Красное море туда попала лишь часть эфиопского разнообразия. В горных условиях и при фермерском отборе возникло генетическое бутылочное горлышко — сужение исходной популяции. Через порт Моха кофе вошёл в торговые сети Ближнего Востока и дальше — Европы и Азии.</p>
       <p>Йемен выращивает кофе и сегодня — почти исключительно арабику, в частности в Haraz, Bani Matar, Hayma, Ibb и других горных районах. Среди традиционных названий встречаются Udaini, Dawairi, Tufahi и Bura'ai. Это не всегда строго разграниченные генетические культивары. Современные исследования также описывают ранее не выделявшиеся группы йеменского кофе, в том числе New Yemen / Yemenia. Производство ограничивают засуха, сложная логистика и продолжительный конфликт.</p>
 
+      </div>
+    </article>
+    <article class="leaf" data-part="История" data-title="Typica и Bourbon">
+      <div class="leaf-copy">
       <p class="num">[04]</p>
       <h2>Typica и Bourbon: две мировые ветви</h2>
       <p>Из относительно узких йеменских культурных популяций в XVII–XVIII веках сформировались две особенно влиятельные линии. Typica распространилась через Индию и Яву, затем ботанические сады Европы и колониальные территории Америки. Bourbon связан с вывозом растений из Йемена на остров Bourbon — современный Реюньон — и их дальнейшим распространением в Африке и Латинской Америке.</p>
       <p>Эти линии стали основой значительной части коммерческой арабики. У обеих хорош потенциал чашки, но деревья обычно уязвимы к ржавчине. Следующие этапы истории всё чаще определялись необходимостью соединить вкус с урожайностью и устойчивостью.</p>
 
+      </div>
+    </article>
+    <article class="leaf" data-part="История" data-title="Бразилия">
+      <div class="leaf-copy">
       <p class="num">[05]</p>
       <h2>Бразилия: от мутации к скрещиванию</h2>
       <p>Caturra появилась как естественная компактная мутация Bourbon, обнаруженная в Минас-Жерайс в начале XX века. Изменение роста дерева облегчало уход и позволяло более плотную посадку. Бразильский Instituto Agronômico de Campinas (IAC) затем отбирал наиболее продуктивные растения.</p>
       <p>Mundo Novo возникла как естественный гибрид Typica и Bourbon. Отбор этого сильнорослого и продуктивного кофе начался в Бразилии в 1940-х годах. В 1949 году исследователи IAC уже намеренно скрестили Caturra и Mundo Novo. После многолетнего отбора в 1972 году были выпущены линии Catuaí. Так одна из важнейших современных бразильских разновидностей стала результатом целевого объединения компактности и продуктивности.</p>
 
+      </div>
+    </article>
+    <article class="leaf" data-part="История" data-title="Кения">
+      <div class="leaf-copy">
       <p class="num">[06]</p>
       <h2>Кения: Scott Laboratories</h2>
       <p>В 1930-е годы Scott Agricultural Laboratories в Кении занималась отбором кофе, подходящего местным условиям. Названия SL28 и SL34 — номера селекций лаборатории, а не порядковые номера сортов арабики вообще.</p>
@@ -321,24 +326,36 @@ const lots = [
       <p>После значительных потерь от coffee berry disease кенийские исследователи разработали сложный гибрид Ruiru 11, выпущенный в 1985 году. В его родословной есть Catimor, SL28 и несколько других африканских линий. Компактность и устойчивость сделали его агрономическим ответом на болезни.</p>
       <p>Batian выпустили в 2010 году. Это результат многопоколенного отбора сложного материала с участием SL28, SL34, Rume Sudan, N39, K7, SL4 и Timor Hybrid. Эти сорта получены классическим скрещиванием и отбором, не методами генной модификации.</p>
 
+      </div>
+    </article>
+    <article class="leaf" data-part="История" data-title="Индонезия">
+      <figure class="figure">
+        <img src="/guide/history-cherry.jpg" alt="Спелые кофейные ягоды на ветке" />
+        <figcaption>Плоды кофе на ветке. Художественная реконструкция.</figcaption>
+      </figure>
+      <div class="leaf-copy">
       <p class="num">[07]</p>
       <h2>Индонезия: Ява и Timor Hybrid</h2>
       <p>В конце XVII века голландские торговые сети развивали посадки арабики на Яве. В XIX веке эпидемии кофейной ржавчины изменили культуру выращивания: в ряде районов арабику заменяли либерикой и затем канефорой. Устойчивость к заболеваниям стала самостоятельной целью селекции.</p>
       <p>В первой половине XX века на острове Тимор обнаружили растения — результат естественного скрещивания арабики и канефоры. Timor Hybrid передал селекционерам источник устойчивости к кофейной ржавчине. Скрещивание Timor Hybrid с Caturra дало семейства Catimor, а с Villa Sarchi — Sarchimor. Эти названия обозначают группы линий, а не один генетически идентичный сорт.</p>
       <p>Andungsari 1 — индонезийская разновидность, официально выпущенная в 2001 году. Её история связана с отбором материала Catimor. Sigarar Utang, признанная в 2005 году, выросла из местной фермерской селекции Северной Суматры. Название обычно объясняют как «выплачивающий долги» — из-за раннего и обильного плодоношения. Точная родословная не установлена окончательно, поэтому категорично относить её к одному определённому скрещиванию нельзя.</p>
-      <figure class="figure">
-        <img src="/guide/history-cherry.jpg" alt="Спелые кофейные ягоды на ветке" />
-        <figcaption>Плоды кофе на ветке. Художественная реконструкция.</figcaption>
-      </figure>
 
-      <p class="num">[08]</p>
-      <h2>Родословные</h2>
-      <p>Карта показывает основные связи. Она намеренно упрощена: точные родословные гибридных популяций могут включать множество промежуточных поколений, а некоторые локальные разновидности требуют дополнительной генетической проверки.</p>
+      </div>
+    </article>
+    <article class="leaf" data-part="История" data-title="Родословные">
       <figure class="figure map">
         <img src="/guide/pedigree.svg" alt="Карта родословных: от эфиопской арабики к Bourbon, Typica, SL28, Catuaí, Sarchimor, Batian и Andungsari" />
         <figcaption>Все разновидности обоих сетов и связи между ними. Вторая строка узла — чашка, где она есть. Пунктир — непрямая или вероятная связь.</figcaption>
       </figure>
+      <div class="leaf-copy">
+      <p class="num">[08]</p>
+      <h2>Родословные</h2>
+      <p>Карта показывает основные связи. Она намеренно упрощена: точные родословные гибридных популяций могут включать множество промежуточных поколений, а некоторые локальные разновидности требуют дополнительной генетической проверки.</p>
 
+      </div>
+    </article>
+    <article class="leaf" data-part="История" data-title="Хронология">
+      <div class="leaf-copy">
       <p class="num">[09]</p>
       <h2>Хронология</h2>
       <ul class="timeline">
@@ -351,6 +368,10 @@ const lots = [
         <li><b>XXI век</b><span>F1-гибриды, новые генетические ресурсы, адаптация к климату.</span></li>
       </ul>
 
+      </div>
+    </article>
+    <article class="leaf" data-part="История" data-title="Кофейные лоты">
+      <div class="leaf-copy">
       <p class="num">[10]</p>
       <h2>Дальше мы попробуем кофейные лоты</h2>
       <ul>
@@ -360,9 +381,11 @@ const lots = [
         <li>Бразилия, Рио Паранайба — жёлтый катуаи 62, натуральная</li>
         <li>Китай, Хуангуан — сарчимор, анаэробная</li>
       </ul>
-    </section>
+      </div>
+    </article>
 
-    <section id="set">
+    <article class="leaf" id="set" data-part="Чашки" data-title="Дегустационный сет">
+      <div class="leaf-copy">
       <h2>Дегустационный сет</h2>
       <p>Дегустационный сет, чтобы различить вкусы и найти ароматы.</p>
       <ul class="sheet">
@@ -375,9 +398,12 @@ const lots = [
           </li>
         ))}
       </ul>
+      </div>
+    </article>
       {lots.map((lot) => (
-        <article class="lot" id={lot.id}>
-          <h3>{lot.name}</h3>
+        <article class="leaf lot" id={lot.id} data-part="Чашки" data-title={lot.name}>
+          <div class="leaf-copy">
+          <h2>{lot.name}</h2>
           <dl class="facts">
             <div><dt>Обжарщик</dt><dd>{lot.roaster}</dd></div>
             <div><dt>Разновидность</dt><dd>{lot.variety}</dd></div>
@@ -410,9 +436,12 @@ const lots = [
           <ul>
             {lot.questions.map((q) => <li>{q}</li>)}
           </ul>
+          </div>
         </article>
       ))}
-      <p class="k">К финальному обсуждению</p>
+    <article class="leaf" data-part="Чашки" data-title="К финальному обсуждению">
+      <div class="leaf-copy">
+      <h2>К финальному обсуждению</h2>
       <ul>
         <li>В какой чашке сильнее всего выражена кислотность и как она меняется, когда кофе остывает?</li>
         <li>Где натуральная обработка заметнее всего, а где на первый план выходит происхождение?</li>
@@ -420,9 +449,11 @@ const lots = [
         <li>Чем естественная мутация Caturra отличается от скрещивания, которым получили Catuaí?</li>
         <li>Что сильнее меняет чашку — селекция или обработка?</li>
       </ul>
-    </section>
+      </div>
+    </article>
 
-    <section id="taste">
+    <article class="leaf" id="taste" data-part="Дегустация" data-title="Как дегустировать">
+      <div class="leaf-copy">
       <h2>Как дегустировать кофе и развивать насмотренность</h2>
       <p>У кофе есть три основных параметра: кислотность, сладость, горечь.</p>
       <div class="params">
@@ -461,9 +492,11 @@ const lots = [
         </div>
       </div>
       <p>После того как вы изучите каждый сорт, их важно сравнивать — так различия ощущаются ярче.</p>
-    </section>
+      </div>
+    </article>
 
-    <section id="run">
+    <article class="leaf" id="run" data-part="Дегустация" data-title="Как проводить дегустацию">
+      <div class="leaf-copy">
       <h2>Как проводить дегустацию</h2>
       <p>В кофе мы ищем 4 пункта: аромат, сладость, кислотность, тело.</p>
       <p class="k">Для каждого лота</p>
@@ -481,15 +514,23 @@ const lots = [
         <li>Какой вы бы пили каждое утро?</li>
         <li>Если бы вы выбирали кофе по стране — какую бы выбрали?</li>
       </ul>
-    </section>
+      </div>
+    </article>
 
-    <section id="types">
+    <article class="leaf" id="types" data-part="Заваривание" data-title="5 типов заваривания">
+      <div class="leaf-copy">
       <h2>5 типов заваривания кофе дома</h2>
       <p>Способ заваривания — это физика и химия: как вода взаимодействует с кофе и что успевает раствориться. Поэтому все методы делятся по механике экстракции («высвобождения» веществ из кофе).</p>
-      {types.map((item) => (
-        <article class="block">
+      </div>
+    </article>
+    {types.map((item) => (
+      <article class="leaf" data-part="Заваривание" data-title={item.name}>
+        <figure class="figure shots">
+          {item.photos.map((src) => <img src={`/guide/${src}.jpg`} alt="" />)}
+        </figure>
+        <div class="leaf-copy">
           <p class="num">[{item.n}]</p>
-          <h3>{item.name}</h3>
+          <h2>{item.name}</h2>
           <p class="en">({item.en}). {item.text}</p>
           <p class="k">Даёт</p>
           <ul class="chips">
@@ -499,34 +540,31 @@ const lots = [
           <ul>
             {item.methods.map((m) => <li>{m}</li>)}
           </ul>
-          <div class="shots">
-            {item.photos.map((src) => <img src={`/guide/${src}.jpg`} alt="" />)}
-          </div>
-        </article>
-      ))}
-    </section>
+        </div>
+      </article>
+    ))}
 
-    <section id="ways">
-      <h2>7 способов заварить кофе</h2>
-      {ways.map((item) => (
-        <article class="block method">
+    {ways.map((item, index) => (
+      <article class="leaf" id={index === 0 ? 'ways' : undefined} data-part="Заваривание" data-title={item.name}>
+        <figure class="figure">
           <img src={`/guide/${item.photo}.jpg`} alt={item.name} />
-          <div>
-            <p class="num">[{item.n}]</p>
-            <h3>{item.name}</h3>
-            <dl>
-              <div><dt>Помол</dt><dd>{item.grind}</dd></div>
-              <div><dt>Время</dt><dd>{item.time}</dd></div>
-              <div><dt>Вкус</dt><dd>{item.taste.join(' · ')}</dd></div>
-            </dl>
-            <p><b>Особенность.</b> {item.note}</p>
-            <p><b>Мини-хак.</b> {item.hack}</p>
-          </div>
-        </article>
-      ))}
-    </section>
+        </figure>
+        <div class="leaf-copy">
+          <p class="num">[{item.n}]</p>
+          <h2>{item.name}</h2>
+          <dl>
+            <div><dt>Помол</dt><dd>{item.grind}</dd></div>
+            <div><dt>Время</dt><dd>{item.time}</dd></div>
+            <div><dt>Вкус</dt><dd>{item.taste.join(' · ')}</dd></div>
+          </dl>
+          <p><b>Особенность.</b> {item.note}</p>
+          <p><b>Мини-хак.</b> {item.hack}</p>
+        </div>
+      </article>
+    ))}
 
-    <section id="filter">
+    <article class="leaf" id="filter" data-part="Заваривание" data-title="Вода и фильтр">
+      <div class="leaf-copy">
       <h2>Что важно знать, заваривая кофе в фильтре?</h2>
       <p class="k">На что обратить внимание</p>
       <ul>
@@ -537,7 +575,10 @@ const lots = [
         <li>Равномерность пролива — как вода проходит через слой кофе</li>
       </ul>
 
-      <article class="block">
+      </div>
+    </article>
+    <article class="leaf" data-part="Заваривание" data-title="Экстракция">
+      <div class="leaf-copy">
         <p class="num">[01]</p>
         <h3>Экстракция</h3>
         <p>Процесс, при котором вода растворяет вещества из кофе.</p>
@@ -546,9 +587,11 @@ const lots = [
           <li>потом сахара</li>
           <li>затем горькие соединения</li>
         </ul>
-      </article>
+      </div>
+    </article>
 
-      <article class="block">
+    <article class="leaf" data-part="Заваривание" data-title="Помол — главный рычаг управления вкусом">
+      <div class="leaf-copy">
         <p class="num">[02]</p>
         <h3>Помол — главный рычаг управления вкусом</h3>
         <div class="pair">
@@ -568,9 +611,11 @@ const lots = [
             </ul>
           </div>
         </div>
-      </article>
+      </div>
+    </article>
 
-      <article class="block">
+    <article class="leaf" data-part="Заваривание" data-title="Температура воды">
+      <div class="leaf-copy">
         <p class="num">[03]</p>
         <h3>Температура воды</h3>
         <p>Чем выше температура, тем быстрее и агрессивнее вода извлекает вещества из кофе.</p>
@@ -593,9 +638,11 @@ const lots = [
             <p>Риски: недоэкстракция, водянистость, травянистые ноты.</p>
           </div>
         </div>
-      </article>
+      </div>
+    </article>
 
-      <article class="block">
+    <article class="leaf" data-part="Заваривание" data-title="Соотношение кофе и воды">
+      <div class="leaf-copy">
         <p class="num">[04]</p>
         <h3>Соотношение кофе и воды</h3>
         <p>Пропорция кофе и воды определяет плотность и интенсивность напитка.</p>
@@ -605,9 +652,11 @@ const lots = [
           <li>легче и «чайнее» → 1:17–1:18</li>
         </ul>
         <p>Ratio влияет не только на ощущение крепости, но и на то, как читается вкус. Иногда сам профиль хороший, но чашка кажется либо слишком тяжёлой, либо слишком пустой — и тогда дело не в зерне, а именно в пропорции.</p>
-      </article>
+      </div>
+    </article>
 
-      <article class="block">
+    <article class="leaf" data-part="Заваривание" data-title="Время контакта">
+      <div class="leaf-copy">
         <p class="num">[05]</p>
         <h3>Время контакта</h3>
         <p>Чем дольше вода контактирует с молотым зерном, тем больше веществ она извлекает.</p>
@@ -629,9 +678,11 @@ const lots = [
           </div>
         </div>
         <p>В фильтре время часто не причина, а следствие. Оно меняется из-за помола, пролива, воды и структуры рецепта.</p>
-      </article>
+      </div>
+    </article>
 
-      <article class="block">
+    <article class="leaf" data-part="Заваривание" data-title="Качество воды">
+      <div class="leaf-copy">
         <p class="num">[06]</p>
         <h3>Качество воды</h3>
         <p>Вода — главный экстрагент в кофе. Если вода плохая, даже хороший рецепт и хорошее зерно не спасут чашку.</p>
@@ -644,9 +695,11 @@ const lots = [
           <li>pH: 6.5–7.5</li>
           <li>без яркого вкуса и запаха</li>
         </ul>
-      </article>
+      </div>
+    </article>
 
-      <article class="block">
+    <article class="leaf" data-part="Заваривание" data-title="Равномерность пролива">
+      <div class="leaf-copy">
         <p class="num">[07]</p>
         <h3>Равномерность пролива</h3>
         <p>В фильтре важно не просто налить воду, а сделать так, чтобы она проходила через слой кофе равномерно.</p>
@@ -668,9 +721,11 @@ const lots = [
             </ul>
           </div>
         </div>
-      </article>
+      </div>
+    </article>
 
-      <article class="block">
+    <article class="leaf" data-part="Заваривание" data-title="Обработка зёрен">
+      <div class="leaf-copy">
         <p class="num">[08]</p>
         <h3>Обработка зёрен</h3>
         <p>После сбора ягоды кофе обрабатывают — от этого зависит, каким будет вкус зерна.</p>
@@ -698,27 +753,28 @@ const lots = [
           <li>natural → слаще, фруктовее, плотнее</li>
           <li>honey → сбалансировано и мягко</li>
         </ul>
-      </article>
-    </section>
+      </div>
+    </article>
 
-    <section>
-      <h3>Сеты для дома</h3>
+    <article class="leaf" data-part="Дальше" data-title="Сеты для дома">
+      <div class="leaf-copy">
+      <h2>Сеты для дома</h2>
       <p>Если вам понравился наш кофейный сет — заказать его в дрипах или зерне можно у нас <a href="https://t.me/ksenijashmel">@ksenijashmel</a>.</p>
       <p>В канале — как заваривать дома, новые наборы и мастер-классы. В Threads меняемся тем, что почувствовали в чашке.</p>
       <p class="links">
         <a href="https://t.me/shmel_coffee">Канал</a>
         <a href="https://www.threads.com/@shmelcoffee">Threads</a>
       </p>
-    </section>
-
+      </div>
+    </article>
+  </Book>
   </main>
 </Layout>
 
 <style>
   .guide {
-    max-width: 1000px;
-    margin: 0 auto;
-    padding: 28px 20px 96px;
+    height: 100dvh;
+    overflow: hidden;
   }
   .guide p + p { margin-top: 14px; }
   .guide li + li { margin-top: 6px; }
@@ -797,7 +853,7 @@ const lots = [
   .totop:hover { border-color: var(--border-hover); }
   :global(html) { scroll-padding-top: 56px; }
   section { padding-top: 56px; scroll-margin-top: 0; }
-  section > h2, #story h2 {
+  .leaf h2, section > h2, #story h2 {
     font-size: 1.85rem;
     margin: 0 0 18px;
     color: var(--accent);
@@ -976,7 +1032,7 @@ const lots = [
   .links { display: flex; gap: 14px; margin-top: 12px; }
   .links a, section a { color: var(--accent-2); }
   @media (min-width: 800px) {
-    .guide { padding: 40px 40px 96px; }
+    .guide { padding: 0; }
     .dock {
       display: grid;
       grid-template-columns: 1fr auto;
