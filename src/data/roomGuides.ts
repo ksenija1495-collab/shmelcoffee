@@ -19,8 +19,8 @@ export const roomGuides: RoomGuide[] = [
   },
   {
     slug: 'istoriya-kofe-nabor',
-    tab: 'История кофе — набор',
-    title: 'История кофе в пяти чашках',
+    tab: 'Образовательные дрипы',
+    title: 'Те же пять чашек, что на каппинге',
     kind: 'Дрип-набор',
     href: '/g/istoriya-kofe-nabor',
   },
