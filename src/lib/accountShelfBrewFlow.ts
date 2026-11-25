@@ -27,6 +27,7 @@ export type ShelfBeanRow = {
   country?: string | null;
   process?: string | null;
   variety?: string | null;
+  bean_type?: string | null;
 };
 
 export type BrewPlanSource = 'diary' | 'rules' | 'preset';

@@ -1,4 +1,5 @@
 import { DB } from '../data/countries';
+import { beanSpeciesLabel, resolveBeanSpecies } from './beanSpecies';
 import { resolveCountryKey } from './countryResolve';
 import type { DiaryCup } from './shelfAssistantDiary';
 
@@ -8,6 +9,7 @@ export type ShelfBean = {
   country?: string | null;
   process?: string | null;
   variety?: string | null;
+  bean_type?: string | null;
 };
 
 export type PairSuggestion = {
@@ -170,7 +172,9 @@ function countrySnippet(countryKey: string | null): string {
 
 export function shelfBeanWithCountryHint(bean: ShelfBean): string {
   const key = resolveCountryKey(bean.country, bean.name);
-  const meta = [bean.country, bean.process, bean.variety].filter(Boolean).join(' · ');
+  const sp = resolveBeanSpecies(bean);
+  const speciesBit = sp !== 'arabica' ? beanSpeciesLabel(sp) : '';
+  const meta = [speciesBit, bean.country, bean.process, bean.variety].filter(Boolean).join(' · ');
   const hint = countrySnippet(key);
   return `${bean.name}${bean.roaster ? ` (${bean.roaster})` : ''} — ${meta || '—'}${hint ? `\n   ${hint}` : ''}`;
 }

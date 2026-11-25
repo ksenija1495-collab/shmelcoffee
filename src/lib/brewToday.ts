@@ -306,6 +306,7 @@ function shelfBeanFromItem(s: any): ShelfBean & { id: string } {
     country: s.country,
     process: s.process,
     variety: s.variety,
+    bean_type: s.bean_type,
   };
 }
 

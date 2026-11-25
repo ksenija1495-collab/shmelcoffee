@@ -2,6 +2,7 @@
 import type { BrewBeanInput } from './brewRecommend';
 import { resolveCountryKey } from './countryResolve';
 import { DB } from '../data/countries';
+import { isLiberica, isRobusta } from './beanSpecies';
 
 type ProcessKind = 'washed' | 'natural' | 'honey' | 'anaerobic' | 'other';
 
@@ -20,6 +21,26 @@ export function pickBrewMethods(input: BrewBeanInput): {
   why: string;
   avoid: string[];
 } {
+  if (isLiberica(input)) {
+    const pk = processKind(input.process);
+    const avoid = ['V60 @ 92+ °C — дым и смола', 'Switch >2 min закрытый на анаэроб-либерике'];
+    if (pk === 'anaerobic') avoid.push('Длинный горячий пролив без паузы');
+    return {
+      primaryMethod: 'Aeropress',
+      secondaryMethod: 'Hario Switch',
+      why: 'Либерика — не арабика: AeroPress или короткий Switch, контроль экстракции.',
+      avoid,
+    };
+  }
+  if (isRobusta(input)) {
+    return {
+      primaryMethod: 'Aeropress',
+      secondaryMethod: 'Френч-пресс',
+      why: 'Робуста — иммерсия и тело; фильтр-пролив часто даёт резкую горечь.',
+      avoid: ['Очень светлая подача с лимонной кислотой', 'Турка первой на specialty-робусте'],
+    };
+  }
+
   const key = resolveCountryKey(input.country, input.name);
   const country = key ? DB[key] : null;
   const pk = processKind(input.process);

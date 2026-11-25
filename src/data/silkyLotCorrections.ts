@@ -7,6 +7,7 @@ export type ShelfBeanPatch = {
   country?: string;
   process?: string;
   variety?: string | null;
+  bean_type?: string | null;
 };
 
 export const SILKY_LOT_CORRECTIONS: Record<string, ShelfBeanPatch> = {
@@ -17,12 +18,13 @@ export const SILKY_LOT_CORRECTIONS: Record<string, ShelfBeanPatch> = {
     process: 'Мытая (Washed)',
     variety: 'андунгсари, сигарар утанг',
   },
-  /** roasted.ru / Silky: натуральный + анаэробный; в каталоге SD сейчас нет slug */
+  /** https://silkydrum.ru/catalog/indonesia-finca-ali-liberica-100h */
   'Индонезия Суматра Семендо Финка Али': {
     roaster: 'Silky Drum',
     country: 'Индонезия',
-    process: 'Анаэробная',
-    variety: null,
+    process: 'Натуральная + анаэробная (100 ч)',
+    variety: 'либерика',
+    bean_type: 'liberica',
   },
   'Китай Хуангуан': {
     roaster: 'Silky Drum',

@@ -22,8 +22,20 @@ import { DB, countryOrder } from '../data/countries';
         <label class="fl">Название *</label>
         <input type="text" id="f_name" placeholder="напр. Эфиопия Гедео / Воронка V60"/>
         <div id="beanFields">
-          <label class="fl">Сорт</label>
-          <select id="f_variety"></select>
+          <div class="row2">
+            <div>
+              <label class="fl">Вид</label>
+              <select id="f_species">
+                <option value="arabica">Арабика</option>
+                <option value="liberica">Либерика</option>
+                <option value="robusta">Робуста</option>
+              </select>
+            </div>
+            <div>
+              <label class="fl">Сорт</label>
+              <select id="f_variety"></select>
+            </div>
+          </div>
           <div id="varietyCustomRow" class="variety-custom" style="display:none">
             <input type="text" id="f_variety_custom" placeholder="Какой сорт? напр. Sidra, Pink Bourbon"/>
           </div>
@@ -155,6 +167,7 @@ import { DB, countryOrder } from '../data/countries';
   } from '../lib/beanCountryField';
   import { PROCESS_OPTIONS } from '../data/processing';
   import { recommendBrew, renderBrewRecHtml } from '../lib/brewRecommend';
+  import { inferBeanSpeciesFromText, normalizeBeanSpecies } from '../lib/beanSpecies';
 
   const supabase = createClient(
     import.meta.env.PUBLIC_SUPABASE_URL,
@@ -196,12 +209,23 @@ import { DB, countryOrder } from '../data/countries';
     return user;
   }
 
+  function readBeanSpecies() {
+    const sel = (document.getElementById('f_species') as HTMLSelectElement).value;
+    let sp = normalizeBeanSpecies(sel) || 'arabica';
+    const name = (document.getElementById('f_name') as HTMLInputElement).value.trim();
+    const variety = readVarietyValue();
+    const inferred = inferBeanSpeciesFromText(variety, name);
+    if (sp === 'arabica' && inferred) sp = inferred;
+    return sp === 'arabica' ? null : sp;
+  }
+
   function beanInput() {
     return {
       name: (document.getElementById('f_name') as HTMLInputElement).value.trim(),
       variety: readVarietyValue(),
       country: readCountryValue(),
       process: (document.getElementById('f_process') as HTMLSelectElement).value || null,
+      bean_type: readBeanSpecies(),
     };
   }
 
@@ -476,6 +500,7 @@ import { DB, countryOrder } from '../data/countries';
         roaster: (document.getElementById('f_roaster') as HTMLInputElement).value.trim() || null,
         country: readCountryValue(),
         process: (document.getElementById('f_process') as HTMLSelectElement).value || null,
+        bean_type: readBeanSpecies(),
         photo_url, source: 'manual',
       };
       const { error } = await supabase.from('shelf_items').insert(payload);

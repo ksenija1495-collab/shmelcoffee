@@ -41,7 +41,7 @@ export async function buildShelfAssistantContext(
       .maybeSingle(),
     admin
       .from('shelf_items')
-      .select('name, roaster, country, process, variety, status, kind')
+      .select('name, roaster, country, process, variety, bean_type, status, kind')
       .eq('user_id', userId)
       .eq('kind', 'bean')
       .order('name', { ascending: true }),
@@ -168,6 +168,7 @@ ${cupsBlock}
   · Малый объём (если просят): 10 г / 150 мл · клапан закрыт · иммерсия ~1:30 · открыть · слив.
   · Полная чашка: 15 г / 250 мл · 92 °C · блум 40 мл / 0:30 · иммерсия закрытым клапаном 1:15–1:30 · открыть · слив.
   · Запрещено: V60-проливы без строк про клапан.
+- Либерика (bean_type или вид на полке): AeroPress или короткий Switch, 88–90 °C; не горячий длинный V60.
 - Турка: холодная/комнатная вода, помол в пыль, 2–3 подъёма пенки, не кипятить; без проливов и блума.
 - Пиши по-русски, коротко, тон Shmelco — умный, без воды.`;
 }

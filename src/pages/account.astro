@@ -212,6 +212,11 @@ import Nav from '../components/Nav.astro';
     font-size: .52rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
     background: rgba(242,234,223,.18); border: 1px solid rgba(242,234,223,.28); opacity: .9;
   }
+  .shelf-species-tag {
+    background: rgba(100, 72, 48, .12);
+    color: var(--text);
+    border: 1px solid rgba(100, 72, 48, .25);
+  }
   .shelf-blend-tag {
     display: inline-block; margin-top: 4px; font-size: .64rem; font-weight: 600;
     color: var(--accent); background: rgba(90,140,90,.1); padding: 2px 7px; border-radius: 999px;
@@ -583,6 +588,7 @@ import Nav from '../components/Nav.astro';
   import { renderProfileReferenceLinks } from '../lib/accountReferencePanel';
   import { bindShelfBrewFlow, type ShelfBeanRow } from '../lib/accountShelfBrewFlow';
   import { bindShelfEdit } from '../lib/accountShelfEdit';
+  import { beanSpeciesLabel, resolveBeanSpecies } from '../lib/beanSpecies';
   import { bestDiaryRecipeForBean } from '../lib/tastingFlights';
   import { filterAvailableShelfBeans } from '../lib/shelfAvailability';
   import { EQUIPMENT_TAGS, findEquipmentItemForTag, equipmentItemMatchesTag } from '../lib/equipmentTags';
@@ -1369,10 +1375,13 @@ import Nav from '../components/Nav.astro';
             ? `<img src="${esc(s.photo_url)}" class="shelf-photo" alt=""/>`
             : shelfBeanCover(s);
           const blend = isVarietyBlend(s.variety, s.name);
+          const speciesKey = resolveBeanSpecies({ bean_type: s.bean_type, variety: s.variety, name: s.name });
+          const speciesTag = speciesKey !== 'arabica' ? beanSpeciesLabel(speciesKey).toLowerCase() : null;
           const meta = hasGeneratedCover
             ? (esc(s.roaster) || 'зерно')
             : ([s.roaster, s.variety, s.process].filter(Boolean).map(esc).join(' · ') || 'зерно');
           const blendTag = blend ? `<div class="shelf-blend-tag">смесь сортов</div>` : '';
+          const speciesBadge = speciesTag ? `<div class="shelf-blend-tag shelf-species-tag">${esc(speciesTag)}</div>` : '';
           const diaryBest = bestDiaryRecipeForBean(cups, { name: s.name, roaster: s.roaster });
           const diaryRecLine = diaryBest ? formatCupRecipe(diaryBest.recipe) : '';
           beansById.set(s.id, {
@@ -1382,15 +1391,16 @@ import Nav from '../components/Nav.astro';
             country: s.country,
             process: s.process,
             variety: s.variety,
+            bean_type: s.bean_type,
             status: shelfStatus(s),
             diaryLine: diaryRecLine || null,
           });
           const brewTip = diaryBest && diaryRecLine
             ? `<div class="brew-rec-note" style="margin-top:6px;font-size:.72rem;color:var(--text-dim)">⭐ ${diaryBest.rating ? `${'★'.repeat(diaryBest.rating)} · ` : ''}${esc(diaryRecLine)}</div>`
             : '';
-          const searchBlob = [s.name, s.roaster, s.country, s.process, s.variety]
+          const searchBlob = [s.name, s.roaster, s.country, s.process, s.variety, speciesTag, s.bean_type]
             .filter(Boolean).join(' ').toLowerCase();
-          return `<div class="shelf-card shelf-st-${st}" data-shelf-q="${esc(searchBlob)}">${cover}<div class="shelf-body"><button type="button" class="shelf-name-btn shelf-name" data-shelf-view="${s.id}" title="Карточка зерна">${esc(s.name)}</button><div class="shelf-meta">${meta}</div>${blendTag}${statusBtn}${brewTip}<button type="button" class="shelf-card-view" data-shelf-view="${s.id}">Карточка →</button><button type="button" class="shelf-brew-btn" data-shelf-brew="${esc(s.id)}">☕ Заварить</button></div><button type="button" class="shelf-edit" data-shelf-edit="${s.id}" title="редактировать">✎</button><button class="shelf-del" data-shelf-del="${s.id}" title="удалить">×</button></div>`;
+          return `<div class="shelf-card shelf-st-${st}" data-shelf-q="${esc(searchBlob)}">${cover}<div class="shelf-body"><button type="button" class="shelf-name-btn shelf-name" data-shelf-view="${s.id}" title="Карточка зерна">${esc(s.name)}</button><div class="shelf-meta">${meta}</div>${blendTag}${speciesBadge}${statusBtn}${brewTip}<button type="button" class="shelf-card-view" data-shelf-view="${s.id}">Карточка →</button><button type="button" class="shelf-brew-btn" data-shelf-brew="${esc(s.id)}">☕ Заварить</button></div><button type="button" class="shelf-edit" data-shelf-edit="${s.id}" title="редактировать">✎</button><button class="shelf-del" data-shelf-del="${s.id}" title="удалить">×</button></div>`;
         };
     const beansBlock = beanItems.length
       ? `${shelfSearch}<div class="shelf-grid" id="shelfGrid">${beanItems.map(renderBeanCard).join('')}</div>${shelfHasStatus ? '' : shelfStatusMigrationBox()}`

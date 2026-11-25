@@ -1,4 +1,11 @@
+import { BEAN_SPECIES } from '../data/beanSpecies';
 import { PROCESS_OPTIONS } from '../data/processing';
+import {
+  beanSpeciesLabel,
+  inferBeanSpeciesFromText,
+  normalizeBeanSpecies,
+  resolveBeanSpecies,
+} from './beanSpecies';
 import {
   BEAN_COUNTRY_OTHER,
   bindCountryOther,
@@ -14,6 +21,7 @@ export type ShelfEditRow = {
   country?: string | null;
   process?: string | null;
   variety?: string | null;
+  bean_type?: string | null;
   status?: string | null;
   /** Лучшая чашка из дневника — одна строка */
   diaryLine?: string | null;
@@ -80,8 +88,17 @@ const MODAL_HTML = `
       <input type="text" id="shelfEditName" class="shelf-edit-inp" autocomplete="off"/>
       <label class="shelf-edit-fl">Обжарщик</label>
       <input type="text" id="shelfEditRoaster" class="shelf-edit-inp" autocomplete="off"/>
-      <label class="shelf-edit-fl">Сорт / разновидность</label>
-      <input type="text" id="shelfEditVariety" class="shelf-edit-inp" placeholder="необязательно" autocomplete="off"/>
+      <div class="shelf-edit-row2">
+        <div>
+          <label class="shelf-edit-fl">Вид кофе</label>
+          <select id="shelfEditSpecies" class="shelf-edit-inp"></select>
+          <p class="field-hint" style="margin:4px 0 0;font-size:.68rem">Вид ≠ сорт: либерика — отдельный Coffea liberica.</p>
+        </div>
+        <div>
+          <label class="shelf-edit-fl">Сорт (культивар)</label>
+          <input type="text" id="shelfEditVariety" class="shelf-edit-inp" placeholder="Bourbon, SL28…" autocomplete="off"/>
+        </div>
+      </div>
       <div class="shelf-edit-row2">
         <div>
           <label class="shelf-edit-fl">Страна</label>
@@ -129,6 +146,13 @@ export function bindShelfEdit(
   const statusForm = root.querySelector('#shelfEditStatusForm') as HTMLSelectElement;
   countrySel.innerHTML = optHtml(countries, null, 'страна');
   processSel.innerHTML = optHtml(PROCESS_OPTIONS, null, 'обработка');
+  const speciesSel = root.querySelector('#shelfEditSpecies') as HTMLSelectElement;
+  speciesSel.innerHTML = [
+    '<option value="arabica">Арабика (по умолчанию)</option>',
+    ...BEAN_SPECIES.filter((o) => o.value !== 'arabica').map(
+      (o) => `<option value="${esc(o.value)}">${esc(o.label)}</option>`,
+    ),
+  ].join('');
   bindCountryOther('shelfEditCountry', 'shelfEditCountryCustomRow');
 
   let editingId: string | null = null;
@@ -152,11 +176,24 @@ export function bindShelfEdit(
     formPanel.hidden = false;
   };
 
+  const speciesValueForForm = (row: ShelfEditRow) => {
+    const explicit = normalizeBeanSpecies(row.bean_type);
+    if (explicit && explicit !== 'arabica') return explicit;
+    const inferred = inferBeanSpeciesFromText(row.variety, row.name);
+    return inferred || 'arabica';
+  };
+
   const renderView = (row: ShelfEditRow) => {
     const dl = root.querySelector('#shelfEditViewDl') as HTMLElement;
+    const sp = resolveBeanSpecies(row);
+    const speciesRow =
+      sp !== 'arabica'
+        ? `<div class="shelf-card-dl-row"><dt>Вид</dt><dd>${esc(beanSpeciesLabel(sp))}</dd></div>`
+        : '';
     dl.innerHTML = `
       <div class="shelf-card-dl-row"><dt>Название</dt><dd>${dash(row.name)}</dd></div>
       <div class="shelf-card-dl-row"><dt>Обжарщик</dt><dd>${dash(row.roaster)}</dd></div>
+      ${speciesRow}
       <div class="shelf-card-dl-row"><dt>Страна</dt><dd>${dash(row.country)}</dd></div>
       <div class="shelf-card-dl-row"><dt>Обработка</dt><dd>${dash(row.process)}</dd></div>
       <div class="shelf-card-dl-row"><dt>Сорт</dt><dd>${dash(row.variety)}</dd></div>`;
@@ -176,6 +213,7 @@ export function bindShelfEdit(
     (root.querySelector('#shelfEditName') as HTMLInputElement).value = row.name || '';
     (root.querySelector('#shelfEditRoaster') as HTMLInputElement).value = row.roaster || '';
     (root.querySelector('#shelfEditVariety') as HTMLInputElement).value = row.variety || '';
+    speciesSel.value = speciesValueForForm(row);
     setCountryValue(row.country, 'shelfEditCountry', 'shelfEditCountryCustom', 'shelfEditCountryCustomRow');
     ensureProcessOption(processSel, row.process);
     const st = row.status && STATUS_OPTS.some((o) => o.value === row.status) ? row.status! : 'ok';
@@ -249,6 +287,11 @@ export function bindShelfEdit(
       root.querySelector('#shelfEditCountryCustom') as HTMLInputElement,
     );
     const process = (root.querySelector('#shelfEditProcess') as HTMLSelectElement).value.trim() || null;
+    let species = normalizeBeanSpecies(speciesSel.value) || 'arabica';
+    if (species === 'unknown') species = 'arabica';
+    const inferred = inferBeanSpeciesFromText(variety, name);
+    if (species === 'arabica' && inferred) species = inferred;
+    const bean_type = species === 'arabica' ? null : species;
     const status = statusForm.value || 'ok';
     const msg = root.querySelector('#shelfEditMsg') as HTMLElement;
     const btn = root.querySelector('#shelfEditSave') as HTMLButtonElement;
@@ -257,7 +300,7 @@ export function bindShelfEdit(
     btn.disabled = true;
     const { error } = await opts.supabase
       .from('shelf_items')
-      .update({ name, roaster, country, process, variety, status })
+      .update({ name, roaster, country, process, variety, bean_type, status })
       .eq('id', editingId)
       .eq('user_id', opts.userId);
     btn.disabled = false;

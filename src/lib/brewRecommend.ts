@@ -11,6 +11,7 @@ import {
   type BrewRecipeRec,
 } from './brewStandards';
 import { pickBrewMethods } from './recommendBrewMethods';
+import { beanSpeciesLabel, isLiberica, resolveBeanSpecies } from './beanSpecies';
 
 export type { BrewRecipeRec };
 
@@ -28,6 +29,7 @@ export type BrewBeanInput = {
   process?: string | null;
   variety?: string | null;
   name?: string | null;
+  bean_type?: string | null;
 };
 
 function parseAltitudeMid(altitude: string): number | null {
@@ -49,6 +51,8 @@ function isCatimorFamily(variety?: string | null, name?: string | null): boolean
 export function recommendBrew(input: BrewBeanInput): BrewRecommendation | null {
   const key = resolveCountryKey(input.country, input.name);
   const country = key ? DB[key] : null;
+  const species = resolveBeanSpecies(input);
+  const liberica = isLiberica(input);
   const dense = isDenseVariety(input.variety, input.name);
   const catimor = isCatimorFamily(input.variety, input.name);
   const blend = isVarietyBlend(input.variety, input.name);
@@ -61,6 +65,7 @@ export function recommendBrew(input: BrewBeanInput): BrewRecommendation | null {
   if (highAlt || dense) tempPrimary += 1;
   if (lowAlt || catimor) tempPrimary -= 2;
   if (/натур|natural|анаэроб|anaerobic/.test(pk)) tempPrimary -= 1;
+  if (liberica) tempPrimary -= 3;
   tempPrimary = Math.min(94, Math.max(88, tempPrimary));
 
   const tempSecondary = Math.min(94, Math.max(88, tempPrimary - 1));
@@ -75,12 +80,16 @@ export function recommendBrew(input: BrewBeanInput): BrewRecommendation | null {
 
   const countryName = country?.name || input.country || 'это зерно';
   const processLabel = (input.process || '').replace(/\s*\([^)]*\)/, '') || 'обработка не указана';
+  const speciesPrefix = species !== 'arabica' ? `${beanSpeciesLabel(species)} · ` : '';
   const headline = blend
-    ? `${countryName} · ${processLabel} · смесь: ${varietyBlendLabel(input.variety)}`
-    : `${countryName} · ${processLabel}`;
+    ? `${speciesPrefix}${countryName} · ${processLabel} · смесь: ${varietyBlendLabel(input.variety)}`
+    : `${speciesPrefix}${countryName} · ${processLabel}`;
 
   if (blend) {
     why += ' Смесь сортов — слушай баланс, не один дескриптор.';
+  }
+  if (liberica) {
+    why += ' Либерика: пористое зерно — ниже °C, короче иммерсия; твои 5★ на этом лоте были AP и турка.';
   }
 
   return {
