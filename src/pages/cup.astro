@@ -167,6 +167,10 @@ import Nav from '../components/Nav.astro';
   }
   .cupcard-recipe-row span:first-child { color: var(--text-muted); flex-shrink: 0; }
   .cupcard-recipe-row span:last-child { text-align: right; font-weight: 600; color: var(--text); }
+  .cupcard-metrics { margin-top: 8px; padding-top: 8px; border-top: 1px dashed rgba(168,124,79,.25); }
+  .cupcard-metrics-h { font-size: .56rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--text-muted); margin: 4px 0 2px; }
+  .cupcard-metrics-sub { color: var(--accent); opacity: .85; }
+  .cupcard-metric-high span:last-child { color: var(--accent); }
   .cupcard-chars {
     margin: 0 12px 6px; padding: 6px 10px; border-radius: 10px;
     background: rgba(168,124,79,.06); border: 1px solid rgba(168,124,79,.12);
@@ -230,6 +234,7 @@ import Nav from '../components/Nav.astro';
   import { createClient } from '@supabase/supabase-js';
   import { balanceWheelSvg } from '../lib/cupBalanceWheel';
   import { cupRecipeLines, formatCupRecipeShort, normalizeRecipe, recipeHasData } from '../lib/cupRecipe';
+  import { brewMetricsLines } from '../lib/brewMetrics';
   import { defaultSavedRecipeName } from '../lib/savedRecipesUi';
   import { upsertSavedBrewRecipe } from '../lib/savedBrewRecipeApi';
   import { buildCupNoteTags } from '../lib/cupNoteDisplay';
@@ -324,6 +329,12 @@ import Nav from '../components/Nav.astro';
     const notes = asNotes(cup.notes);
     const noteTags = buildCupNoteTags(notes);
     const recipeLines = cupRecipeLines(cup.recipe);
+    const metricsLines = brewMetricsLines(cup.recipe, { cupCreatedAt: cup.created_at });
+    const hasRecipeTime = recipeLines.some((l) => l.label === 'Общее время');
+    const metricsHigh = metricsLines.filter(
+      (m) => m.tier === 'high' && !(m.key === 'time' && hasRecipeTime),
+    );
+    const metricsResearch = metricsLines.filter((m) => m.tier === 'research');
     const recipeShort = formatCupRecipeShort(cup.recipe, cup.brew_method);
     const roaster = resolveRoaster(cup.roaster);
     const country = countryCardData(cup.country, cup.name);
@@ -371,6 +382,18 @@ import Nav from '../components/Nav.astro';
           `<div class="cupcard-recipe-row"><span>${esc(l.label)}</span><span>${esc(l.value)}</span></div>`
         ).join('')}</div>`
       : '';
+    const metricsHtml = metricsLines.length
+      ? `<div class="cupcard-metrics">
+          ${metricsHigh.length ? `<div class="cupcard-metrics-h">Параметры заварки</div>
+          <div class="cupcard-recipe-rows">${metricsHigh.map((l) =>
+            `<div class="cupcard-recipe-row cupcard-metric-high"><span>${esc(l.label)}</span><span>${esc(l.value)}</span></div>`,
+          ).join('')}</div>` : ''}
+          ${metricsResearch.length ? `<div class="cupcard-metrics-h cupcard-metrics-sub">Исследовательские</div>
+          <div class="cupcard-recipe-rows">${metricsResearch.map((l) =>
+            `<div class="cupcard-recipe-row cupcard-metric-res"><span>${esc(l.label)}</span><span>${esc(l.value)}</span></div>`,
+          ).join('')}</div>` : ''}
+        </div>`
+      : '';
 
     page.innerHTML = `
       <div class="cupcard-wrap">
@@ -386,10 +409,11 @@ import Nav from '../components/Nav.astro';
           <div class="cupcard-wheel">${wheel}</div>
           ${tasteCharLine ? `<div class="cupcard-chars">${esc(tasteCharLine)}</div>` : ''}
           ${notesHtml}
-          ${brewLine || recipeLines.length ? `
+          ${brewLine || recipeLines.length || metricsLines.length ? `
             <div class="cupcard-recipe">
               <div class="cupcard-recipe-h">Заваривание</div>
               ${brewLine ? `<div class="cupcard-recipe-t">${esc(brewLine)}</div>` : ''}
+              ${metricsHtml}
               ${recipeRowsHtml}
             </div>` : ''}
           ${cup.comment ? `<div class="cupcard-comment">«${esc(cup.comment)}»</div>` : ''}

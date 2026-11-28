@@ -32,6 +32,20 @@ export type BrewRecipe = {
   blooming?: BrewPour | null;
   pours?: BrewPour[];
   switch_valve?: SwitchValve | null;
+  /** Дата обжарки (YYYY-MM-DD) — для авто «дней после обжарки». */
+  roast_date?: string | null;
+  /** Если нет даты — вручную. */
+  days_since_roast?: number | null;
+  /** Масса готового напитка в чашке, г. */
+  beverage_g?: number | null;
+  /** TDS, %. */
+  tds?: number | null;
+  /** Выход экстракции, % — можно сохранить или пересчитать. */
+  extraction_yield?: number | null;
+  /** id из data/waterProfiles */
+  water_profile?: string | null;
+  /** Дубль time для явной подписи в UI */
+  brew_time_total?: string | null;
 };
 
 const RECIPE_KEYS = [
@@ -45,6 +59,13 @@ const RECIPE_KEYS = [
   'blooming',
   'pours',
   'switch_valve',
+  'roast_date',
+  'days_since_roast',
+  'beverage_g',
+  'tds',
+  'extraction_yield',
+  'water_profile',
+  'brew_time_total',
 ] as const;
 
 const SWITCH_CLOSE_LABELS: Record<SwitchValveCloseWhen, string> = {
@@ -144,6 +165,27 @@ export function normalizeRecipe(raw: unknown): BrewRecipe | null {
   }
   const sw = normalizeSwitchValve(r.switch_valve);
   if (sw) out.switch_valve = sw;
+  if (r.roast_date) out.roast_date = String(r.roast_date).trim().slice(0, 10) || null;
+  const dsr = r.days_since_roast;
+  if (dsr != null && dsr !== '') {
+    const n = Number(dsr);
+    if (Number.isFinite(n) && n >= 0) out.days_since_roast = Math.round(n);
+  }
+  if (r.beverage_g != null && r.beverage_g !== '') {
+    const n = Number(r.beverage_g);
+    if (Number.isFinite(n) && n > 0) out.beverage_g = n;
+  }
+  if (r.tds != null && r.tds !== '') {
+    const n = parseFloat(String(r.tds).replace(',', '.'));
+    if (Number.isFinite(n) && n > 0) out.tds = Math.round(n * 100) / 100;
+  }
+  if (r.extraction_yield != null && r.extraction_yield !== '') {
+    const n = parseFloat(String(r.extraction_yield).replace(',', '.'));
+    if (Number.isFinite(n) && n > 0) out.extraction_yield = Math.round(n * 10) / 10;
+  }
+  if (r.water_profile) out.water_profile = String(r.water_profile).trim() || null;
+  const brewTime = r.brew_time_total || r.time;
+  if (brewTime) out.brew_time_total = String(brewTime).trim() || null;
   return recipeHasData(out as Record<string, unknown>) ? out : null;
 }
 

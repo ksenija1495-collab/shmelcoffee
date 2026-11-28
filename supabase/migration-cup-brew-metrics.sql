@@ -1,0 +1,2 @@
+-- Параметры из дневника (соотношение, TDS, EY…) хранятся в cups.recipe (jsonb).
+-- Миграция колонок не требуется. Поля: roast_date, days_since_roast, beverage_g, tds, extraction_yield, water_profile, brew_time_total.

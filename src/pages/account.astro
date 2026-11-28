@@ -579,6 +579,7 @@ import Nav from '../components/Nav.astro';
   import { isCabinetFree } from '../lib/cabinetFree';
   import { beanOutUrl } from '../lib/beanOutUrl';
   import { formatCupRecipe, recipeFingerprint, applyRecipeToParams } from '../lib/cupRecipe';
+  import { brewMetricsSummary } from '../lib/brewMetrics';
   import { formatTasteCharacterLine, normalizeTasteCharacter } from '../lib/tasteCharacter';
   import { resolveCountryKey } from '../lib/countryResolve';
   import { fetchSavedBrewRecipes } from '../lib/savedBrewRecipeApi';
@@ -1330,6 +1331,7 @@ import Nav from '../components/Nav.astro';
     const showTasteChar = cups.length >= 10;
     const renderCupItem = (c: any) => {
       const recipeLine = formatCupRecipe(c.recipe);
+      const metricsLine = brewMetricsSummary(c.recipe);
       const fp = recipeFingerprint(c.recipe);
       const charLine = showTasteChar ? formatTasteCharacterLine(normalizeTasteCharacter(c.taste_character)) : '';
       const searchBlob = [c.name, c.roaster, c.country, c.process, c.variety, c.brew_method, c.comment, recipeLine]
@@ -1338,6 +1340,7 @@ import Nav from '../components/Nav.astro';
         <div class="cup-head"><a href="/cup?id=${c.id}" class="cup-card-link">${esc(c.name)}</a>${c.rating ? ` <span class="cup-star">${'★'.repeat(c.rating)}</span>` : ''}</div>
         <div class="coffee-detail">${[c.roaster, c.country, c.process, c.brew_method].filter(Boolean).map(esc).join(' · ') || '—'}</div>
         ${recipeLine ? `<div class="coffee-detail">${esc(recipeLine)}</div>` : ''}
+        ${metricsLine ? `<div class="coffee-detail">${esc(metricsLine)}</div>` : ''}
         <div class="coffee-detail">кислотность ${c.acidity ?? '–'} · сладость ${c.sweetness ?? '–'} · горечь ${c.bitterness ?? '–'} · тело ${c.body ?? '–'}</div>
         ${charLine ? `<div class="coffee-detail">${esc(charLine)}</div>` : ''}
         ${asNoteList(c.notes).length ? `<div class="profile-tags" style="margin-top:6px">${asNoteList(c.notes).map((n: string) => `<span class="profile-tag">${esc(n)}</span>`).join('')}</div>` : ''}

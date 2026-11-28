@@ -92,8 +92,42 @@ import { DB, countryOrder } from '../data/countries';
           <input type="text" id="r_temp" placeholder="Вода °C (напр. 94)"/>
           <input type="text" id="r_time" class="brew-time-inp" inputmode="numeric" placeholder="2:30"/>
         </div>
-        <p class="field-hint brew-time-hint">Время в формате м:сс — набираешь 150, получаешь 1:50</p>
+        <p class="field-hint brew-time-hint">Общее время заваривания, м:сс — набираешь 150, получаешь 1:50</p>
         <div id="grinderHint" class="recipe-hint" style="display:none;margin-top:4px">Отметь кофемолку во вкладке <a href="/account?tab=shelf#equipSection">Зерно</a> — она появится в списке.</div>
+        <details class="brew-metrics-panel" id="brewMetricsHigh" open>
+          <summary class="brew-metrics-summary">Заварка · важное</summary>
+          <div class="brew-metrics-body">
+            <div class="brew-metric-row">
+              <span class="brew-metric-lbl">Соотношение</span>
+              <span id="r_ratio_auto" class="brew-metric-val brew-metric-auto">— заполни зерно и воду</span>
+            </div>
+            <div class="brew-metric-row">
+              <span class="brew-metric-lbl">Дней после обжарки</span>
+              <div class="brew-metric-inps">
+                <input type="date" id="r_roast_date" class="brew-metric-inp" aria-label="Дата обжарки"/>
+                <span class="brew-metric-or">или</span>
+                <input type="number" id="r_days_since_roast" class="brew-metric-inp" inputmode="numeric" min="0" step="1" placeholder="дней"/>
+              </div>
+            </div>
+            <p class="field-hint" style="margin:6px 0 0">Дата обжарки → в карточке посчитаем дни автоматически.</p>
+          </div>
+        </details>
+        <details class="brew-metrics-panel" id="brewMetricsResearch">
+          <summary class="brew-metrics-summary">Исследовательские</summary>
+          <div class="brew-metrics-body">
+            <div class="recipe-grid">
+              <input type="number" id="r_beverage_g" inputmode="decimal" min="0" step="1" placeholder="Масса напитка, г"/>
+              <input type="number" id="r_tds" inputmode="decimal" min="0" step="0.01" placeholder="TDS, %"/>
+            </div>
+            <label class="fl" for="r_water_profile">Вода / минерализация</label>
+            <select id="r_water_profile" class="shelf-edit-inp"></select>
+            <div class="brew-metric-row" style="margin-top:10px">
+              <span class="brew-metric-lbl">EY · выход экстракции</span>
+              <span id="r_ey_auto" class="brew-metric-val brew-metric-auto">— TDS + масса напитка + зерно</span>
+            </div>
+            <p class="field-hint" style="margin:6px 0 0">EY = TDS × масса напитка ÷ зерно (считаем при сохранении).</p>
+          </div>
+        </details>
         <label class="fl">Проливы</label>
         <p class="pour-block-hint">Пролив — порция воды через кофе. «до» — итоговый вес на весах (долила до 150 мл), без флага — сколько мл влила в этот пролив. «байпас» — вода мимо кофе (разбавление после пресса).</p>
         <div class="pour-block-head">
@@ -296,6 +330,17 @@ import { DB, countryOrder } from '../data/countries';
     font-size: .92rem; background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif;
   }
   .recipe-hint { font-size: .76rem; color: var(--accent); margin-top: 8px; }
+  .brew-metrics-panel { margin: 12px 0; border: 1px solid var(--border); border-radius: 12px; background: var(--bg); overflow: hidden; }
+  .brew-metrics-summary { font-size: .78rem; font-weight: 700; padding: 10px 14px; cursor: pointer; list-style: none; }
+  .brew-metrics-summary::-webkit-details-marker { display: none; }
+  .brew-metrics-body { padding: 0 14px 14px; }
+  .brew-metric-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 10px; }
+  .brew-metric-lbl { font-size: .72rem; font-weight: 600; color: var(--text-dim); min-width: 9rem; }
+  .brew-metric-val { font-size: .8rem; color: var(--text); }
+  .brew-metric-auto { color: var(--accent); font-weight: 600; }
+  .brew-metric-inps { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; flex: 1; min-width: 0; }
+  .brew-metric-inp { flex: 1; min-width: 6rem; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--border); font-size: .8rem; }
+  .brew-metric-or { font-size: .68rem; color: var(--text-muted); }
   .recipe-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
   .recipe-act-btn {
     flex: 1; min-width: 148px; padding: 9px 12px; border-radius: 10px;
@@ -454,6 +499,8 @@ import { DB, countryOrder } from '../data/countries';
   import { defaultSavedRecipeName, savedRecipeSummary } from '../lib/savedRecipesUi';
   import { filterAvailableShelfBeans } from '../lib/shelfAvailability';
   import { detailForPlan } from '../lib/shelfRecipeDetail';
+  import { WATER_PROFILES } from '../data/waterProfiles';
+  import { brewRatioText, computeExtractionYield, enrichRecipeMetrics } from '../lib/brewMetrics';
 
   const supabase = createClient(
     import.meta.env.PUBLIC_SUPABASE_URL,
@@ -896,6 +943,94 @@ import { DB, countryOrder } from '../data/countries';
     if (show && !document.querySelector('.ap-mode-chip.on')) setAeropressMode('standard');
   }
 
+  function fillWaterProfileSelect(selected?: string | null) {
+    const sel = document.getElementById('r_water_profile') as HTMLSelectElement;
+    if (!sel) return;
+    sel.innerHTML =
+      '<option value="">— вода —</option>' +
+      WATER_PROFILES.map((p) => `<option value="${p.id}"${p.id === selected ? ' selected' : ''}>${p.label}</option>`).join('');
+  }
+
+  function syncBrewMetricsDisplay() {
+    const coffee = parseFloat((document.getElementById('r_coffee_g') as HTMLInputElement).value.replace(',', '.'));
+    const water = parseFloat((document.getElementById('r_water_g') as HTMLInputElement).value.replace(',', '.'));
+    const ratioEl = document.getElementById('r_ratio_auto');
+    if (ratioEl) {
+      const t = brewRatioText(
+        Number.isFinite(coffee) ? coffee : null,
+        Number.isFinite(water) ? water : null,
+      );
+      ratioEl.textContent = t || '— заполни зерно и воду';
+    }
+    const bev = parseFloat((document.getElementById('r_beverage_g') as HTMLInputElement)?.value.replace(',', '.') || '');
+    const tds = parseFloat((document.getElementById('r_tds') as HTMLInputElement)?.value.replace(',', '.') || '');
+    const eyEl = document.getElementById('r_ey_auto');
+    if (eyEl) {
+      const ey = computeExtractionYield(
+        Number.isFinite(tds) ? tds : null,
+        Number.isFinite(bev) ? bev : null,
+        Number.isFinite(coffee) ? coffee : null,
+      );
+      eyEl.textContent = ey != null ? `${ey}%` : '— TDS + масса напитка + зерно';
+    }
+  }
+
+  function bindBrewMetricsInputs() {
+    const ids = ['r_coffee_g', 'r_water_g', 'r_beverage_g', 'r_tds', 'r_days_since_roast', 'r_roast_date', 'r_time'];
+    ids.forEach((id) => document.getElementById(id)?.addEventListener('input', syncBrewMetricsDisplay));
+    syncBrewMetricsDisplay();
+  }
+
+  function readMetricsFromForm(): Record<string, unknown> {
+    const roast_date = (document.getElementById('r_roast_date') as HTMLInputElement)?.value.trim() || null;
+    const dsrRaw = (document.getElementById('r_days_since_roast') as HTMLInputElement)?.value.trim();
+    const days_since_roast = dsrRaw ? parseInt(dsrRaw, 10) : null;
+    const bevRaw = (document.getElementById('r_beverage_g') as HTMLInputElement)?.value.trim();
+    const beverage_g = bevRaw ? parseFloat(bevRaw.replace(',', '.')) : null;
+    const tdsRaw = (document.getElementById('r_tds') as HTMLInputElement)?.value.trim();
+    const tds = tdsRaw ? parseFloat(tdsRaw.replace(',', '.')) : null;
+    const water_profile =
+      (document.getElementById('r_water_profile') as HTMLSelectElement)?.value.trim() || null;
+    const brew_time_total = readBrewTimeInput(document.getElementById('r_time') as HTMLInputElement);
+    const out: Record<string, unknown> = {};
+    if (roast_date) out.roast_date = roast_date;
+    if (days_since_roast != null && Number.isFinite(days_since_roast) && days_since_roast >= 0) {
+      out.days_since_roast = days_since_roast;
+    }
+    if (beverage_g != null && Number.isFinite(beverage_g) && beverage_g > 0) out.beverage_g = beverage_g;
+    if (tds != null && Number.isFinite(tds) && tds > 0) out.tds = tds;
+    if (water_profile) out.water_profile = water_profile;
+    if (brew_time_total) {
+      out.brew_time_total = brew_time_total;
+      out.time = brew_time_total;
+    }
+    return out;
+  }
+
+  function setMetricsOnForm(r: Record<string, unknown> | null | undefined) {
+    const roastEl = document.getElementById('r_roast_date') as HTMLInputElement;
+    const dsrEl = document.getElementById('r_days_since_roast') as HTMLInputElement;
+    const bevEl = document.getElementById('r_beverage_g') as HTMLInputElement;
+    const tdsEl = document.getElementById('r_tds') as HTMLInputElement;
+    if (!r) {
+      if (roastEl) roastEl.value = '';
+      if (dsrEl) dsrEl.value = '';
+      if (bevEl) bevEl.value = '';
+      if (tdsEl) tdsEl.value = '';
+      fillWaterProfileSelect();
+      syncBrewMetricsDisplay();
+      return;
+    }
+    if (roastEl) roastEl.value = String(r.roast_date || '');
+    if (dsrEl) dsrEl.value = r.days_since_roast != null ? String(r.days_since_roast) : '';
+    if (bevEl) bevEl.value = r.beverage_g != null ? String(r.beverage_g) : '';
+    if (tdsEl) tdsEl.value = r.tds != null ? String(r.tds) : '';
+    fillWaterProfileSelect(String(r.water_profile || '') || null);
+    const research = document.getElementById('brewMetricsResearch') as HTMLDetailsElement | null;
+    if (research && (r.tds || r.beverage_g || r.water_profile)) research.open = true;
+    syncBrewMetricsDisplay();
+  }
+
   function clearRecipeForm() {
     (document.getElementById('r_coffee_g') as HTMLInputElement).value = '';
     (document.getElementById('r_water_g') as HTMLInputElement).value = '';
@@ -907,6 +1042,7 @@ import { DB, countryOrder } from '../data/countries';
     setPourRows([]);
     setAeropressMode('standard');
     setSwitchValveOnForm(null);
+    setMetricsOnForm(null);
     const hint = document.getElementById('recipeHint') as HTMLElement | null;
     if (hint) hint.style.display = 'none';
   }
@@ -936,6 +1072,7 @@ import { DB, countryOrder } from '../data/countries';
     if (r.switch_valve) setSwitchValveOnForm(r.switch_valve);
     else if (isSwitchSelected()) setSwitchValveOnForm(null);
     syncSwitchValveVisibility();
+    setMetricsOnForm(r as Record<string, unknown>);
     (document.getElementById('recipeHint') as HTMLElement).style.display = 'block';
   }
 
@@ -1084,7 +1221,8 @@ import { DB, countryOrder } from '../data/countries';
     if (isAeropressSelected()) recipe.aeropress_mode = readAeropressMode();
     const sw = readSwitchValveFromForm();
     if (sw) recipe.switch_valve = sw;
-    return recipe;
+    Object.assign(recipe, readMetricsFromForm());
+    return enrichRecipeMetrics(recipe);
   }
 
   async function saveBaseRecipeFromForm() {
@@ -1511,6 +1649,8 @@ import { DB, countryOrder } from '../data/countries';
     bindBrewTimeInput(document.getElementById('p_bloom') as HTMLInputElement);
     bindBrewTimeInput(document.getElementById('r_time') as HTMLInputElement);
     bindBrewTimeInput(document.getElementById('r_switch_open') as HTMLInputElement);
+    fillWaterProfileSelect();
+    bindBrewMetricsInputs();
     buildTasteSection();
     buildNotes();
     document.getElementById('f_name')!.addEventListener('blur', guessCountryFromName);
